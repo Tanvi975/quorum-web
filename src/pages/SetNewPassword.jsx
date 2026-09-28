@@ -1,16 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { FiEye, FiEyeOff } from "react-icons/fi";
-import CloudBackground from "../components/CloudBackground";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
+import AuthInput from "../components/AuthInput";
+import AuthButton from "../components/AuthButton";
+import { resetPassword } from "../services/authService";
 
 function SetNewPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { email, otp } = location.state || {};
+
+
+  if (!email || !otp) {
+    return <Navigate to="/forgot-password" replace />;
+  }
 
   function validate() {
     const newErrors = {};
@@ -26,98 +33,69 @@ function SetNewPassword() {
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!validate()) return;
-    setSuccess(true);
+
+    try {
+      await resetPassword(email, otp, password);
+      setSuccess(true);
+    } catch (err) {
+      setErrors({
+        form:
+          (err.response && err.response.data && err.response.data.message) ||
+          "Something went wrong",
+      });
+    }
   }
 
   return (
-    <CloudBackground>
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
-          <h2 className="text-xl font-bold text-center">Set New Password</h2>
-          <p className="text-sm text-gray-500 text-center mb-6">
-            Your new password must be different from previous ones.
-          </p>
+    <AuthLayout
+      title="Set New Password"
+      subtitle="Your new password must be different from previous ones."
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthInput
+          label="Enter Password*"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter new password"
+          error={errors.password}
+        />
+        <AuthInput
+          label="Confirm Password*"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Re-enter new password"
+          error={errors.confirmPassword}
+        />
 
-          <form onSubmit={handleSubmit} noValidate>
-            <label className="block text-sm font-medium mb-1">Enter Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full border rounded-md px-3 py-2 pr-10 mb-1 outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.password ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-gray-400"
-              >
-                {showPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="text-xs text-red-500 mb-2">{errors.password}</p>
-            )}
-
-            <label className="block text-sm font-medium mt-3 mb-1">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`w-full border rounded-md px-3 py-2 pr-10 mb-1 outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.confirmPassword ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-2.5 text-gray-400"
-              >
-                {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <p className="text-xs text-red-500 mb-2">{errors.confirmPassword}</p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-md mt-6"
-            >
-              Reset & Sign In
-            </button>
-          </form>
-        </div>
-
-        {success && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-20">
-            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
-              <h2 className="text-xl font-bold text-blue-700 mb-2">
-                Password updated !
-              </h2>
-              <p className="text-sm text-gray-500 mb-6">
-                Your password has been changed successfully. You can now log
-                into your workspace.
-              </p>
-              <button
-                onClick={() => navigate("/login")}
-                className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-md"
-              >
-                Back to Log In
-              </button>
-            </div>
-          </div>
+        {errors.form && (
+          <p className="text-xs text-red-500 text-center mb-3">{errors.form}</p>
         )}
-      </div>
-    </CloudBackground>
+
+        <AuthButton>Reset & Sign In</AuthButton>
+      </form>
+
+      {success && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-20 p-4">
+          <div className="bg-[#F7F6F2] rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
+            <h2 className="text-xl font-bold text-[#0B2A5B] mb-2">
+              Password updated!
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Your password has been changed successfully. You can now log into
+              your workspace.
+            </p>
+            <AuthButton type="button" onClick={() => navigate("/login")}>
+              Back to Log In
+            </AuthButton>
+          </div>
+        </div>
+      )}
+    </AuthLayout>
   );
 }
 

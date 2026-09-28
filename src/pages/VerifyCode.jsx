@@ -1,15 +1,25 @@
 import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import CloudBackground from "../components/CloudBackground";
+import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
+import AuthButton from "../components/AuthButton";
+import { forgotPassword } from "../services/authService";
 
 function VerifyCode() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const inputRefs = useRef([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state && location.state.email;
+
+
+  if (!email) {
+    return <Navigate to="/forgot-password" replace />;
+  }
 
   function handleChange(index, value) {
-    if (!/^[0-9]?$/.test(value)) return;
+    if (value !== "" && isNaN(Number(value))) return;
     const updated = [...code];
     updated[index] = value;
     setCode(updated);
@@ -30,60 +40,67 @@ function VerifyCode() {
       setError("Enter the complete 6-digit code");
       return;
     }
-    navigate("/set-new-password");
+    navigate("/set-new-password", { state: { email, otp: code.join("") } });
+  }
+
+  async function handleResend() {
+    try {
+      await forgotPassword(email);
+      setError("");
+      setInfo("A new code has been sent to your email.");
+    } catch (err) {
+      setInfo("");
+      setError(
+        (err.response && err.response.data && err.response.data.message) ||
+          "Could not resend the code"
+      );
+    }
   }
 
   return (
-    <CloudBackground>
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
-          <h2 className="text-xl font-bold text-center">Enter Verification Code</h2>
-          <p className="text-sm text-gray-500 text-center mb-6">
-            We have sent a recovery code to your email.
-          </p>
-
-          <form onSubmit={handleSubmit}>
-            <div className="flex justify-center gap-2 mb-1">
-              {code.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => (inputRefs.current[index] = el)}
-                  type="text"
-                  maxLength="1"
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-10 h-12 text-center border rounded-md outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
-                />
-              ))}
-            </div>
-            {error && (
-              <p className="text-xs text-red-500 text-center mb-2">{error}</p>
-            )}
-
-            <div className="text-right mb-6">
-              <button type="button" className="text-xs text-blue-600">
-                Resend Code
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-md"
-            >
-              Verify & Continue
-            </button>
-          </form>
-
-          <p className="text-center text-sm mt-4">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 font-medium">
-              Sign In
-            </Link>
-          </p>
+    <AuthLayout
+      title="Enter Verification Code"
+      subtitle="We have sent a recovery code to your email."
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="flex justify-center gap-2 mb-1">
+          {code.map((digit, index) => (
+            <input
+              key={index}
+              ref={(el) => (inputRefs.current[index] = el)}
+              type="text"
+              inputMode="numeric"
+              maxLength="1"
+              value={digit}
+              onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              className="w-11 h-12 text-center rounded-xl bg-gray-100 border border-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          ))}
         </div>
-      </div>
-    </CloudBackground>
+        {error && <p className="text-xs text-red-500 text-center mb-2">{error}</p>}
+        {info && <p className="text-xs text-green-700 text-center mb-2">{info}</p>}
+
+        <div className="text-right mb-6">
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-xs text-blue-700"
+          >
+            Resend Code
+          </button>
+        </div>
+
+        <AuthButton>Verify & Continue</AuthButton>
+      </form>
+
+      <p className="text-center text-sm text-gray-600 mt-4">
+        Already have an account?{" "}
+        <Link to="/login" className="text-blue-700 font-medium">
+          Sign In
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
 
