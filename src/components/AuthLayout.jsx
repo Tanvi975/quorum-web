@@ -24,7 +24,7 @@ function AuthLayout({ title, subtitle, children }) {
             <img
               src={teamIllustration}
               alt="Team collaboration"
-              className="w-full max-w-md object-contain drop-shadow-[0_0_3px_rgba(255,255,255,0.7)]"
+              className="w-full max-w-md object-contain"
             />
             <p className="text-sm lg:text-base font-medium mt-6 max-w-md">
               Ultra-low latency video and smart audio built for fast team

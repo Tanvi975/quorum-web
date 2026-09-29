@@ -76,7 +76,7 @@ function Signup() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
           error={errors.password}
-          hint="Password should be atleast 8 characters long."
+          hint="Password must be atleast 8 characters long."
         />
         <AuthInput
           label="Confirm Password*"
@@ -96,7 +96,7 @@ function Signup() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-blue-700 font-medium underline">
+        <Link to="/login" className="text-blue-700 text-sm underline">
           Log In
         </Link>
       </p>
