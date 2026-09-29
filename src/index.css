@@ -1,1 +1,61 @@
 @import "tailwindcss";
+@keyframes cloudFade {
+    0% {
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    45% {
+        opacity: 1;
+    }
+    66% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes cloudZoom {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1.08);
+    }
+}
+
+.cloud-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    animation: cloudFade 24s ease-in-out infinite;
+}
+
+.cloud-frame-1 {
+    animation-delay: 0s;
+    animation-name: cloudFade, cloudZoom;
+    animation-duration: 24s, 24s;
+    animation-timing-function: ease-in-out, linear;
+    animation-iteration-count: infinite, infinite;
+}
+
+.cloud-frame-2 {
+    animation-delay: -8s;
+    animation-name: cloudFade, cloudZoom;
+    animation-duration: 24s, 24s;
+    animation-timing-function: ease-in-out, linear;
+    animation-iteration-count: infinite, infinite;
+}
+
+.cloud-frame-3 {
+    animation-delay: -16s;
+    animation-name: cloudFade, cloudZoom;
+    animation-duration: 24s, 24s;
+    animation-timing-function: ease-in-out, linear;
+    animation-iteration-count: infinite, infinite;
+}
