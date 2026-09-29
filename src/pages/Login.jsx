@@ -63,7 +63,7 @@ function Login() {
           error={errors.password}
         />
         <div className="text-right -mt-2 mb-4">
-          <Link to="/forgot-password" className="text-xs text-blue-700">
+          <Link to="/forgot-password" className="text-xs text-blue-700 underline">
             Forgot password?
           </Link>
         </div>
@@ -77,7 +77,7 @@ function Login() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Don't have an account?{" "}
-        <Link to="/signup" className="text-blue-700 font-medium">
+        <Link to="/signup" className="text-blue-700 font-medium underline">
           Sign Up
         </Link>
       </p>
