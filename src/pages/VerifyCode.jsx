@@ -24,6 +24,7 @@ function VerifyCode() {
     return <Navigate to="/forgot-password" replace />;
   }
 
+
   function handleChange(index, value) {
     if (value !== "" && !/^\d$/.test(value)) return;
 
@@ -42,6 +43,21 @@ function VerifyCode() {
       inputRefs.current[index - 1]?.focus();
     }
   }
+  function handlePaste(e) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+  
+    const updated = [...code];
+    for (let i = 0; i < 6; i++) {
+      updated[i] = pasted[i] || "";
+    }
+    setCode(updated);
+    setError("");
+  
+    const nextIndex = pasted.length < 6 ? pasted.length : 5;
+    inputRefs.current[nextIndex]?.focus();
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -55,16 +71,14 @@ function VerifyCode() {
 
     try {
       if (from === "signup") {
-        // Signup OTP → verify email
+
         await verifyEmailOTP(email, otp);
 
         setInfo("Email verified successfully!");
 
-        // Abhi signup verification complete hai.
-        // Next step mein login/dashboard flow connect karenge.
         navigate("/login");
       } else {
-        // Forgot password OTP → directly password reset page
+
         navigate("/set-new-password", {
           state: {
             email,
@@ -134,6 +148,7 @@ function VerifyCode() {
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={handlePaste}
               className="w-11 h-12 text-center rounded-xl bg-gray-100 border border-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
             />
           ))}

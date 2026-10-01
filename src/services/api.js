@@ -22,7 +22,7 @@ api.interceptors.response.use(
         const originalRequest = error.config;
         const status = error.response && error.response.status;
 
-        // Only try refresh for requests that actually had an access token
+
         const accessToken = localStorage.getItem("accessToken");
         const refreshToken = localStorage.getItem("refreshToken");
 

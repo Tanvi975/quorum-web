@@ -71,10 +71,10 @@ function Signup() {
       localStorage.setItem("accessToken", authData.accessToken);
       localStorage.setItem("refreshToken", authData.refreshToken);
       
-      // 2. Send email verification OTP
+    
       await sendVerificationOTP(email);
 
-      // 3. Go to OTP page
+
       navigate("/verify-code", {
         state: {
           email,
