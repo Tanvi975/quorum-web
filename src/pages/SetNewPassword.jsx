@@ -21,10 +21,13 @@ function SetNewPassword() {
 
   function validate() {
     const newErrors = {};
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,30}$/;
+  
     if (!password) {
       newErrors.password = "Password is required";
-    } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long";
+    } else if (!passwordRegex.test(password)) {
+      newErrors.password =
+        "8-30 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character, no spaces";
     }
     if (confirmPassword !== password) {
       newErrors.confirmPassword = "Passwords do not match";
@@ -41,11 +44,22 @@ function SetNewPassword() {
       await resetPassword(email, otp, password);
       setSuccess(true);
     } catch (err) {
-      setErrors({
-        form:
-          (err.response && err.response.data && err.response.data.message) ||
-          "Something went wrong",
-      });
+      const status = err.response && err.response.status;
+      let message;
+    
+      if (status === 400 || status === 410) {
+        message = "This code has expired or is invalid. Please request a new one.";
+      } else if (status === 429) {
+        message = "Too many attempts. Please wait a moment and try again.";
+      } else if (status >= 500) {
+        message = "We're having trouble. Please try again in a moment.";
+      } else if (!err.response) {
+        message = "Unable to connect. Please check your internet connection.";
+      } else {
+        message = "We couldn't reset your password. Please try again.";
+      }
+    
+      setErrors({ form: message });
     }
   }
 
@@ -60,21 +74,24 @@ function SetNewPassword() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter new password"
+          placeholder="Enter your password"
           error={errors.password}
+          hint="8-30 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character."
         />
         <AuthInput
           label="Confirm Password*"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Re-enter new password"
+          placeholder="Enter your password"
           error={errors.confirmPassword}
         />
 
+        <div className="h-5 mb-2">
         {errors.form && (
-          <p className="text-xs text-red-500 text-center mb-3">{errors.form}</p>
-        )}
+        <p className="text-xs text-red-500 text-center">{errors.form}</p>
+         )}
+        </div>
 
         <AuthButton>Reset & Sign In</AuthButton>
       </form>

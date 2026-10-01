@@ -29,7 +29,7 @@ function SSO() {
           label="Organization ID or Work Email*"
           value={orgId}
           onChange={(e) => setOrgId(e.target.value)}
-          placeholder="name@company.com"
+          placeholder="name@example.com"
           error={error}
         />
         <AuthButton>Continue with SSO</AuthButton>
@@ -37,8 +37,8 @@ function SSO() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Back to standard{" "}
-        <Link to="/login" className="text-blue-700 font-medium">
-          Sign In
+        <Link to="/login" className="text-[#2563EB] font-medium underline">
+         Sign In
         </Link>
       </p>
     </AuthLayout>

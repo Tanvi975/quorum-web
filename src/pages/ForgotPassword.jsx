@@ -12,7 +12,8 @@ function ForgotPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!email || !email.includes("@")) {
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!email || !emailRegex.test(email)) {
       setError("Enter a valid email");
       return;
     }
@@ -20,10 +21,22 @@ function ForgotPassword() {
       await forgotPassword(email);
       navigate("/verify-code", { state: { email } });
     } catch (err) {
-      setError(
-        (err.response && err.response.data && err.response.data.message) ||
-          "Something went wrong"
-      );
+      const status = err.response && err.response.status;
+      let message;
+    
+      if (status === 404) {
+        message = "We couldn't find an account with that email.";
+      } else if (status === 429) {
+        message = "Too many requests. Please wait a moment and try again.";
+      } else if (status >= 500) {
+        message = "We're having trouble. Please try again in a moment.";
+      } else if (!err.response) {
+        message = "Unable to connect. Please check your internet connection.";
+      } else {
+        message = "We couldn't send the code. Please try again.";
+      }
+    
+      setError(message);
     }
   }
 
@@ -38,7 +51,7 @@ function ForgotPassword() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="name@example.com"
+          placeholder="Enter your email"
           error={error}
         />
         <AuthButton>Send Code</AuthButton>
@@ -46,8 +59,8 @@ function ForgotPassword() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-blue-700 font-medium underline">
-          Sign In
+        <Link to="/login" className="text-[#2563EB] font-medium underline">
+        Sign In
         </Link>
       </p>
     </AuthLayout>

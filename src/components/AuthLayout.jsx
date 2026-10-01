@@ -1,7 +1,7 @@
 import authBg1 from "../assets/auth-bg-1.png";
 import authBg2 from "../assets/auth-bg-2.png";
 import authBg3 from "../assets/auth-bg-3.png";
-import teamIllustration from "../assets/team-illustration.png";
+import teamIllustration from "../assets/team-illustration.svg";
 
 function AuthLayout({ title, subtitle, children }) {
   return (
@@ -31,13 +31,24 @@ function AuthLayout({ title, subtitle, children }) {
               check-ins.
             </p>
           </div>
-          <div className="w-full max-w-sm bg-[#F7F6F2] shadow-xl p-8">
-            <h2 className="text-xl font-bold text-center text-[#0B2A5B]">
-              {title}
-            </h2>
-            <p className="text-sm text-gray-500 text-center mt-1 mb-6">
-              {subtitle}
-            </p>
+          <div className="w-full max-w-sm rounded-xl border border-[#D7D7D7]/25 bg-[#F7F6F2] shadow-[0_8px_24px_-4px_rgba(37,99,235,0.15)] p-8">
+          <h2
+          className="text-2xl font-bold text-center mb-1"
+          style={{
+          backgroundImage: "linear-gradient(to bottom, #0F172A, #2563EB)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          color: "transparent",
+          }}
+>
+  {title}
+</h2>
+           {subtitle && (
+           <p className="text-sm text-gray-500 text-center mt-2 mb-4">
+            {subtitle}
+           </p>
+            )}
 
             {children}
 

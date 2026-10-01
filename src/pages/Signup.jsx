@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
-import { registerUser } from "../services/authService";
+import { registerUser, sendVerificationOTP } from "../services/authService";
 
 function Signup() {
   const [fullName, setFullName] = useState("");
@@ -12,25 +12,40 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [showOTP, setShowOTP] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   function validate() {
     const newErrors = {};
-    if (!fullName) newErrors.fullName = "Full name is required";
+  
+    const nameRegex = /^[A-Za-z ]{2,20}$/;
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,30}$/;
+  
+    if (!fullName) {
+      newErrors.fullName = "Full name is required";
+    } else if (!nameRegex.test(fullName)) {
+      newErrors.fullName = "Only letters and spaces allowed (2-20 characters)";
+    }
+  
     if (!email) {
       newErrors.email = "Email is required";
-    } else if (!email.includes("@") || !email.includes(".")) {
+    } else if (!emailRegex.test(email)) {
       newErrors.email = "Enter a valid email";
     }
+  
     if (!password) {
       newErrors.password = "Password is required";
-    } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long";
+    } else if (!passwordRegex.test(password)) {
+      newErrors.password =
+        "8-30 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character, no spaces";
     }
+  
     if (confirmPassword !== password) {
       newErrors.confirmPassword = "Passwords do not match";
     }
+  
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -40,13 +55,25 @@ function Signup() {
     if (!validate()) return;
 
     try {
-      const res = await registerUser(fullName, email, password);
-      login(res.data.user, res.data.accessToken, res.data.refreshToken);
-      navigate("/dashboard");
+      await registerUser(fullName, email, password);
+      await sendVerificationOTP(email);
+      setShowOTP(true);
     } catch (err) {
-      const message =
-        (err.response && err.response.data && err.response.data.message) ||
-        "Sign up failed. Try again.";
+      const status = err.response && err.response.status;
+      let message;
+    
+      if (status === 409 || status === 400) {
+        message = "An account with this email already exists.";
+      } else if (status === 429) {
+        message = "Too many attempts. Please wait a moment and try again.";
+      } else if (status >= 500) {
+        message = "We're having trouble. Please try again in a moment.";
+      } else if (!err.response) {
+        message = "Unable to connect. Please check your internet connection.";
+      } else {
+        message = "We couldn't create your account. Please try again.";
+      }
+    
       setErrors({ form: message });
     }
   }
@@ -58,7 +85,7 @@ function Signup() {
           label="Full Name*"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="e.g. Karan Grover"
+          placeholder="Enter your name"
           error={errors.fullName}
         />
         <AuthInput
@@ -66,7 +93,7 @@ function Signup() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="user@gmail.com"
+          placeholder="Enter your email"
           error={errors.email}
         />
         <AuthInput
@@ -74,9 +101,9 @@ function Signup() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
+          placeholder="Enter your password"
           error={errors.password}
-          hint="Password must be atleast 8 characters long."
+          hint="8-30 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character."
         />
         <AuthInput
           label="Confirm Password*"
@@ -87,17 +114,19 @@ function Signup() {
           error={errors.confirmPassword}
         />
 
+        <div className="h-5 mb-2">
         {errors.form && (
-          <p className="text-xs text-red-500 text-center mb-3">{errors.form}</p>
-        )}
+         <p className="text-xs text-red-500 text-center">{errors.form}</p>
+         )}
+        </div>
 
         <AuthButton>Create Account</AuthButton>
       </form>
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-blue-700 text-sm underline">
-          Log In
+        <Link to="/login" className="text-[#2563EB] text-sm font-medium underline">
+         Sign In
         </Link>
       </p>
     </AuthLayout>

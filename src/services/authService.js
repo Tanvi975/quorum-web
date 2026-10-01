@@ -33,3 +33,12 @@ export async function resetPassword(email, otp, newPassword) {
     });
     return res.data;
 }
+export async function sendVerificationOTP(email) {
+    const res = await api.post("/api/otp/send-verification", { email });
+    return res.data;
+}
+
+export async function verifyEmailOTP(email, otp) {
+    const res = await api.post("/api/otp/verify-email", { email, otp });
+    return res.data;
+}

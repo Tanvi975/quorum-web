@@ -49,11 +49,16 @@ function VerifyCode() {
       setError("");
       setInfo("A new code has been sent to your email.");
     } catch (err) {
+      const status = err.response && err.response.status;
       setInfo("");
-      setError(
-        (err.response && err.response.data && err.response.data.message) ||
-          "Could not resend the code"
-      );
+  
+      if (status === 429) {
+        setError("Please wait a moment before requesting another code.");
+      } else if (!err.response) {
+        setError("Unable to connect. Please check your internet connection.");
+      } else {
+        setError("We couldn't resend the code. Please try again.");
+      }
     }
   }
 
@@ -74,7 +79,7 @@ function VerifyCode() {
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
-              className="w-11 h-12 text-center rounded-xl bg-gray-100 border border-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-11 h-12 text-center rounded-xl bg-gray-100 border border-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
             />
           ))}
         </div>
@@ -85,7 +90,7 @@ function VerifyCode() {
           <button
             type="button"
             onClick={handleResend}
-            className="text-xs text-blue-700"
+            className="text-xs text-[#2563EB] font-medium underline"
           >
             Resend Code
           </button>
@@ -96,8 +101,8 @@ function VerifyCode() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-blue-700 font-medium underline">
-          Sign In
+        <Link to="/login" className="text-[#2563EB] font-medium underline">
+        Sign In
         </Link>
       </p>
     </AuthLayout>

@@ -21,6 +21,7 @@ function App() {
           <Route path="/sso" element={<SSO />} />
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/set-new-password" element={<SetNewPassword />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
           <Route
             path="/dashboard"
             element={
