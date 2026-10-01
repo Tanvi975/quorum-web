@@ -2,56 +2,107 @@ import { useState, useRef } from "react";
 import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../components/AuthButton";
-import { forgotPassword } from "../services/authService";
+import {
+  forgotPassword,
+  verifyEmailOTP,
+  sendVerificationOTP,
+} from "../services/authService";
 
 function VerifyCode() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+
   const inputRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state && location.state.email;
 
+  const email = location.state && location.state.email;
+  const from = location.state && location.state.from;
 
   if (!email) {
     return <Navigate to="/forgot-password" replace />;
   }
 
   function handleChange(index, value) {
-    if (value !== "" && isNaN(Number(value))) return;
+    if (value !== "" && !/^\d$/.test(value)) return;
+
     const updated = [...code];
     updated[index] = value;
     setCode(updated);
+    setError("");
+
     if (value && index < 5) {
-      inputRefs.current[index + 1].focus();
+      inputRefs.current[index + 1]?.focus();
     }
   }
 
   function handleKeyDown(index, e) {
     if (e.key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
+      inputRefs.current[index - 1]?.focus();
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (code.some((digit) => digit === "")) {
+
+    const otp = code.join("");
+
+    if (otp.length !== 6) {
       setError("Enter the complete 6-digit code");
       return;
     }
-    navigate("/set-new-password", { state: { email, otp: code.join("") } });
+
+    try {
+      if (from === "signup") {
+        // Signup OTP → verify email
+        await verifyEmailOTP(email, otp);
+
+        setInfo("Email verified successfully!");
+
+        // Abhi signup verification complete hai.
+        // Next step mein login/dashboard flow connect karenge.
+        navigate("/login");
+      } else {
+        // Forgot password OTP → directly password reset page
+        navigate("/set-new-password", {
+          state: {
+            email,
+            otp,
+          },
+        });
+      }
+    } catch (err) {
+      const status = err.response && err.response.status;
+
+      if (status === 400) {
+        setError("Invalid or expired verification code");
+      } else if (status === 429) {
+        setError("Too many attempts. Please wait a moment.");
+      } else if (!err.response) {
+        setError("Unable to connect. Please check your internet connection.");
+      } else {
+        setError("Verification failed. Please try again.");
+      }
+    }
   }
 
   async function handleResend() {
     try {
-      await forgotPassword(email);
+      if (from === "signup") {
+        await sendVerificationOTP(email);
+      } else {
+        await forgotPassword(email);
+      }
+
       setError("");
       setInfo("A new code has been sent to your email.");
+      setCode(["", "", "", "", "", ""]);
     } catch (err) {
       const status = err.response && err.response.status;
+
       setInfo("");
-  
+
       if (status === 429) {
         setError("Please wait a moment before requesting another code.");
       } else if (!err.response) {
@@ -65,7 +116,11 @@ function VerifyCode() {
   return (
     <AuthLayout
       title="Enter Verification Code"
-      subtitle="We have sent a recovery code to your email."
+      subtitle={
+        from === "signup"
+          ? "We have sent a verification code to your email."
+          : "We have sent a recovery code to your email."
+      }
     >
       <form onSubmit={handleSubmit}>
         <div className="flex justify-center gap-2 mb-1">
@@ -83,8 +138,18 @@ function VerifyCode() {
             />
           ))}
         </div>
-        {error && <p className="text-xs text-red-500 text-center mb-2">{error}</p>}
-        {info && <p className="text-xs text-green-700 text-center mb-2">{info}</p>}
+
+        {error && (
+          <p className="text-xs text-red-500 text-center mb-2">
+            {error}
+          </p>
+        )}
+
+        {info && (
+          <p className="text-xs text-green-700 text-center mb-2">
+            {info}
+          </p>
+        )}
 
         <div className="text-right mb-6">
           <button
@@ -101,8 +166,11 @@ function VerifyCode() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-[#2563EB] font-medium underline">
-        Sign In
+        <Link
+          to="/login"
+          className="text-[#2563EB] font-medium underline"
+        >
+          Sign In
         </Link>
       </p>
     </AuthLayout>

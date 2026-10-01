@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
@@ -12,68 +11,100 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
-  const [showOTP, setShowOTP] = useState(false);
-  const { login } = useAuth();
+
   const navigate = useNavigate();
 
   function validate() {
     const newErrors = {};
-  
+
     const nameRegex = /^[A-Za-z ]{2,20}$/;
-    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,30}$/;
-  
+    const emailRegex =
+      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,30}$/;
+
     if (!fullName) {
       newErrors.fullName = "Full name is required";
     } else if (!nameRegex.test(fullName)) {
-      newErrors.fullName = "Only letters and spaces allowed (2-20 characters)";
+      newErrors.fullName =
+        "Only letters and spaces allowed (2-20 characters)";
     }
-  
+
     if (!email) {
       newErrors.email = "Email is required";
     } else if (!emailRegex.test(email)) {
       newErrors.email = "Enter a valid email";
     }
-  
+
     if (!password) {
       newErrors.password = "Password is required";
     } else if (!passwordRegex.test(password)) {
       newErrors.password =
         "8-30 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character, no spaces";
     }
-  
-    if (confirmPassword !== password) {
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (confirmPassword !== password) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-  
+
     setErrors(newErrors);
+
     return Object.keys(newErrors).length === 0;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     if (!validate()) return;
 
     try {
-      await registerUser(fullName, email, password);
+      const registerResponse = await registerUser(
+        fullName,
+        email,
+        password
+      );
+      
+      const authData = registerResponse.data;
+      
+      localStorage.setItem("accessToken", authData.accessToken);
+      localStorage.setItem("refreshToken", authData.refreshToken);
+      
+      // 2. Send email verification OTP
       await sendVerificationOTP(email);
-      setShowOTP(true);
+
+      // 3. Go to OTP page
+      navigate("/verify-code", {
+        state: {
+          email,
+          from: "signup",
+          authData,
+        },
+      });
     } catch (err) {
       const status = err.response && err.response.status;
+
       let message;
-    
-      if (status === 409 || status === 400) {
+
+      if (status === 409) {
         message = "An account with this email already exists.";
+      } else if (status === 400) {
+        message = "Please check your details and try again.";
       } else if (status === 429) {
-        message = "Too many attempts. Please wait a moment and try again.";
+        message =
+          "Too many attempts. Please wait a moment and try again.";
       } else if (status >= 500) {
-        message = "We're having trouble. Please try again in a moment.";
+        message =
+          "We're having trouble. Please try again in a moment.";
       } else if (!err.response) {
-        message = "Unable to connect. Please check your internet connection.";
+        message =
+          "Unable to connect. Please check your internet connection.";
       } else {
-        message = "We couldn't create your account. Please try again.";
+        message =
+          "We couldn't create your account. Please try again.";
       }
-    
+
       setErrors({ form: message });
     }
   }
@@ -88,6 +119,7 @@ function Signup() {
           placeholder="Enter your name"
           error={errors.fullName}
         />
+
         <AuthInput
           label="Email*"
           type="email"
@@ -96,6 +128,7 @@ function Signup() {
           placeholder="Enter your email"
           error={errors.email}
         />
+
         <AuthInput
           label="Password*"
           type="password"
@@ -105,6 +138,7 @@ function Signup() {
           error={errors.password}
           hint="8-30 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character."
         />
+
         <AuthInput
           label="Confirm Password*"
           type="password"
@@ -115,9 +149,11 @@ function Signup() {
         />
 
         <div className="h-5 mb-2">
-        {errors.form && (
-         <p className="text-xs text-red-500 text-center">{errors.form}</p>
-         )}
+          {errors.form && (
+            <p className="text-xs text-red-500 text-center">
+              {errors.form}
+            </p>
+          )}
         </div>
 
         <AuthButton>Create Account</AuthButton>
@@ -125,8 +161,11 @@ function Signup() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-[#2563EB] text-sm font-medium underline">
-         Sign In
+        <Link
+          to="/login"
+          className="text-[#2563EB] text-sm font-medium underline"
+        >
+          Sign In
         </Link>
       </p>
     </AuthLayout>
