@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../components/AuthButton";
+import illustration1 from "../assets/team-illustration-1.svg";
 import {
   forgotPassword,
   verifyEmailOTP,
@@ -128,14 +129,18 @@ function VerifyCode() {
   }
 
   return (
+   
     <AuthLayout
-      title="Enter Verification Code"
-      subtitle={
-        from === "signup"
-          ? "We have sent a verification code to your email."
-          : "We have sent a recovery code to your email."
-      }
-    >
+  title="Enter Verification Code"
+  subtitle={
+    from === "signup"
+      ? "We have sent a verification code to your email."
+      : "We have sent a recovery code to your email."
+  }
+  leftTitle="Crystal-Clear Syncs for Modern Teams"
+  leftSubtitle="Built for fast team check-ins."
+  leftImage={illustration1}
+>
       <form onSubmit={handleSubmit}>
         <div className="flex justify-center gap-2 mb-1">
           {code.map((digit, index) => (

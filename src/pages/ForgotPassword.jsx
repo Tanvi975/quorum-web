@@ -4,6 +4,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { forgotPassword } from "../services/authService";
+import illustration3 from "../assets/team-illustration-3.svg";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -42,9 +43,12 @@ function ForgotPassword() {
 
   return (
     <AuthLayout
-      title="Reset Password"
-      subtitle="Enter your registered email and we'll send a recovery code."
-    >
+    title="Reset Password"
+    subtitle="Enter your registered email and we'll send a recovery code."
+    leftTitle="Architecting Seamless Global Alignment"
+    leftSubtitle="Connected video spaces designed to bridge teams everywhere."
+    leftImage={illustration3}
+  >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Email*"

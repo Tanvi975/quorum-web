@@ -5,6 +5,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { loginUser } from "../services/authService";
+import illustration1 from "../assets/team-illustration-1.svg";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -62,7 +63,13 @@ function Login() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign into your account">
+    <AuthLayout
+  title="Welcome back"
+  subtitle="Sign into your account"
+  leftTitle="Crystal-Clear Syncs for Modern Teams"
+  leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
+  leftImage={illustration1}
+>
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Email*"

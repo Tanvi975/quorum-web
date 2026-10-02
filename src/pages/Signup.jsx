@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
+import illustration2 from "../assets/team-illustration-2.svg";
 import { registerUser, sendVerificationOTP } from "../services/authService";
 
 function Signup() {
@@ -110,7 +111,13 @@ function Signup() {
   }
 
   return (
-    <AuthLayout title="Create Account" subtitle="Get Started">
+    <AuthLayout
+    title="Create Account"
+    subtitle="Get Started"
+    leftTitle="Turn Complex Discussions into Action"
+    leftSubtitle="Integrated whiteboards and live agendas to keep projects moving forward."
+    leftImage={illustration2}
+  >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Full Name*"

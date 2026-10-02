@@ -4,6 +4,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { resetPassword } from "../services/authService";
+import illustration3 from "../assets/team-illustration-3.svg";
 
 function SetNewPassword() {
   const [password, setPassword] = useState("");
@@ -65,9 +66,12 @@ function SetNewPassword() {
 
   return (
     <AuthLayout
-      title="Set New Password"
-      subtitle="Your new password must be different from previous ones."
-    >
+    title="Set New Password"
+    subtitle="Your new password must be different from previous ones."
+    leftTitle="Architecting Seamless Global Alignment"
+    leftSubtitle="Connected video spaces designed to bridge teams everywhere."
+    leftImage={illustration3}
+  >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Enter Password*"

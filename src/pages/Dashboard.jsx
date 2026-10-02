@@ -24,9 +24,7 @@ function Dashboard() {
         <p className="text-gray-600 mb-1">
           Welcome, {user ? user.name : "User"}
         </p>
-        <p className="text-sm text-gray-400 mb-6">
-          {user ? user.email : ""}
-        </p>
+        
         <button
           onClick={handleLogout}
           className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-md"

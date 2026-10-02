@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
+import illustration1 from "../assets/team-illustration-1.svg";
 
 function SSO() {
   const [orgId, setOrgId] = useState("");
@@ -21,9 +22,12 @@ function SSO() {
 
   return (
     <AuthLayout
-      title="Single Sign-On (SSO)"
-      subtitle="Enter your Organization ID or Work Email to proceed."
-    >
+    title="Single Sign-On (SSO)"
+    subtitle="Enter your Organization ID or Work Email to proceed."
+    leftTitle="Crystal-Clear Syncs for Modern Teams"
+    leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
+    leftImage={illustration1}
+  >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Organization ID or Work Email*"
