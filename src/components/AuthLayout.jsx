@@ -16,19 +16,19 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
 
         <div className="w-full max-w-5xl md:min-h-[80vh] flex flex-col md:flex-row items-center rounded-2xl border border-white/30 bg-white/25 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-6 md:p-10 gap-8">
-          <div className="hidden md:flex flex-col items-center justify-center text-white flex-1 text-center">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-6">
-              {leftTitle}
-            </h1>
-            <img
-              src={leftImage}
-              alt="Team collaboration"
-              className="w-full max-w-[360px] object-contain"
-            />
-           <p className="text-sm lg:text-base font-medium mt-6 max-w-md" style={{ color: "#07090D" }}>
-          {leftSubtitle}
-            </p>
-          </div>
+        <div className="hidden md:flex flex-col items-center justify-center text-white flex-1 text-center">
+  <h1 className="text-2xl lg:text-3xl font-bold mb-6">
+    {leftTitle}
+  </h1>
+  <img
+    src={leftImage}
+    alt="Team collaboration"
+    className="w-full max-w-[360px] object-contain mb-6"
+  />
+  <p className="text-sm lg:text-base font-medium max-w-md" style={{ color: "#07090D" }}>
+    {leftSubtitle}
+  </p>
+</div>
           <div className="w-full max-w-sm rounded-xl border border-[#D7D7D7]/25 bg-[#F7F6F2] shadow-[0_8px_24px_-4px_rgba(37,99,235,0.15)] p-8">
           <h2
           className="text-2xl font-bold text-center mb-1"
@@ -42,8 +42,11 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
 >
   {title}
 </h2>
-<div className="mb-6" />
-
+{subtitle && (
+  <p className="text-sm text-gray-500 text-center mt-2 mb-6">
+    {subtitle}
+  </p>
+)}
             {children}
 
           </div>
