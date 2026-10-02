@@ -136,15 +136,21 @@ function Signup() {
           error={errors.email}
         />
 
-        <AuthInput
-          label="Password*"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          error={errors.password}
-          hint="8-30 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character."
-        />
+<AuthInput
+  label="Password*"
+  type="password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  placeholder="E2gv_86q@r"
+  error={errors.password}
+  checklist={[
+    { label: "8-30 characters", test: (v) => v.length >= 8 && v.length <= 30 },
+    { label: "No spaces", test: (v) => v.length > 0 && !/\s/.test(v) },
+    { label: "1 uppercase & 1 lowercase letter", test: (v) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
+    { label: "1 number", test: (v) => /\d/.test(v) },
+    { label: "1 special character", test: (v) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(v) },
+  ]}
+/>
 
         <AuthInput
           label="Confirm Password*"

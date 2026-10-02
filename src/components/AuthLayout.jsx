@@ -23,7 +23,7 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
             <img
               src={leftImage}
               alt="Team collaboration"
-              className="w-full max-w-md object-contain"
+              className="w-full max-w-[360px] object-contain"
             />
            <p className="text-sm lg:text-base font-medium mt-6 max-w-md" style={{ color: "#07090D" }}>
           {leftSubtitle}
@@ -42,11 +42,7 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
 >
   {title}
 </h2>
-           {subtitle && (
-           <p className="text-sm text-gray-500 text-center mt-2 mb-4">
-            {subtitle}
-           </p>
-            )}
+<div className="mb-6" />
 
             {children}
 
