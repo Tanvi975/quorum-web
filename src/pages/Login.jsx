@@ -18,7 +18,7 @@ function Login() {
   function validate() {
     const newErrors = {};
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-  
+
     if (!email) {
       newErrors.email = "Email is required";
     } else if (!emailRegex.test(email)) {
@@ -43,7 +43,7 @@ function Login() {
     } catch (err) {
       const status = err.response && err.response.status;
       let message;
-    
+
       if (status === 400 || status === 401) {
         message = "The email or password you entered is incorrect.";
       } else if (status === 404) {
@@ -57,59 +57,67 @@ function Login() {
       } else {
         message = "We couldn't sign you in. Please try again.";
       }
-    
+
       setErrors({ form: message });
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
     <AuthLayout
-  title="Welcome back"
-  subtitle="Sign into your account"
-  leftTitle="Crystal-Clear Syncs for Modern Teams"
-  leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
-  leftImage={illustration1}
->
+      title="Welcome back"
+      subtitle="Sign into your account"
+      leftTitle="Crystal-Clear Syncs for Modern Teams"
+      leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
+      leftImage={illustration1}
+    >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
           label="Email*"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setLoading(false);
+          }}
           placeholder="Enter your email"
           error={errors.email}
         />
- <AuthInput
-  label="Password*"
-  type="password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  placeholder="Enter your password"
-  error={errors.password}
-  belowRight={
-    <Link
-      to="/forgot-password"
-      className="text-[#2563EB] text-xs font-medium underline whitespace-nowrap"
-    >
-      Forgot password?
-    </Link>
-  }
-/>
-<div className="min-h-5 mt-2 mb-4 flex items-center justify-center">
-  {errors.form && (
-    <p className="text-xs text-red-500 text-center">{errors.form}</p>
-  )}
-</div>
-<AuthButton disabled={loading}>
-  {loading ? "Signing In..." : "Sign In"}
-</AuthButton>
+        <AuthInput
+          label="Password*"
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setLoading(false);
+          }}
+          placeholder="Enter your password"
+          error={errors.password}
+          belowRight={
+            <Link
+              to="/forgot-password"
+              className="text-[#2563EB] text-xs font-medium underline whitespace-nowrap"
+            >
+              Forgot password?
+            </Link>
+          }
+        />
+        <div className="min-h-5 mt-2 mb-4 flex items-center justify-center">
+          {errors.form && (
+            <p className="text-xs text-red-500 text-center">{errors.form}</p>
+          )}
+        </div>
+        <AuthButton disabled={loading}>
+          {loading ? "Signing In..." : "Sign In"}
+        </AuthButton>
       </form>
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Don't have an account?{" "}
         <Link to="/signup" className="text-[#2563EB] text-sm font-medium underline">
-        Sign Up
-       </Link>
+          Sign Up
+        </Link>
       </p>
     </AuthLayout>
   );
