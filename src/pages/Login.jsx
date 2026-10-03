@@ -69,7 +69,7 @@ function Login() {
       title="Welcome back"
       subtitle="Sign into your account"
       leftTitle="Crystal-Clear Syncs for Modern Teams"
-      leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
+      leftSubtitle="Built for fast team check-ins."
       leftImage={illustration1}
     >
       <form onSubmit={handleSubmit} noValidate>

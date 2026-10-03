@@ -62,3 +62,7 @@
     animation-timing-function: ease-in-out, linear;
     animation-iteration-count: infinite, infinite;
 }
+
+body {
+    font-family: "Inter", sans-serif;
+}
