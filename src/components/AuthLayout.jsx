@@ -1,8 +1,11 @@
 import authBg1 from "../assets/auth-bg-1.png";
 import authBg2 from "../assets/auth-bg-2.png";
 import authBg3 from "../assets/auth-bg-3.png";
+import { useNavigate } from "react-router-dom";
+import { FiArrowLeft } from "react-icons/fi";
 
-function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, children }) {
+function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, children, showBack = true }) {
+  const navigate = useNavigate();
   return (
     <div
       className="relative min-h-screen overflow-hidden"
@@ -29,7 +32,18 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
     {leftSubtitle}
   </p>
 </div>
-          <div className="w-full max-w-sm rounded-xl border border-[#D7D7D7]/25 bg-[#F7F6F2] shadow-[0_8px_24px_-4px_rgba(37,99,235,0.15)] p-8">
+<div className="w-full max-w-sm rounded-xl border border-[#D7D7D7]/25 bg-[#F7F6F2] shadow-[0_8px_24px_-4px_rgba(37,99,235,0.15)] p-8 relative">
+{showBack && (
+  <button
+    type="button"
+    onClick={() => navigate(-1)}
+    aria-label="Go back"
+    className="absolute left-6 top-6 text-gray-500 hover:text-[#2563EB] transition"
+  >
+    <FiArrowLeft size={20} />
+  </button>
+)}
+
           <h2
           className="text-2xl font-bold text-center mb-1"
           style={{

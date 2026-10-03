@@ -71,6 +71,7 @@ function Login() {
       leftTitle="Crystal-Clear Syncs for Modern Teams"
       leftSubtitle="Built for fast team check-ins."
       leftImage={illustration1}
+      showBack={false}
     >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
