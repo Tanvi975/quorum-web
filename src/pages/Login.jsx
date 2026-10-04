@@ -39,7 +39,7 @@ function Login() {
     try {
       const res = await loginUser(email, password);
       login(res.data.user, res.data.accessToken);
-      navigate("/dashboard");
+      navigate("/onboarding/step-1");
     } catch (err) {
       const status = err.response?.status;
       const message = err.response?.data?.message;
