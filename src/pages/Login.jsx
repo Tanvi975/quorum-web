@@ -42,12 +42,12 @@ function Login() {
       navigate("/onboarding/step-1");
     } catch (err) {
       const status = err.response?.status;
-      const message = err.response?.data?.message;
+      const backendMessage = err.response?.data?.message;
     
       if (
         status === 403 &&
-        message ===
-          "Email not verified. A fresh verification code has been sent to your email."
+        backendMessage ===
+        "Email not verified. A fresh verification code has been sent to your email."
       ) {
         navigate("/verify-code", {
           state: {
