@@ -43,10 +43,10 @@ function Login() {
     } catch (err) {
       const status = err.response && err.response.status;
     
-      if (status === 403) {
-        navigate("/verify-code", { state: { email, from: "signup" } });
-        return;
-      }
+      // if (status === 403) {
+      //   navigate("/verify-code", { state: { email, from: "signup" } });
+      //   return;
+      // }
     
       let message;
     
