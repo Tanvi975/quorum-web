@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import SSO from "./pages/SSO";
 import VerifyCode from "./pages/VerifyCode";
 import SetNewPassword from "./pages/SetNewPassword";
+import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
+import OnboardingStep2 from "./pages/onboarding/OnboardingStep2";
+import OnboardingStep3 from "./pages/onboarding/OnboardingStep3";
 
 function App() {
   return (
@@ -21,15 +24,13 @@ function App() {
           <Route path="/sso" element={<SSO />} />
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/set-new-password" element={<SetNewPassword />} />
-          {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
+<Route path="/onboarding/step-2" element={<OnboardingStep2 />} />
+<Route path="/onboarding/step-3" element={<OnboardingStep3 />} />
+          {/* <Route path="/onboarding/step-1" element={<ProtectedRoute><OnboardingStep1 /></ProtectedRoute>} />
+          <Route path="/onboarding/step-2" element={<ProtectedRoute><OnboardingStep2 /></ProtectedRoute>} />
+          <Route path="/onboarding/step-3" element={<ProtectedRoute><OnboardingStep3 /></ProtectedRoute>} /> */}
         </Routes>
       </BrowserRouter>
     </AuthProvider>

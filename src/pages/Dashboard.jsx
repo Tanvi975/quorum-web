@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { logoutUser } from "../services/authService";
+import DashboardBackground from "../components/DashboardBackground";
 
 function Dashboard() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   async function handleLogout() {
-    const refreshToken = localStorage.getItem("refreshToken");
     try {
-      await logoutUser(refreshToken);
+      await logoutUser();
     } catch (err) {
       console.log("logout request failed");
     }
@@ -18,16 +18,13 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
-        <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
-        <p className="text-gray-600 mb-1">
-          Welcome, {user ? user.name : "User"}
-        </p>
-        
+    <div className="relative" style={{ minHeight: "3331px" }}>
+      <DashboardBackground />
+      <div className="relative z-10 flex flex-col items-center pt-32 p-4">
+        <h1 className="text-2xl font-bold text-white mb-6">Welcome!</h1>
         <button
           onClick={handleLogout}
-          className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-md"
+          className="bg-[#0068FF] hover:opacity-90 transition text-white text-sm font-medium px-6 py-2.5 rounded-xl"
         >
           Logout
         </button>

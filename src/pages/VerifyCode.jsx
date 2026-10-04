@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../components/AuthButton";
 import illustration1 from "../assets/team-illustration-1.svg";
+import { useAuth } from "../context/AuthContext";
 import {
   forgotPassword,
   verifyEmailOTP,
@@ -13,6 +14,7 @@ function VerifyCode() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const { login } = useAuth();
 
   const inputRefs = useRef([]);
   const navigate = useNavigate();
@@ -72,12 +74,12 @@ function VerifyCode() {
 
     try {
       if (from === "signup") {
-
-        await verifyEmailOTP(email, otp);
-
-        setInfo("Email verified successfully!");
-
-        navigate("/login");
+    
+        const res = await verifyEmailOTP(email, otp);
+    
+        login(res.data.user, res.data.accessToken);
+    
+        navigate("/dashboard");
       } else {
 
         navigate("/set-new-password", {

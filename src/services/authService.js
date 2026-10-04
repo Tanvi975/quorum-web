@@ -15,8 +15,18 @@ export async function getCurrentUser() {
     return res.data;
 }
 
-export async function logoutUser(refreshToken) {
-    const res = await api.post("/api/auth/logout", { refreshToken });
+export async function logoutUser() {
+    const res = await api.post("/api/auth/logout");
+    return res.data;
+}
+
+export async function sendVerificationOTP(email) {
+    const res = await api.post("/api/otp/send-verification", { email });
+    return res.data;
+}
+
+export async function verifyEmailOTP(email, otp) {
+    const res = await api.post("/api/otp/verify-email", { email, otp });
     return res.data;
 }
 
@@ -31,14 +41,5 @@ export async function resetPassword(email, otp, newPassword) {
         otp,
         newPassword,
     });
-    return res.data;
-}
-export async function sendVerificationOTP(email) {
-    const res = await api.post("/api/otp/send-verification", { email });
-    return res.data;
-}
-
-export async function verifyEmailOTP(email, otp) {
-    const res = await api.post("/api/otp/verify-email", { email, otp });
     return res.data;
 }

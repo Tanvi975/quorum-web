@@ -38,12 +38,18 @@ function Login() {
     setLoading(true);
     try {
       const res = await loginUser(email, password);
-      login(res.data.user, res.data.accessToken, res.data.refreshToken);
+      login(res.data.user, res.data.accessToken);
       navigate("/dashboard");
     } catch (err) {
       const status = err.response && err.response.status;
+    
+      if (status === 403) {
+        navigate("/verify-code", { state: { email, from: "signup" } });
+        return;
+      }
+    
       let message;
-
+    
       if (status === 400 || status === 401) {
         message = "The email or password you entered is incorrect.";
       } else if (status === 404) {
