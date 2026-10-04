@@ -11,8 +11,15 @@ import SetNewPassword from "./pages/SetNewPassword";
 import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
 import OnboardingStep2 from "./pages/onboarding/OnboardingStep2";
 import OnboardingStep3 from "./pages/onboarding/OnboardingStep3";
+import { useEffect } from "react";
+import api from "./services/api";
 
 function App() {
+  useEffect(() => {
+    api.get("/api/csrf-token")
+      .then(() => console.log("CSRF initialized"))
+      .catch((err) => console.error("CSRF initialization failed", err));
+  }, []);
   return (
     <AuthProvider>
       <BrowserRouter>
