@@ -53,7 +53,6 @@ function Login() {
           state: {
             email,
             from: "signup",
-            message,
           },
         });
         return;
@@ -62,17 +61,17 @@ function Login() {
       let errorMessage;
     
       if (status === 400 || status === 401) {
-        message = "The email or password you entered is incorrect.";
+        errorMessage = "The email or password you entered is incorrect.";
       } else if (status === 404) {
-        message = "We couldn't find an account with that email.";
+        errorMessagee = "We couldn't find an account with that email.";
       } else if (status === 429) {
-        message = "Too many login attempts. Please wait a moment and try again.";
+        errorMessage = "Too many login attempts. Please wait a moment and try again.";
       } else if (status >= 500) {
-        message = "We're having trouble. Please try again in a moment.";
+        errorMessage = "We're having trouble. Please try again in a moment.";
       } else if (!err.response) {
-        message = "Unable to connect. Please check your internet connection.";
+        errorMessage = "Unable to connect. Please check your internet connection.";
       } else {
-        message = "We couldn't sign you in. Please try again.";
+        errorMessage = "We couldn't sign you in. Please try again.";
       }
 
       setErrors({ form: message });
