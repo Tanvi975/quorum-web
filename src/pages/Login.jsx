@@ -41,14 +41,25 @@ function Login() {
       login(res.data.user, res.data.accessToken);
       navigate("/dashboard");
     } catch (err) {
-      const status = err.response && err.response.status;
+      const status = err.response?.status;
+      const message = err.response?.data?.message;
     
-      // if (status === 403) {
-      //   navigate("/verify-code", { state: { email, from: "signup" } });
-      //   return;
-      // }
+      if (
+        status === 403 &&
+        message ===
+          "Email not verified. A fresh verification code has been sent to your email."
+      ) {
+        navigate("/verify-code", {
+          state: {
+            email,
+            from: "signup",
+            message,
+          },
+        });
+        return;
+      }
     
-      let message;
+      let errorMessage;
     
       if (status === 400 || status === 401) {
         message = "The email or password you entered is incorrect.";
