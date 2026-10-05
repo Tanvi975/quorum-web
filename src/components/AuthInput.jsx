@@ -42,7 +42,7 @@ function AuthInput({
           </button>
         )}
 
-     {/* Live requirements tooltip - only while focused */}
+    
 {checklist && focused && (
   <div className="absolute left-0 top-full mt-2 z-20 w-full">
     <div className="absolute -top-1.5 left-5 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45" />
