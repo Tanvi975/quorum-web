@@ -83,7 +83,6 @@ function Login() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign into your account"
       leftTitle="Crystal-Clear Syncs for Modern Teams"
       leftSubtitle="Built for fast team check-ins."
       leftImage={illustration1}

@@ -45,7 +45,7 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
 )}
 
           <h2
-          className="text-2xl font-bold text-center mb-1"
+         className="text-2xl font-bold text-center mb-6"
           style={{
           backgroundImage: "linear-gradient(to bottom, #0F172A, #2563EB)",
           WebkitBackgroundClip: "text",
@@ -53,14 +53,9 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
           WebkitTextFillColor: "transparent",
           color: "transparent",
           }}
->
-  {title}
-</h2>
-{subtitle && (
-  <p className="text-sm text-gray-500 text-center mt-2 mb-6">
-    {subtitle}
-  </p>
-)}
+           >
+            {title}
+           </h2>
             {children}
 
           </div>

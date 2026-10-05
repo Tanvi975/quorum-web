@@ -90,7 +90,6 @@ function Signup() {
   return (
     <AuthLayout
       title="Create Account"
-      subtitle="Get Started"
       leftTitle="Turn Complex Discussions into Action"
       leftSubtitle="Integrated whiteboards and live agendas to keep projects moving forward."
       leftImage={illustration2}

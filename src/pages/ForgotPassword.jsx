@@ -44,7 +44,6 @@ function ForgotPassword() {
   return (
     <AuthLayout
     title="Reset Password"
-    subtitle="Enter your registered email and we'll send a recovery code."
     leftTitle="Architecting Seamless Global Alignment"
     leftSubtitle="Connected video spaces designed to bridge teams everywhere."
     leftImage={illustration3}
