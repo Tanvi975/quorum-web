@@ -28,7 +28,7 @@ function AuthLayout({ title, subtitle, leftTitle, leftSubtitle, leftImage, child
     alt="Team collaboration"
     className="w-full max-w-[360px] object-contain mb-6"
   />
-  <p className="text-sm lg:text-base font-medium max-w-md" style={{ color: "#07090D" }}>
+  <p className="text-sm lg:text-base font-medium max-w-md" style={{ color: "#FFFFFF" }}>
     {leftSubtitle}
   </p>
 </div>
