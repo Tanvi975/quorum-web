@@ -51,7 +51,7 @@ function ForgotPassword() {
   >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
-          label="Email*"
+          label="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}

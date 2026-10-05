@@ -74,7 +74,7 @@ function SetNewPassword() {
   >
       <form onSubmit={handleSubmit} noValidate>
       <AuthInput
-  label="Enter Password*"
+  label="Enter Password"
   type="password"
   value={password}
   onChange={(e) => setPassword(e.target.value)}
@@ -89,7 +89,7 @@ function SetNewPassword() {
   ]}
 />
         <AuthInput
-          label="Confirm Password*"
+          label="Confirm Password"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}

@@ -91,7 +91,7 @@ function Login() {
     >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
-          label="Email*"
+          label="Email"
           type="email"
           value={email}
           onChange={(e) => {
@@ -102,7 +102,7 @@ function Login() {
           error={errors.email}
         />
         <AuthInput
-          label="Password*"
+          label="Password"
           type="password"
           value={password}
           onChange={(e) => {

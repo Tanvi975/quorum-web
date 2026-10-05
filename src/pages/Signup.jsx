@@ -97,7 +97,7 @@ function Signup() {
     >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
-          label="Full Name*"
+          label="Full Name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           placeholder="Enter your name"
@@ -105,7 +105,7 @@ function Signup() {
         />
 
         <AuthInput
-          label="Email*"
+          label="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -114,7 +114,7 @@ function Signup() {
         />
 
         <AuthInput
-          label="Password*"
+          label="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -130,7 +130,7 @@ function Signup() {
         />
 
         <AuthInput
-          label="Confirm Password*"
+          label="Confirm Password"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
