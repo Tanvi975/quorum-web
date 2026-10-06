@@ -2,64 +2,102 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import OptionCard from "../../components/OptionCard";
-import { FiBriefcase, FiLink } from "react-icons/fi";
+import { saveOnboarding } from "../../services/onboardingService";
 
-function OnboardingStep1() {
+function OnboardingStep3() {
+  const [selected, setSelected] = useState([]);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  function handleAdminSetup() {
+  function toggle(key) {
+    setSelected((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
     setError("");
-    navigate("/onboarding/step-2");
   }
 
-  function handleMemberInvite() {
-    setError("Member invite isn't available yet. Please choose Admin Setup for now.");
+  async function handleSubmit() {
+    if (selected.length === 0) {
+      setError("Please select at least one option to continue.");
+      return;
+    }
+  
+    try {
+      setError("");
+  
+      await saveOnboarding(selected);
+  
+      navigate("/onboarding/step-2");
+    } catch (error) {
+      console.error("Onboarding failed:", error);
+  
+      if (error.response?.status === 401) {
+        setError("Your session has expired. Please login again.");
+      } else if (error.response?.status === 403) {
+        setError("Please verify your email before continuing.");
+      } else {
+        setError(
+          error.response?.data?.message ||
+          "Unable to save your preferences. Please try again."
+        );
+      }
+    }
   }
+
+  const roles = [
+    {
+      key: "ORGANIZATION",
+      title: "Work at an organization",
+      description: "Internal team meetings, 1-on-1s, and department syncs.",
+    },
+    {
+      key: "FREELANCE",
+      title: "Freelancing or consulting",
+      description: "Client reviews, project updates, and discussions.",
+    },
+    {
+      key: "HIRE_COLLABORATE",
+      title: "Collaborate across teams",
+      description: "Cross-functional hubs and open meeting spaces.",
+    },
+    {
+      key: "COMMUNITY",
+      title: "Communities",
+      description: "Large group webinars, town halls, and stage events.",
+    },
+  ];
 
   return (
-    <OnboardingLayout stepLabel="Step 1 of 3">
-      <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Welcome to Quorum</h1>
-      <p className="text-xs sm:text-sm text-white/70 mb-4 sm:mb-5">
-        How would you like to set up your collaborative workspace today?
+    <OnboardingLayout stepLabel="Step 3 of 3">
+      <h1 className="text-2xl font-bold text-white mb-1">Build your team & define your role</h1>
+      <p className="text-sm text-white/70 mb-5">
+        Select how you'll be using Quorum and invite collaborators to your workspace.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        <OptionCard
-          icon={<FiBriefcase size={18} />}
-          badge="ADMIN SETUP"
-          title="Create an Organization"
-          description="Set up a new workspace for your company, configure security controls, and invite your team members."
-          button={
-            <button
-              onClick={handleAdminSetup}
-              className="w-full text-white text-sm font-medium py-2 rounded-lg mt-2"
-              style={{ backgroundImage: "linear-gradient(to right, #0068FF, #003D99)" }}
-            >
-              Admin Setup
-            </button>
-          }
-        />
-        <OptionCard
-          icon={<FiLink size={18} />}
-          badge="MEMBER INVITE"
-          title="Join an Organization"
-          description="Enter an invite code or security key provided by your workspace admin to access your team."
-          button={
-            <button
-              onClick={handleMemberInvite}
-              className="w-full text-white text-sm font-medium py-2 rounded-lg mt-2"
-              style={{ backgroundImage: "linear-gradient(to right, #0068FF, #003D99)" }}
-            >
-              Member Invite
-            </button>
-          }
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+        {roles.map((role) => (
+          <OptionCard
+            key={role.key}
+            horizontal
+            title={role.title}
+            description={role.description}
+            selected={selected.includes(role.key)}
+            onClick={() => toggle(role.key)}
+          />
+        ))}
       </div>
 
-      <p className="text-xs text-red-400 min-h-[18px] mt-3">{error}</p>
+      <p className="text-xs text-red-400 min-h-[16px] mb-3">{error}</p>
+
+      <button
+        onClick={handleSubmit}
+        className="w-full text-white text-sm font-medium py-2.5 rounded-lg"
+        style={{ backgroundImage: "linear-gradient(to right, #0068FF, #003D99)" }}
+      >
+        Complete Setup & Launch Dashboard
+      </button>
     </OnboardingLayout>
   );
 }
 
-export default OnboardingStep1;
+export default OnboardingStep3;
