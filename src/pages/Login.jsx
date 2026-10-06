@@ -74,7 +74,7 @@ function Login() {
         errorMessage = "We couldn't sign you in. Please try again.";
       }
 
-      setErrors({ form: message });
+      setErrors({ form:errorMessage });
     } finally {
       setLoading(false);
     }
