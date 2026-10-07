@@ -39,7 +39,11 @@ function Login() {
     try {
       const res = await loginUser(email, password);
       login(res.data.user, res.data.accessToken);
-      navigate("/onboarding/step-1");
+      if (res.data.user.isOnboarded) {
+      navigate("/dashboard");
+      } else {
+       navigate("/onboarding/step-1");
+      }
     } catch (err) {
       const status = err.response?.status;
       const backendMessage = err.response?.data?.message;
@@ -63,7 +67,7 @@ function Login() {
       if (status === 400 || status === 401) {
         errorMessage = "The email or password you entered is incorrect.";
       } else if (status === 404) {
-        errorMessagee = "We couldn't find an account with that email.";
+        errorMessage = "We couldn't find an account with that email.";
       } else if (status === 429) {
         errorMessage = "Too many login attempts. Please wait a moment and try again.";
       } else if (status >= 500) {

@@ -27,7 +27,7 @@ function OnboardingStep3() {
   
       await saveOnboarding(selected);
   
-      navigate("/onboarding/step-2");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Onboarding failed:", error);
   

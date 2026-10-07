@@ -1,8 +1,11 @@
 import { useAuth } from "../context/AuthContext";
 import DashboardBackground from "../components/DashboardBackground";
+import {FiHome, FiCalendar, FiBookmark, FiUsers} from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const userName = user?.name || "Karan";
 
@@ -75,90 +78,61 @@ function Dashboard() {
           >
             <div className="flex flex-col items-center pt-7 gap-6">
 
-              <button
-                className="
-                  w-[42px]
-                  h-[42px]
-                  rounded-xl
-                  bg-white/15
-                  text-white
-                  flex
-                  items-center
-                  justify-center
-                "
+            <button
+             className="
+              w-[42px]
+              h-[42px]
+              rounded-xl
+              bg-white/15
+              text-white
+              flex
+              items-center
+              justify-center "
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"
-                  />
-                </svg>
-              </button>
-              <button
-                className="
-                  w-[42px]
-                  h-[42px]
-                  rounded-xl
-                  text-white/60
-                  hover:bg-white/10
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <rect
-                    x="3"
-                    y="5"
-                    width="18"
-                    height="16"
-                    rx="2"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M16 3v4M8 3v4M3 10h18"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
+             <FiHome className="w-5 h-5" />
+             </button>
+             <button
+             className="
+              w-[42px]
+              h-[42px]
+              rounded-xl
+              text-white/60
+              hover:bg-white/10
+              flex
+              items-center
+              justify-center "
+            >
+           <FiCalendar className="w-5 h-5" />
+          </button>
 
-              <button
-                className="
-                  w-[42px]
-                  h-[42px]
-                  rounded-xl
-                  text-white/60
-                  hover:bg-white/10
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M6 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18l-6-4-6 4V4Z"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </button>
+             <button
+            className="
+             w-[42px]
+             h-[42px]
+             rounded-xl
+             text-white/60
+             hover:bg-white/10
+             flex
+             items-center
+             justify-center"
+            >
+           <FiBookmark className="w-5 h-5" />
+           </button>
+
+          <button
+           onClick={() => navigate("/organization")}
+          className="
+           w-[42px]
+           h-[42px]
+           rounded-xl
+           text-white/60
+           hover:bg-white/10
+           flex
+           items-center
+           justify-center "
+          >
+         <FiUsers className="w-5 h-5" />
+         </button>
 
             </div>
           </aside>

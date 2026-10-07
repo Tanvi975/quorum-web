@@ -9,11 +9,11 @@ import SSO from "./pages/SSO";
 import VerifyCode from "./pages/VerifyCode";
 import SetNewPassword from "./pages/SetNewPassword";
 import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
-import OnboardingStep2 from "./pages/onboarding/OnboardingStep2";
-import OnboardingStep3 from "./pages/onboarding/OnboardingStep3";
 import { useEffect } from "react";
 import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
+import Organization from "./pages/Organization";
+import CreateOrganization from "./pages/CreateOrganization";
 
 function App() {
   useEffect(() => {
@@ -35,8 +35,11 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/video-call" element={<VideoCall />} />
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
-<Route path="/onboarding/step-2" element={<OnboardingStep2 />} />
-<Route path="/onboarding/step-3" element={<OnboardingStep3 />} />
+<Route path="/organization" element={<Organization />} />
+<Route
+  path="/organization/create"
+  element={<CreateOrganization />}
+/>
           {/* <Route path="/onboarding/step-1" element={<ProtectedRoute><OnboardingStep1 /></ProtectedRoute>} />
           <Route path="/onboarding/step-2" element={<ProtectedRoute><OnboardingStep2 /></ProtectedRoute>} />
           <Route path="/onboarding/step-3" element={<ProtectedRoute><OnboardingStep3 /></ProtectedRoute>} /> */}
