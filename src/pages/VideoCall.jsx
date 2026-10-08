@@ -146,8 +146,13 @@ function VideoCall() {
 
       {/* Main Meeting Area */}
       <main className="flex-1 p-4 md:p-6 relative">
+  <div className="flex gap-3 h-full min-h-[520px]">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full min-h-[520px]">
+  <div
+  className={`grid grid-cols-2 gap-3 h-full min-h-[520px] ${
+    showChat ? "flex-1 min-w-0" : "w-full"
+  }`}
+>
 
           {/* My Video */}
           <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/50">
@@ -176,6 +181,7 @@ function VideoCall() {
             </div>
 
           </div>
+        
 
           {/* Participant 1 */}
           <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center">
@@ -222,6 +228,26 @@ function VideoCall() {
           </div>
 
         </div>
+      
+
+           {/* Chat Panel */}
+           {showChat && (
+          <div className="w-72 shrink-0 h-full rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 flex flex-col">
+            <h3 className="font-semibold text-sm mb-4">
+              Meeting Chat
+            </h3>
+
+            <div className="flex-1 flex items-center justify-center text-xs text-white/40">
+              No messages yet
+            </div>
+
+            <input
+              placeholder="Type a message..."
+              className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-xs outline-none placeholder:text-white/30"
+            />
+          </div>
+        )}
+          </div>
 
         {/* Participants Panel */}
         {showParticipants && (
@@ -253,25 +279,6 @@ function VideoCall() {
           </div>
         )}
 
-        {/* Chat Panel */}
-        {showChat && (
-          <div className="absolute top-6 right-6 w-72 h-80 rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 z-20 flex flex-col">
-
-            <h3 className="font-semibold text-sm mb-4">
-              Meeting Chat
-            </h3>
-
-            <div className="flex-1 flex items-center justify-center text-xs text-white/40">
-              No messages yet
-            </div>
-
-            <input
-              placeholder="Type a message..."
-              className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-xs outline-none placeholder:text-white/30"
-            />
-
-          </div>
-        )}
 
       </main>
 

@@ -40,9 +40,6 @@ function App() {
   path="/organization/create"
   element={<CreateOrganization />}
 />
-          {/* <Route path="/onboarding/step-1" element={<ProtectedRoute><OnboardingStep1 /></ProtectedRoute>} />
-          <Route path="/onboarding/step-2" element={<ProtectedRoute><OnboardingStep2 /></ProtectedRoute>} />
-          <Route path="/onboarding/step-3" element={<ProtectedRoute><OnboardingStep3 /></ProtectedRoute>} /> */}
         </Routes>
       </BrowserRouter>
     </AuthProvider>
