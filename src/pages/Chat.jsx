@@ -150,7 +150,13 @@ export default function Chat() {
           ? response
           : [];
 
-      setConversations(list);
+          setConversations(
+            list.map((item) =>
+              String(item.id) === String(activeConversationRef.current?.id)
+                ? { ...item, unreadCount: 0 }
+                : item
+            )
+          );
 
       setActiveConversation((previous) => {
         if (!list.length) return null;
