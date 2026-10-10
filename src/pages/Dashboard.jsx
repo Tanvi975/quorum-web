@@ -1,6 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import DashboardBackground from "../components/DashboardBackground";
-import {FiHome, FiCalendar, FiBookmark, FiUsers} from "react-icons/fi";
+import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
@@ -133,6 +133,26 @@ function Dashboard() {
           >
          <FiUsers className="w-5 h-5" />
          </button>
+
+
+           <button
+           onClick={() => navigate("/chat")}
+           title="Chat"
+           aria-label="Open Chat"
+           className="
+           w-[42px]
+           h-[42px]
+           rounded-xl
+           text-white/60
+           hover:bg-white/10
+           flex
+           items-center
+           justify-center
+           "
+          >
+          <FiMessageCircle className="w-5 h-5" />
+          </button>
+
 
             </div>
           </aside>
