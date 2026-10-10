@@ -14,6 +14,7 @@ import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
 import Organization from "./pages/Organization";
 import CreateOrganization from "./pages/CreateOrganization";
+import Chat from "./pages/Chat";
 
 function App() {
   useEffect(() => {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/set-new-password" element={<SetNewPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/video-call" element={<VideoCall />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
 <Route path="/organization" element={<Organization />} />
 <Route
