@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { io } from "socket.io-client";
+import { useAuth } from "../context/AuthContext";
+import { useSearchParams } from "react-router-dom";
+import { useQuorumMeeting } from "../hooks/useQuorumMeeting";
 import {
   FiMic,
   FiMicOff,
@@ -11,6 +15,33 @@ import {
 } from "react-icons/fi";
 
 function VideoCall() {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  
+  const meetingCode = searchParams.get("code");
+  const isHost = searchParams.get("host") === "1";
+  
+  const {
+    status,
+    error,
+    participants,
+    waitingList,
+    messages,
+    localStream,
+    remoteStreams,
+    isMuted,
+    isVideoOff,
+    toggleMic,
+    toggleCamera,
+    sendMessage,
+    admitGuest,
+    rejectGuest,
+    leaveMeeting,
+  } = useQuorumMeeting({ meetingCode, user, isHost });
+
+const socketRef = useRef(null)
+const [meetingStatus, setMeetingStatus] = useState("Connecting...");
+const [meetingError, setMeetingError] = useState("");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -21,12 +52,10 @@ function VideoCall() {
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    startCamera();
-
-    return () => {
-      stopStream();
-    };
-  }, []);
+    if (videoRef.current && localStream) {
+      videoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
 
   async function startCamera() {
     try {
@@ -44,6 +73,70 @@ function VideoCall() {
       console.error("Camera/microphone permission denied:", error);
     }
   }
+  useEffect(() => {
+    if (!meetingCode || !user?.id) {
+      setMeetingError("Meeting code or user information is missing.");
+      return;
+    }
+  
+    const socket = io(import.meta.env.VITE_API_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+      auth: {
+        userId: user.id,
+        name: user.name,
+        role: isHost ? "host" : "participant",
+      },
+    });
+  
+    socketRef.current = socket;
+  
+    socket.on("connect", () => {
+      setMeetingStatus("Joining meeting...");
+  
+      socket.emit("meeting:join", { meetingCode }, (ack) => {
+        if (!ack?.success) {
+          setMeetingError(ack?.message || "Could not join meeting.");
+          setMeetingStatus("Unable to join");
+          return;
+        }
+  
+        setMeetingError("");
+        setMeetingStatus(
+          ack.data?.status === "waiting_room"
+            ? "Waiting for host approval"
+            : "Connected"
+        );
+  
+        setParticipants(ack.data?.participants || []);
+      });
+    });
+  
+    socket.on("connect_error", (error) => {
+      console.error("Meeting socket error:", error);
+      setMeetingError("Could not connect to the meeting server.");
+    });
+  
+    socket.on("meeting:guest-waiting", (data) => {
+      console.log("Guest waiting:", data);
+    });
+  
+    socket.on("meeting:admitted", () => {
+      setMeetingStatus("Connected");
+      setMeetingError("");
+    });
+  
+    socket.on("meeting:rejected", () => {
+      setMeetingStatus("Admission rejected");
+      setMeetingError("The host did not admit you.");
+    });
+  
+    return () => {
+      socket.emit("meeting:leave", { meetingCode });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [meetingCode, user?.id, user?.name, isHost]);
 
   function stopStream() {
     if (streamRef.current) {
@@ -51,27 +144,6 @@ function VideoCall() {
     }
   }
 
-  function toggleMic() {
-    if (!streamRef.current) return;
-
-    const audioTrack = streamRef.current.getAudioTracks()[0];
-
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setMicOn(audioTrack.enabled);
-    }
-  }
-
-  function toggleCamera() {
-    if (!streamRef.current) return;
-
-    const videoTrack = streamRef.current.getVideoTracks()[0];
-
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      setCameraOn(videoTrack.enabled);
-    }
-  }
 
   async function toggleScreenShare() {
     if (screenSharing) {
@@ -116,6 +188,15 @@ function VideoCall() {
         <div>
           <h1 className="text-base font-semibold">
             Quorum Meeting
+            <p className="text-xs text-white/50">
+  {meetingStatus}
+</p>
+
+{meetingError && (
+  <p className="text-xs text-red-400">
+    {meetingError}
+  </p>
+)}
           </h1>
 
           <p className="text-xs text-white/50">
@@ -157,15 +238,13 @@ function VideoCall() {
           {/* My Video */}
           <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/50">
 
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className={`w-full h-full object-cover ${
-                cameraOn ? "" : "hidden"
-              }`}
-            />
+          <video
+  ref={videoRef}
+  autoPlay
+  muted
+  playsInline
+  className="h-full w-full object-cover"
+/>
 
             {!cameraOn && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">

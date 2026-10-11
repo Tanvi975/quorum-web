@@ -2,10 +2,35 @@ import { useAuth } from "../context/AuthContext";
 import DashboardBackground from "../components/DashboardBackground";
 import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { createMeeting } from "../services/meetingService";
+import { useState } from "react";
 
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
+const [meetingError, setMeetingError] = useState("");
+
+async function handleNewMeeting() {
+  try {
+    setCreatingMeeting(true);
+    setMeetingError("");
+
+    const meeting = await createMeeting();
+
+    if (!meeting?.code) {
+      throw new Error("Meeting code was not returned by the server.");
+    }
+
+    navigate(`/video-call?code=${encodeURIComponent(meeting.code)}&host=1`);
+  } catch (error) {
+    setMeetingError(
+      error.response?.data?.message || error.message || "Could not create meeting."
+    );
+  } finally {
+    setCreatingMeeting(false);
+  }
+}
 
   const userName = user?.name || "Karan";
 
@@ -43,6 +68,8 @@ function Dashboard() {
           <div className="flex items-center gap-4">
 
             <button
+            onClick={handleNewMeeting}
+            disabled={creatingMeeting}
               className="
                 hidden sm:block
                 bg-[#0068FF]
@@ -58,6 +85,9 @@ function Dashboard() {
             >
               + New Meeting
             </button>
+            {meetingError && (
+  <p className="mt-2 text-sm text-red-400">{meetingError}</p>
+)}
 
             <div className="w-[36px] h-[36px] rounded-full bg-[#0068FF] text-white flex items-center justify-center font-semibold text-sm">
               {userName.charAt(0).toUpperCase()}
