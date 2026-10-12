@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useSearchParams } from "react-router-dom";
 import { useQuorumMeeting } from "../hooks/useQuorumMeeting";
@@ -13,6 +12,26 @@ import {
   FiMessageCircle,
   FiPhoneOff,
 } from "react-icons/fi";
+
+function RemoteVideo({ stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      className="h-full w-full object-cover"
+    />
+  );
+}
+
 
 function VideoCall() {
   const { user } = useAuth();
@@ -38,12 +57,7 @@ function VideoCall() {
     rejectGuest,
     leaveMeeting,
   } = useQuorumMeeting({ meetingCode, user, isHost });
-
-const socketRef = useRef(null)
-const [meetingStatus, setMeetingStatus] = useState("Connecting...");
-const [meetingError, setMeetingError] = useState("");
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
 
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
@@ -73,70 +87,6 @@ const [meetingError, setMeetingError] = useState("");
       console.error("Camera/microphone permission denied:", error);
     }
   }
-  useEffect(() => {
-    if (!meetingCode || !user?.id) {
-      setMeetingError("Meeting code or user information is missing.");
-      return;
-    }
-  
-    const socket = io(import.meta.env.VITE_API_URL, {
-      transports: ["websocket"],
-      withCredentials: true,
-      auth: {
-        userId: user.id,
-        name: user.name,
-        role: isHost ? "host" : "participant",
-      },
-    });
-  
-    socketRef.current = socket;
-  
-    socket.on("connect", () => {
-      setMeetingStatus("Joining meeting...");
-  
-      socket.emit("meeting:join", { meetingCode }, (ack) => {
-        if (!ack?.success) {
-          setMeetingError(ack?.message || "Could not join meeting.");
-          setMeetingStatus("Unable to join");
-          return;
-        }
-  
-        setMeetingError("");
-        setMeetingStatus(
-          ack.data?.status === "waiting_room"
-            ? "Waiting for host approval"
-            : "Connected"
-        );
-  
-        setParticipants(ack.data?.participants || []);
-      });
-    });
-  
-    socket.on("connect_error", (error) => {
-      console.error("Meeting socket error:", error);
-      setMeetingError("Could not connect to the meeting server.");
-    });
-  
-    socket.on("meeting:guest-waiting", (data) => {
-      console.log("Guest waiting:", data);
-    });
-  
-    socket.on("meeting:admitted", () => {
-      setMeetingStatus("Connected");
-      setMeetingError("");
-    });
-  
-    socket.on("meeting:rejected", () => {
-      setMeetingStatus("Admission rejected");
-      setMeetingError("The host did not admit you.");
-    });
-  
-    return () => {
-      socket.emit("meeting:leave", { meetingCode });
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [meetingCode, user?.id, user?.name, isHost]);
 
   function stopStream() {
     if (streamRef.current) {
@@ -175,9 +125,8 @@ const [meetingError, setMeetingError] = useState("");
   }
 
   function leaveCall() {
-    stopStream();
-    window.history.back();
-  }
+    leaveMeeting();
+}
 
   return (
     <div className="min-h-screen bg-[#06182F] text-white flex flex-col">
@@ -189,12 +138,12 @@ const [meetingError, setMeetingError] = useState("");
           <h1 className="text-base font-semibold">
             Quorum Meeting
             <p className="text-xs text-white/50">
-  {meetingStatus}
+  {status}
 </p>
 
-{meetingError && (
+{error && (
   <p className="text-xs text-red-400">
-    {meetingError}
+    {error}
   </p>
 )}
           </h1>
@@ -224,6 +173,43 @@ const [meetingError, setMeetingError] = useState("");
 
         </div>
       </header>
+
+{/* Host Waiting Room */}
+{isHost && waitingList.length > 0 && (
+  <div className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+    <h2 className="mb-3 text-lg font-semibold text-slate-800">
+      Waiting Room ({waitingList.length})
+    </h2>
+
+    {waitingList.map((guest) => (
+      <div
+        key={guest.userId}
+        className="mb-2 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3"
+      >
+        <span className="font-medium text-slate-700">
+          {guest.name || "Guest"}
+        </span>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => admitGuest(guest.userId)}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            Admit
+          </button>
+
+          <button
+            onClick={() => rejectGuest(guest.userId)}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
 
       {/* Main Meeting Area */}
       <main className="flex-1 p-4 md:p-6 relative">
@@ -262,52 +248,47 @@ const [meetingError, setMeetingError] = useState("");
           </div>
         
 
-          {/* Participant 1 */}
-          <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center">
+       
+          {/* Actual Remote Participants */}
+          {participants
+            .filter((participant) => participant.userId !== user?.id)
+            .map((participant) => {
+              const remoteStream = remoteStreams[participant.userId];
 
-            <div className="w-16 h-16 rounded-full bg-[#263D68] flex items-center justify-center text-lg font-semibold">
-              A
-            </div>
+              return (
+                <div
+                  key={participant.userId}
+                  className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center min-h-[200px]"
+                >
+                  {remoteStream && !participant.isVideoOff ? (
+                    <RemoteVideo stream={remoteStream} />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-[#263D68] flex items-center justify-center text-lg font-semibold">
+                      {(participant.name || "G").charAt(0).toUpperCase()}
+                    </div>
+                  )}
 
-            <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
-              Aniket
-            </div>
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
+                    {participant.name || "Guest"}
+                  </div>
+                </div>
+              );
+            })}
 
-          </div>
-
-          {/* Participant 2 */}
-          <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center">
-
-            <div className="w-16 h-16 rounded-full bg-[#263D68] flex items-center justify-center text-lg font-semibold">
-              S
-            </div>
-
-            <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
-              Swasti
-            </div>
-
-          </div>
-          
-
-          {/* Waiting */}
-          <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-white/10 flex items-center justify-center">
-
-            <div className="text-center">
-
-              <div className="w-12 h-12 mx-auto rounded-full bg-[#12355B] flex items-center justify-center mb-3">
-                <FiUsers size={20} />
+          {participants.filter((participant) => participant.userId !== user?.id).length === 0 && (
+            <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-white/10 flex items-center justify-center min-h-[200px]">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto rounded-full bg-[#12355B] flex items-center justify-center mb-3">
+                  <FiUsers size={20} />
+                </div>
+                <p className="text-sm text-white/60">
+                  Waiting for another participant...
+                </p>
               </div>
-
-              <p className="text-sm text-white/60">
-                Waiting for another participant...
-              </p>
-
             </div>
+          )}
 
-          </div>
-
-        </div>
-      
+      </div>
 
            {/* Chat Panel */}
            {showChat && (

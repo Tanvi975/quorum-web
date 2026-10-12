@@ -23,7 +23,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [isVideoOff, setIsVideoOff] = useState(false);
 
     const stopMedia = useCallback(() => {
-        publisherRef.current?.close();
+        publisherRef.current ?.close();
         publisherRef.current = null;
 
         subscribersRef.current.forEach((pc) => pc.close());
@@ -59,21 +59,34 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             setLocalStream(stream);
 
             const pc = new RTCPeerConnection(STUN);
+            pc.oniceconnectionstatechange = () => {
+                console.log("Publisher ICE:", pc.iceConnectionState);
+            };
+
+            pc.onicegatheringstatechange = () => {
+                console.log("Publisher ICE gathering:", pc.iceGatheringState);
+            };
             publisherRef.current = pc;
 
             stream.getTracks().forEach((track) => {
                 pc.addTrack(track, stream);
             });
 
+
             pc.onicecandidate = ({ candidate }) => {
                 if (candidate && socket.connected) {
+                    console.log("LOCAL ICE CANDIDATE:", candidate.candidate);
+
                     socket.emit("sfu:ice-candidate", {
                         roomCode: meetingCode,
                         peerId: user.id,
                         candidate,
                     });
+                } else if (!candidate) {
+                    console.log("LOCAL ICE GATHERING COMPLETE");
                 }
             };
+
 
             socket.emit("sfu:join", {
                 roomCode: meetingCode,
@@ -147,9 +160,12 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             import.meta.env.VITE_API_URL;
         const socketUrl = apiUrl.replace(/\/api\/?$/, "");
 
+        const token = localStorage.getItem("accessToken");
+
         const socket = io(socketUrl, {
             transports: ["websocket"],
             auth: {
+                token,
                 userId: user.id,
                 name: user.name,
                 role: isHost ? "host" : "participant",
@@ -254,10 +270,17 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         });
 
         socket.on("sfu:answer", async({ sdp }) => {
+            console.log("SFU ANSWER RECEIVED");
             try {
                 if (publisherRef.current && sdp) {
                     await publisherRef.current.setRemoteDescription(
                         new RTCSessionDescription(sdp)
+                    );
+                    console.log(
+                        "Publisher signaling state:",
+                        publisherRef.current.signalingState,
+                        "ICE state:",
+                        publisherRef.current.iceConnectionState
                     );
                 }
             } catch (err) {
@@ -266,6 +289,23 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         });
 
         socket.on("sfu:joined", ({ existingTracks = [] }) => {
+
+
+            socket.on("sfu:joined", ({ existingTracks = [] }) => {
+                console.log("SFU JOINED - existing tracks:", existingTracks);
+
+                existingTracks.forEach(({ trackId, kind, peerId }) => {
+                    console.log("Remote track found:", { trackId, kind, peerId });
+
+                    if (peerId !== user.id) {
+                        subscribeToTrack(trackId, kind, peerId).catch((err) => {
+                            console.error("Subscribe to remote track failed:", err);
+                        });
+                    }
+                });
+            });
+
+
             existingTracks.forEach(({ trackId, kind, peerId }) => {
                 if (peerId !== user.id) {
                     subscribeToTrack(trackId, kind, peerId).catch(console.error);
@@ -294,10 +334,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             try {
                 if (!candidate) return;
 
-                // The backend documentation does not define an explicit
-                // subscriber/publisher identifier for routing ICE candidates.
-                // Do not guess which peer connection should receive the candidate.
-                console.debug("Received SFU ICE candidate for peer:", peerId);
+                console.log("REMOTE ICE CANDIDATE RECEIVED:", {
+                    peerId,
+                    candidate,
+                });
             } catch (err) {
                 console.error("ICE candidate handling failed:", err);
             }
@@ -356,20 +396,40 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         });
     };
 
+
     const admitGuest = (userId) => {
-        socketRef.current ?.emit(
-            "meeting:admit-participant", { meetingCode, userId },
+        const socket = socketRef.current;
+
+        console.log("Admit debug:", {
+            connected: socket ?.connected,
+            meetingCode,
+            userId,
+        });
+
+        if (!meetingCode || !userId) {
+            setError("Meeting code or guest user ID is missing.");
+            return;
+        }
+
+        socket ?.emit(
+            "meeting:admit-participant", { meetingCode, targetUserId: userId },
             (ack) => {
+                console.log("Admit response:", ack);
+
                 if (ack ?.success) {
                     setWaitingList((previous) =>
                         previous.filter((guest) => guest.userId !== userId)
                     );
+                    setError("");
                 } else {
-                    setError(ack ?.message || "Could not admit participant.");
+                    setError(
+                        ack ?.message || "Could not admit participant."
+                    );
                 }
             }
         );
     };
+
 
     const rejectGuest = (userId) => {
         socketRef.current ?.emit("meeting:reject-participant", {
