@@ -58,6 +58,7 @@ function CreateOrganization() {
 
       <input
         value={orgName}
+        maxLength={100}
         onChange={(e) => setOrgName(e.target.value)}
         placeholder="Enter your organization name"
         className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 px-3 py-2 text-sm outline-none mb-1"
@@ -73,7 +74,10 @@ function CreateOrganization() {
 
       <select
         value={orgType}
-        onChange={(e) => setOrgType(e.target.value)}
+        onChange={(e) => {
+          setOrgType(e.target.value);
+          setErrors((prev) => ({ ...prev, orgType: "" }));
+        }}
         className="w-full rounded-lg bg-white/10 border border-white/20 text-white px-3 py-2 text-sm outline-none mb-1"
       >
         <option value="" className="text-black">
@@ -106,7 +110,10 @@ function CreateOrganization() {
           <button
             key={option}
             type="button"
-            onClick={() => setMemberCount(option)}
+            onClick={() => {
+              setMemberCount(option);
+              setErrors((prev) => ({ ...prev, memberCount: "" }));
+            }}
             className="text-xs px-3 py-1.5 rounded-lg"
             style={{
               backgroundColor:
