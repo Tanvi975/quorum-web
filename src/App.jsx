@@ -15,6 +15,8 @@ import VideoCall from "./pages/VideoCall";
 import Organization from "./pages/Organization";
 import CreateOrganization from "./pages/CreateOrganization";
 import Chat from "./pages/Chat";
+import Communities from "./pages/communities/Communities";
+import JoinOrganization from "./pages/JoinOrganization";
 
 function App() {
   useEffect(() => {
@@ -36,7 +38,16 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/video-call" element={<VideoCall />} />
           <Route path="/chat" element={<Chat />} />
+          <Route
+  path="/organization/join"
+  element={<JoinOrganization />}
+/>
+          
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
+          <Route
+  path="/communities"
+  element={<ProtectedRoute><Communities /></ProtectedRoute> }
+/>
 <Route path="/organization" element={<Organization />} />
 <Route
   path="/organization/create"

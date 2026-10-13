@@ -59,8 +59,6 @@ function VideoCall() {
   } = useQuorumMeeting({ meetingCode, user, isHost });
   const videoRef = useRef(null);
 
-  const [micOn, setMicOn] = useState(true);
-  const [cameraOn, setCameraOn] = useState(true);
   const [screenSharing, setScreenSharing] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -232,7 +230,7 @@ function VideoCall() {
   className="h-full w-full object-cover"
 />
 
-            {!cameraOn && (
+            {isVideoOff && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
                 <div className="w-16 h-16 rounded-full bg-[#1C4D7C] flex items-center justify-center text-xl font-semibold">
                   T
@@ -241,7 +239,7 @@ function VideoCall() {
             )}
 
             <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs flex items-center gap-2">
-              {micOn ? <FiMic size={13} /> : <FiMicOff size={13} />}
+            {!isMuted ? <FiMic size={13} /> : <FiMicOff size={13} />}
               You
             </div>
 
@@ -254,6 +252,16 @@ function VideoCall() {
             .filter((participant) => participant.userId !== user?.id)
             .map((participant) => {
               const remoteStream = remoteStreams[participant.userId];
+              console.log("Remote video debug:", {
+                userId: participant.userId,
+                isVideoOff: participant.isVideoOff,
+                stream: remoteStreams[participant.userId],
+                streamTracks: remoteStreams[participant.userId]?.getTracks().map((track) => ({
+                  kind: track.kind,
+                  enabled: track.enabled,
+                  readyState: track.readyState,
+                })),
+              });
 
               return (
                 <div
@@ -310,34 +318,41 @@ function VideoCall() {
           </div>
 
         {/* Participants Panel */}
-        {showParticipants && (
-          <div className="absolute top-6 right-6 w-64 rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 z-20">
+       
+{showParticipants && (
+  <div className="absolute top-6 right-6 w-64 rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 z-20">
+    <h3 className="font-semibold text-sm mb-4">
+      Participants ({participants.length})
+    </h3>
 
-            <h3 className="font-semibold text-sm mb-4">
-              Participants
-            </h3>
+    <div className="space-y-3 text-sm">
+      {participants.map((participant) => (
+        <div
+          key={participant.userId}
+          className="flex items-center justify-between gap-3"
+        >
+          <span className="truncate">
+            {participant.name || "Guest"}
+            {participant.userId === user?.id ? " (You)" : ""}
+          </span>
 
-            <div className="space-y-3 text-sm">
+          {participant.isMuted ? (
+            <FiMicOff size={14} className="shrink-0 text-red-400" />
+          ) : (
+            <FiMic size={14} className="shrink-0 text-green-400" />
+          )}
+        </div>
+      ))}
 
-              <div className="flex items-center justify-between">
-                <span>Tanvi</span>
-                <FiMic size={14} />
-              </div>
+      {participants.length === 0 && (
+        <p className="text-xs text-white/50">
+          No participants yet.
+        </p>
+      )}
+    </div>
+  </div>
+)}
 
-              <div className="flex items-center justify-between">
-                <span>Aniket</span>
-                <FiMic size={14} />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span>Swasti</span>
-                <FiMicOff size={14} />
-              </div>
-
-            </div>
-
-          </div>
-        )}
 
 
       </main>
@@ -348,25 +363,25 @@ function VideoCall() {
         <button
           onClick={toggleMic}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
-            micOn
+            !isMuted
               ? "bg-white/10 hover:bg-white/20"
               : "bg-red-500/80"
           }`}
-          title={micOn ? "Mute microphone" : "Unmute microphone"}
+          title={!isMuted ? "Mute microphone" : "Unmute microphone"}
         >
-          {micOn ? <FiMic size={18} /> : <FiMicOff size={18} />}
+          {!isMuted ? <FiMic size={18} /> : <FiMicOff size={18} />}
         </button>
 
         <button
           onClick={toggleCamera}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
-            cameraOn
+            isVideoOff
               ? "bg-white/10 hover:bg-white/20"
               : "bg-red-500/80"
           }`}
-          title={cameraOn ? "Turn camera off" : "Turn camera on"}
+          title={isVideoOff ? "Turn camera off" : "Turn camera on"}
         >
-          {cameraOn ? <FiVideo size={18} /> : <FiVideoOff size={18} />}
+          {isVideoOff ? <FiVideoOff size={18} /> : <FiVideo size={18} />}
         </button>
 
         <button

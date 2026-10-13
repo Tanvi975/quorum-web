@@ -1,6 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import DashboardBackground from "../components/DashboardBackground";
-import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle} from "react-icons/fi";
+import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle, FiGlobe,} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
 import { useState } from "react";
@@ -208,6 +208,24 @@ function handleJoinMeeting() {
           >
           <FiMessageCircle className="w-5 h-5" />
           </button>
+
+          <button
+          onClick={() => navigate("/communities")}
+          title="Communities"
+          aria-label="Open Communities"
+          className="
+          w-[42px]
+          h-[42px]
+          rounded-xl
+          text-white/60
+          hover:bg-white/10
+          flex
+          items-center
+         justify-center
+         "
+        >
+  <FiGlobe className="w-5 h-5" />
+</button>
 
 
             </div>
