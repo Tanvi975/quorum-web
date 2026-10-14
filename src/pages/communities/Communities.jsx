@@ -227,6 +227,10 @@ function Communities() {
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredCommunities.map((community, index) => (
                 <article
+                onClick={() =>
+                  navigate(`/communities/${community._id || community.id}`)
+              }
+              role="button"
                   key={community._id || community.id || index}
                   className="flex min-h-28 items-center gap-4 rounded-xl border border-white/10 bg-white/[0.05] p-5 transition hover:border-blue-300/30 hover:bg-white/[0.08]"
                 >
