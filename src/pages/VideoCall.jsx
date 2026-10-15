@@ -17,9 +17,24 @@ function RemoteVideo({ stream }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const video = videoRef.current;
+    if (!video || !stream) return;
+  
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
     }
+  
+    const playVideo = async () => {
+      try {
+        await video.play();
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.warn("Remote video playback failed:", err);
+        }
+      }
+    };
+  
+    playVideo();
   }, [stream]);
 
   return (
@@ -58,6 +73,7 @@ function VideoCall() {
     leaveMeeting,
   } = useQuorumMeeting({ meetingCode, user, isHost });
   const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   const [screenSharing, setScreenSharing] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
@@ -247,57 +263,46 @@ function VideoCall() {
         
 
        
-          {/* Actual Remote Participants */}
-          {participants
-            .filter((participant) => participant.userId !== user?.id)
-            .map((participant) => {
-              const remoteStream = remoteStreams[participant.userId];
-              console.log("Remote video debug:", {
-                userId: participant.userId,
-                isVideoOff: participant.isVideoOff,
-                stream: remoteStreams[participant.userId],
-                streamTracks: remoteStreams[participant.userId]?.getTracks().map((track) => ({
-                  kind: track.kind,
-                  enabled: track.enabled,
-                  readyState: track.readyState,
-                })),
-              });
+ 
+{/* Actual Remote Participants */}
+{Object.entries(remoteStreams).map(([peerId, remoteStream]) => {
+  const participant = participants.find(
+    (p) =>
+      p.userId === peerId ||
+      p.peerId === peerId
+  );
 
-              return (
-                <div
-                  key={participant.userId}
-                  className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center min-h-[200px]"
-                >
-                  {remoteStream && !participant.isVideoOff ? (
-                    <RemoteVideo stream={remoteStream} />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-[#263D68] flex items-center justify-center text-lg font-semibold">
-                      {(participant.name || "G").charAt(0).toUpperCase()}
-                    </div>
-                  )}
+  return (
+    <div
+      key={peerId}
+      className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center min-h-[200px]"
+    >
+      <RemoteVideo stream={remoteStream} />
 
-                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
-                    {participant.name || "Guest"}
-                  </div>
-                </div>
-              );
-            })}
-
-          {participants.filter((participant) => participant.userId !== user?.id).length === 0 && (
-            <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-white/10 flex items-center justify-center min-h-[200px]">
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto rounded-full bg-[#12355B] flex items-center justify-center mb-3">
-                  <FiUsers size={20} />
-                </div>
-                <p className="text-sm text-white/60">
-                  Waiting for another participant...
-                </p>
-              </div>
-            </div>
-          )}
-
+      <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
+      {participant?.name ||
+  participants.find(
+    (p) => p.userId === peerId || p.peerId === peerId
+  )?.name ||
+  "Guest"}
       </div>
+    </div>
+  );
+})}
 
+{Object.keys(remoteStreams).length === 0 && (
+  <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-white/10 flex items-center justify-center min-h-[200px]">
+    <div className="text-center">
+      <div className="w-12 h-12 mx-auto rounded-full bg-[#12355B] flex items-center justify-center mb-3">
+        <FiUsers size={20} />
+      </div>
+      <p className="text-sm text-white/60">
+        Waiting for another participant...
+      </p>
+    </div>
+  </div>
+)}
+</div>
            {/* Chat Panel */}
            {showChat && (
           <div className="w-72 shrink-0 h-full rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 flex flex-col">

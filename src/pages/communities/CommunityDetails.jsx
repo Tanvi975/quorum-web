@@ -1,26 +1,46 @@
-
-import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+
+
+import {
+    getCommunityDetails,
+    getCommunityMembers,
+    getCommunityPosts,
+    createCommunityPost,
+    createCommunityInvite,
+    updateCommunityPost,
+    deleteCommunityPost,
+    getPostComments,
+    createPostComment,
+    deletePostComment,
+    searchCommunityUsers,
+    removeCommunityMember,
+    leaveCommunity,
+    updateCommunity,
+    deleteCommunity,
+} from "../../services/communityService";
+
+
+
 import {
     FiArrowLeft,
     FiUsers,
     FiMessageSquare,
-    FiFolder,
     FiInfo,
     FiSettings,
     FiPlus,
     FiSearch,
     FiUserPlus,
-    FiUploadCloud,
     FiRefreshCw,
 } from "react-icons/fi";
+
 
 const tabs = [
     { label: "Posts", icon: FiMessageSquare },
     { label: "Members", icon: FiUsers },
-    { label: "Files", icon: FiFolder },
     { label: "About", icon: FiInfo },
 ];
+
 
 function CommunityDetails() {
     const navigate = useNavigate();
@@ -28,20 +48,286 @@ function CommunityDetails() {
 
     const [activeTab, setActiveTab] = useState("Posts");
     const [search, setSearch] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+const [searchingMembers, setSearchingMembers] = useState(false);
 
-    // API integration ke baad in states ko backend data se populate karenge.
     const [community, setCommunity] = useState(null);
     const [posts, setPosts] = useState([]);
     const [members, setMembers] = useState([]);
-    const [files, setFiles] = useState([]);
+
+    const [postContent, setPostContent] = useState("");
+    const [creatingPost, setCreatingPost] = useState(false);
+
+     const [notice, setNotice] = useState("");
+    const [inviteLink, setInviteLink] = useState("");
+    const [editingPostId, setEditingPostId] = useState(null);
+    const [editingPostContent, setEditingPostContent] = useState("");
+    const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
+    const [commentsByPost, setCommentsByPost] = useState({});
+    const [commentInputs, setCommentInputs] = useState({});
+  
+
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const loadCommunityData = useCallback(async () => {
+        if (!communityId) {
+            setError("Community ID is missing.");
+            setLoading(false);
+            return;
+        }
+    
+        setLoading(true);
+        setError("");
+    
+        try {
+            const [detailsResponse, membersResponse, postsResponse] =
+                await Promise.all([
+                    getCommunityDetails(communityId),
+                    getCommunityMembers(communityId),
+                    getCommunityPosts(communityId),
+                ]);
+    
+            const details = detailsResponse?.data ?? detailsResponse;
+            const memberData = membersResponse?.data ?? membersResponse;
+            const postData = postsResponse?.data ?? postsResponse;
+    
+            setCommunity(details?.community ?? details);
+    
+            setMembers(
+                Array.isArray(memberData?.members)
+                    ? memberData.members
+                    : Array.isArray(memberData)
+                        ? memberData
+                        : []
+            );
+    
+            setPosts(
+                Array.isArray(postData?.posts)
+                    ? postData.posts
+                    : Array.isArray(postData)
+                        ? postData
+                        : []
+            );
+        } catch (err) {
+            console.error("Failed to load community:", err);
+            setError(
+                err.response?.data?.message ||
+                "Could not load community details. Please retry."
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, [communityId]);
+    
+    useEffect(() => {
+        loadCommunityData();
+    }, [loadCommunityData]);
+    
+    async function handleCreatePost(event) {
+
+        event.preventDefault();
+    
+        const content = postContent.trim();
+        if (!content || creatingPost) return;
+    
+        setCreatingPost(true);
+        setError("");
+        setNotice("");
+    
+        try {
+            await createCommunityPost(communityId, content);
+            setPostContent("");
+            setNotice("Post published.");
+            await loadCommunityData();
+        } catch (err) {
+            console.error("Failed to publish post:", err);
+            setError(
+                err.response?.data?.message ||
+                "Could not publish the post."
+            );
+        } finally {
+            setCreatingPost(false);
+        }
+    }
+
+
+    async function handleUpdatePost(event, postId) {
+        event.preventDefault();
+        const content = editingPostContent.trim();
+        if (!content) return;
+    
+        try {
+            await updateCommunityPost(postId, content);
+            setEditingPostId(null);
+            setNotice("Post updated.");
+            await loadCommunityData();
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not update post.");
+        }
+    }
+    
+    async function handleDeletePost(postId) {
+        if (!window.confirm("Delete this post?")) return;
+    
+        try {
+            await deleteCommunityPost(postId);
+            setNotice("Post deleted.");
+            await loadCommunityData();
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not delete post.");
+        }
+    }
+    
+    async function handleToggleComments(postId) {
+        if (openCommentsPostId === postId) {
+            setOpenCommentsPostId(null);
+            return;
+        }
+    
+        setOpenCommentsPostId(postId);
+    
+        try {
+            const response = await getPostComments(postId);
+            const result = response?.data ?? response;
+            const data = result?.data ?? result;
+            const comments = Array.isArray(data?.comments)
+                ? data.comments
+                : Array.isArray(data) ? data : [];
+    
+            setCommentsByPost((previous) => ({
+                ...previous,
+                [postId]: comments,
+            }));
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not load comments.");
+        }
+    }
+    
+    async function handleCreateComment(event, postId) {
+        event.preventDefault();
+        const content = (commentInputs[postId] || "").trim();
+        if (!content) return;
+    
+        try {
+            await createPostComment(postId, content);
+            setCommentInputs((previous) => ({ ...previous, [postId]: "" }));
+            setNotice("Comment added.");
+    
+            const response = await getPostComments(postId);
+            const result = response?.data ?? response;
+            const data = result?.data ?? result;
+            const comments = Array.isArray(data?.comments)
+                ? data.comments
+                : Array.isArray(data) ? data : [];
+    
+            setCommentsByPost((previous) => ({
+                ...previous,
+                [postId]: comments,
+            }));
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not add comment.");
+        }
+    }
+    
+    async function handleDeleteComment(commentId, postId) {
+        if (!window.confirm("Delete this comment?")) return;
+    
+        try {
+            await deletePostComment(commentId);
+            setNotice("Comment deleted.");
+    
+            const response = await getPostComments(postId);
+            const result = response?.data ?? response;
+            const data = result?.data ?? result;
+            const comments = Array.isArray(data?.comments)
+                ? data.comments
+                : Array.isArray(data) ? data : [];
+    
+            setCommentsByPost((previous) => ({
+                ...previous,
+                [postId]: comments,
+            }));
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not delete comment.");
+        }
+    }
+    
+
+    
+async function handleInvite() {
+    setError("");
+    setNotice("");
+    setInviteLink("");
+
+    try {
+        const response = await createCommunityInvite(communityId);
+        const result = response?.data ?? response;
+
+        const invite = result?.data ?? result;
+        const token = invite?.token;
+
+        if (!token) {
+            throw new Error("Backend did not return an invite token.");
+        }
+
+        const url = `${window.location.origin}/communities/invite/${token}`;
+
+        setInviteLink(url);
+        setNotice("Invitation created. Copy and share this link.");
+    } catch (err) {
+        console.error("Failed to create invite:", err);
+        setError(
+            err.response?.data?.message ||
+            err.message ||
+            "Could not generate an invitation link."
+        );
+    }
+}
+
+
+async function handleSearchMembers(query) {
+    setSearch(query);
+
+    if (!query.trim()) {
+        setSearchResults([]);
+        return;
+    }
+
+    setSearchingMembers(true);
+
+    try {
+        const response = await searchCommunityUsers(
+            communityId,
+            query.trim()
+        );
+
+        const result = response?.data ?? response;
+        const data = result?.data ?? result;
+
+        setSearchResults(
+            Array.isArray(data?.users)
+                ? data.users
+                : Array.isArray(data?.members)
+                    ? data.members
+                    : Array.isArray(data)
+                        ? data
+                        : []
+        );
+    } catch (err) {
+        setError(
+            err.response?.data?.message ||
+            "Could not search community members."
+        );
+    } finally {
+        setSearchingMembers(false);
+    }
+}
+
     const isEmpty = {
         Posts: posts.length === 0,
         Members: members.length === 0,
-        Files: files.length === 0,
     };
 
     const activeTabData = tabs.find(
@@ -81,12 +367,6 @@ function CommunityDetails() {
         </div>
     );
 
-    function showIntegrationNotice() {
-        setError(
-            "This action will be available after the backend API is integrated."
-        );
-    }
-
     return (
         <div className="min-h-screen bg-[#062C5F] text-white">
             {/* Header */}
@@ -107,7 +387,7 @@ function CommunityDetails() {
 
                     <button
                         type="button"
-                        onClick={showIntegrationNotice}
+                      onClick={() => setActiveTab("About")}
                         aria-label="Community settings"
                         className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white"
                     >
@@ -148,20 +428,11 @@ function CommunityDetails() {
                         <div className="flex shrink-0 flex-wrap gap-2">
                             <button
                                 type="button"
-                                onClick={showIntegrationNotice}
+                                onClick={handleInvite}
                                 className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold transition hover:bg-blue-400"
                             >
                                 <FiUserPlus size={17} />
                                 Invite
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={showIntegrationNotice}
-                                className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/5"
-                            >
-                                <FiSettings size={16} />
-                                Manage
                             </button>
                         </div>
                     </div>
@@ -185,6 +456,27 @@ function CommunityDetails() {
                         </button>
                     </div>
                 )}
+                {notice && (
+    <div
+        role="status"
+        className="mt-4 rounded-lg border border-green-300/20 bg-green-400/10 p-4 text-sm text-green-100"
+    >
+        {notice}
+    </div>
+)}
+
+{inviteLink && (
+    <div className="mt-3 rounded-lg border border-white/10 p-4">
+        <p className="break-all text-sm">{inviteLink}</p>
+        <button
+            type="button"
+            onClick={() => navigator.clipboard.writeText(inviteLink)}
+            className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm"
+        >
+            Copy invite link
+        </button>
+    </div>
+)}
 
                 {/* navigation tabs */}
                 <nav className="mt-7 flex gap-1 overflow-x-auto border-b border-white/10">
@@ -230,57 +522,177 @@ function CommunityDetails() {
                                         Share announcements, questions and updates with members.
                                     </p>
 
-                                    <button
-                                        type="button"
-                                        onClick={showIntegrationNotice}
-                                        className="mt-4 flex w-full items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-sm text-blue-100/60 transition hover:border-blue-300/40 hover:bg-white/[0.07]"
-                                    >
-                                        <FiPlus size={18} />
-                                        Start a new post...
-                                    </button>
-                                </div>
+                                  
+<form onSubmit={handleCreatePost}>
+    <textarea
+        value={postContent}
+        onChange={(event) => setPostContent(event.target.value)}
+        placeholder="Share an update with your community..."
+        maxLength={5000}
+        rows={3}
+        required
+        className="mt-4 w-full rounded-lg border border-white/10 bg-[#061B38] px-4 py-3 text-sm text-white outline-none placeholder:text-blue-100/40 focus:border-blue-400"
+    />
 
-                                {isEmpty.Posts ? (
-                                    <EmptyState
-                                        icon={FiMessageSquare}
-                                        title="No posts yet"
-                                        description="Start a conversation with your community. Posts will appear here once the API is connected."
-                                        actionLabel="Create a post"
-                                        onAction={showIntegrationNotice}
-                                    />
-                                ) : (
-                                    posts.map((post) => (
-                                        <article
-                                            key={post.id}
-                                            className="rounded-xl border border-white/10 bg-white/[0.05] p-5"
-                                        >
-                                            <h3 className="font-semibold">
-                                                {post.title}
-                                            </h3>
-                                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-blue-100/75">
-                                                {post.content}
-                                            </p>
-                                        </article>
-                                    ))
-                                )}
-                            </div>
+    <button
+        type="submit"
+        disabled={creatingPost || !postContent.trim()}
+        className="mt-3 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+        {creatingPost ? "Publishing..." : "Publish post"}
+    </button>
+</form>
 
-                            {/* Sidebar */}
-                            <aside className="space-y-5">
-                                <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5">
-                                    <h2 className="font-semibold">
-                                        About community
-                                    </h2>
+</div>
 
-                                    <p className="mt-3 text-sm leading-6 text-blue-100/65">
-                                        {community?.description ||
-                                            "Community information will appear here once loaded."}
-                                    </p>
+{isEmpty.Posts ? (
+<EmptyState
+icon={FiMessageSquare}
+title="No posts yet"
+description="Start a conversation with your community. Posts will appear here once the API is connected."
+/>
+) : (
+posts.map((post) => (
+<article
+key={post.id || post._id}
+className="rounded-xl border border-white/10 bg-white/[0.05] p-5"
+>
+     <p className="text-xs text-blue-100/60">
+         {post.author?.name || "Community member"}
+            </p>
 
-                                    <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4 text-sm text-blue-100/65">
-                                        <FiUsers size={18} />
-                                        {community?.memberCount ?? "—"} members
-                                    </div>
+                                            
+<div className="mt-2">
+    {editingPostId === (post.id || post._id) ? (
+        <form
+            onSubmit={(event) => handleUpdatePost(event, post.id || post._id)}
+        >
+            <textarea
+                value={editingPostContent}
+                onChange={(event) => setEditingPostContent(event.target.value)}
+                maxLength={5000}
+                required
+                className="w-full rounded-lg border border-white/10 bg-[#061B38] p-3 text-sm text-white"
+            />
+            <button type="submit" className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm">
+                Save
+            </button>
+            <button
+                type="button"
+                onClick={() => setEditingPostId(null)}
+                className="ml-2 rounded-lg border border-white/20 px-3 py-2 text-sm"
+            >
+                Cancel
+            </button>
+        </form>
+    ) : (
+        <p className="whitespace-pre-wrap text-sm leading-6 text-blue-100/75">
+            {post.content}
+        </p>
+    )}
+</div>
+
+<div className="mt-4 flex flex-wrap gap-3">
+    <button
+        type="button"
+        onClick={() => {
+            setEditingPostId(post.id || post._id);
+            setEditingPostContent(post.content || "");
+        }}
+        className="text-sm text-blue-200 hover:text-white"
+    >
+        Edit post
+    </button>
+
+    <button
+        type="button"
+        onClick={() => handleDeletePost(post.id || post._id)}
+        className="text-sm text-red-300 hover:text-red-200"
+    >
+        Delete post
+    </button>
+
+    <button
+        type="button"
+        onClick={() => handleToggleComments(post.id || post._id)}
+        className="text-sm text-blue-200 hover:text-white"
+    >
+        {openCommentsPostId === (post.id || post._id)
+            ? "Hide comments"
+            : "Comments"}
+    </button>
+</div>
+
+{openCommentsPostId === (post.id || post._id) && (
+    <div className="mt-4 border-t border-white/10 pt-4">
+        <form onSubmit={(event) => handleCreateComment(event, post.id || post._id)}>
+            <input
+                value={commentInputs[post.id || post._id] || ""}
+                onChange={(event) =>
+                    setCommentInputs((previous) => ({
+                        ...previous,
+                        [post.id || post._id]: event.target.value,
+                    }))
+                }
+                placeholder="Write a comment..."
+                maxLength={2000}
+                required
+                className="w-full rounded-lg border border-white/10 bg-[#061B38] px-3 py-2 text-sm text-white"
+            />
+            <button type="submit" className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm">
+                Add comment
+            </button>
+        </form>
+
+        {(commentsByPost[post.id || post._id] || []).map((comment) => (
+            <div key={comment.id || comment._id} className="mt-3 rounded-lg bg-white/5 p-3">
+                <p className="text-xs text-blue-100/60">
+                    {comment.author?.name || comment.user?.name || "Member"}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {comment.content}
+                </p>
+                <button
+                    type="button"
+                    onClick={() => handleDeleteComment(comment.id || comment._id, post.id || post._id)}
+                    className="mt-2 text-xs text-red-300"
+                >
+                    Delete comment
+                </button>
+            </div>
+        ))}
+    </div>
+)}
+
+
+          {post.createdAt && (
+          <p className="mt-3 text-xs text-blue-100/50">
+            {new Date(post.createdAt).toLocaleString()}
+                 </p>
+             )}
+          </article>
+                                        
+             ))
+          )}
+                                
+          </div>
+
+                {/* Sidebar */}
+                  <aside className="space-y-5">
+                       <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5">
+                    <h2 className="font-semibold">
+                          About community
+                      </h2>
+
+                      <p className="mt-3 text-sm leading-6 text-blue-100/65">
+                            {community?.description ||
+                            "Community information will appear here once loaded."}
+                         </p>
+
+                              <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4 text-sm text-blue-100/65">
+                               <FiUsers size={18} />
+                                 {community?.memberCount ?? "—"} members
+                                 </div>
                                 </div>
 
                                 <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5">
@@ -324,20 +736,19 @@ function CommunityDetails() {
                                 </div>
 
                                 <button
-                                    type="button"
-                                    onClick={showIntegrationNotice}
-                                    className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold hover:bg-blue-400"
-                                >
-                                    <FiUserPlus size={17} />
-                                    Invite members
-                                </button>
+                               type="button"
+                               onClick={handleInvite}
+                           className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold hover:bg-blue-400">
+                           <FiUserPlus size={17} />
+                          Invite members
+                         </button>
                             </div>
 
                             <div className="mt-5 flex max-w-lg items-center gap-3 rounded-lg border border-white/10 bg-white/[0.05] px-4 py-3">
                                 <FiSearch className="shrink-0 text-blue-100/50" />
                                 <input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) => handleSearchMembers(event.target.value)} 
                                     placeholder="Search members"
                                     aria-label="Search members"
                                     className="w-full bg-transparent text-sm outline-none placeholder:text-blue-100/40"
@@ -346,75 +757,30 @@ function CommunityDetails() {
 
                             {members.length === 0 ? (
                                 <div className="mt-5">
-                                    <EmptyState
-                                        icon={FiUsers}
-                                        title="Members will appear here"
-                                        description="Once the members API is connected, you can view and search community members here."
-                                        actionLabel="Invite members"
-                                        onAction={showIntegrationNotice}
-                                    />
+                                   <EmptyState
+                              icon={FiUsers}
+                              title="No members found"
+                              description="No community members are available to display."
+                               />
                                 </div>
                             ) : (
                                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                     {members
-                                        .filter((member) =>
-                                            member.name.toLowerCase().includes(search.toLowerCase())
-                                        )
-                                        .map((member) => (
-                                            <div
-                                                key={member.id}
-                                                className="rounded-xl border border-white/10 bg-white/[0.05] p-4"
-                                            >
-                                                {member.name}
-                                            </div>
-                                        ))}
+    .filter((member) =>
+        (member.name ?? member.user?.name ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase())
+    )
+    .map((member) => (
+        <div
+            key={member.id ?? member.user?.id}
+            className="rounded-xl border border-white/10 bg-white/[0.05] p-4"
+        >
+            {member.name ?? member.user?.name ?? "Community member"}
+        </div>
+    ))}
                                 </div>
                             )}
-                        </div>
-                    ) : activeTab === "Files" ? (
-                        <div>
-                            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                                <div>
-                                    <h2 className="text-xl font-bold">
-                                        Files and resources
-                                    </h2>
-                                    <p className="mt-1 text-sm text-blue-100/60">
-                                        Shared documents and useful community resources.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={showIntegrationNotice}
-                                    className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold hover:bg-blue-400"
-                                >
-                                    <FiUploadCloud size={17} />
-                                    Add resource
-                                </button>
-                            </div>
-
-                            <div className="mt-5">
-                                {isEmpty.Files ? (
-                                    <EmptyState
-                                        icon={FiFolder}
-                                        title="No files shared yet"
-                                        description="Documents and resources shared by community members will appear here."
-                                        actionLabel="Add resource"
-                                        onAction={showIntegrationNotice}
-                                    />
-                                ) : (
-                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                        {files.map((file) => (
-                                            <article
-                                                key={file.id}
-                                                className="rounded-xl border border-white/10 bg-white/[0.05] p-5"
-                                            >
-                                                {file.name}
-                                            </article>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     ) : (
                         <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5 sm:p-7">
@@ -450,15 +816,6 @@ function CommunityDetails() {
                                     {communityId}
                                 </p>
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={showIntegrationNotice}
-                                className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold hover:bg-white/5"
-                            >
-                                <FiSettings size={16} />
-                                Edit details
-                            </button>
                         </div>
                     )}
                 </section>

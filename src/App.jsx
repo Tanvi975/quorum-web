@@ -18,6 +18,7 @@ import Chat from "./pages/Chat";
 import Communities from "./pages/communities/Communities";
 import JoinOrganization from "./pages/JoinOrganization";
 import CommunityDetails from "./pages/communities/CommunityDetails";
+import CommunityInvite from "./pages/communities/CommunityInvite";
 
 function App() {
   useEffect(() => {
@@ -39,6 +40,10 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/video-call" element={<VideoCall />} />
           <Route path="/chat" element={<Chat />} />
+          <Route
+    path="/communities/invite/:token"
+    element={<CommunityInvite />}
+/>
           <Route
   path="/communities/:communityId"
   element={

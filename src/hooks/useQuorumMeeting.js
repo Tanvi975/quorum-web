@@ -10,6 +10,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const localStreamRef = useRef(null);
     const publisherRef = useRef(null);
     const subscribersRef = useRef(new Map());
+    const pendingIceRef = useRef(new Map());
     const startedRef = useRef(false);
 
     const [status, setStatus] = useState("Connecting");
@@ -21,6 +22,28 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [remoteStreams, setRemoteStreams] = useState({});
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
+
+    const flushPendingIce = useCallback(async(key, pc) => {
+        if (!pc ?.remoteDescription) return;
+
+        const pending = pendingIceRef.current.get(key) || [];
+        pendingIceRef.current.delete(key);
+
+        for (const candidate of pending) {
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log("Queued ICE candidate added:", key);
+            } catch (err) {
+                console.error("Queued ICE candidate failed:", err);
+            }
+        }
+    }, []);
+
+    const queueIceCandidate = useCallback((key, candidate) => {
+        const pending = pendingIceRef.current.get(key) || [];
+        pending.push(candidate);
+        pendingIceRef.current.set(key, pending);
+    }, []);
 
     const stopMedia = useCallback(() => {
         publisherRef.current ?.close();
@@ -77,11 +100,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 if (candidate && socket.connected) {
                     console.log("LOCAL ICE CANDIDATE:", candidate.candidate);
 
+
                     socket.emit("sfu:ice-candidate", {
                         roomCode: meetingCode,
                         peerId: user.id,
+                        target: "publisher",
                         candidate,
                     });
+
                 } else if (!candidate) {
                     console.log("LOCAL ICE GATHERING COMPLETE");
                 }
@@ -120,8 +146,17 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         pc.addTransceiver(kind, { direction: "recvonly" });
 
+
         pc.ontrack = (event) => {
-            const stream = event.streams[0] || new MediaStream([event.track]);
+            console.log("REMOTE TRACK RECEIVED:", {
+                trackId,
+                peerId,
+                kind: event.track.kind,
+                readyState: event.track.readyState,
+            });
+
+            const stream =
+                event.streams[0] || new MediaStream([event.track]);
 
             setRemoteStreams((previous) => ({
                 ...previous,
@@ -134,6 +169,8 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 socket.emit("sfu:ice-candidate", {
                     roomCode: meetingCode,
                     peerId: user.id,
+                    target: "subscriber",
+                    trackId,
                     candidate,
                 });
             }
@@ -269,49 +306,41 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             stopMedia();
         });
 
+
         socket.on("sfu:answer", async({ sdp }) => {
             console.log("SFU ANSWER RECEIVED");
+
             try {
-                if (publisherRef.current && sdp) {
-                    await publisherRef.current.setRemoteDescription(
-                        new RTCSessionDescription(sdp)
-                    );
-                    console.log(
-                        "Publisher signaling state:",
-                        publisherRef.current.signalingState,
-                        "ICE state:",
-                        publisherRef.current.iceConnectionState
-                    );
-                }
+                const pc = publisherRef.current;
+
+                if (!pc || !sdp) return;
+
+                await pc.setRemoteDescription(
+                    new RTCSessionDescription(sdp)
+                );
+
+                await flushPendingIce("publisher", pc);
+
+                console.log("Publisher signaling state:", pc.signalingState);
+                console.log("Publisher ICE state:", pc.iceConnectionState);
             } catch (err) {
                 console.error("Publisher answer failed:", err);
             }
         });
 
+
         socket.on("sfu:joined", ({ existingTracks = [] }) => {
-
-
-            socket.on("sfu:joined", ({ existingTracks = [] }) => {
-                console.log("SFU JOINED - existing tracks:", existingTracks);
-
-                existingTracks.forEach(({ trackId, kind, peerId }) => {
-                    console.log("Remote track found:", { trackId, kind, peerId });
-
-                    if (peerId !== user.id) {
-                        subscribeToTrack(trackId, kind, peerId).catch((err) => {
-                            console.error("Subscribe to remote track failed:", err);
-                        });
-                    }
-                });
-            });
-
+            console.log("SFU JOINED - existing tracks:", existingTracks);
 
             existingTracks.forEach(({ trackId, kind, peerId }) => {
                 if (peerId !== user.id) {
-                    subscribeToTrack(trackId, kind, peerId).catch(console.error);
+                    subscribeToTrack(trackId, kind, peerId).catch((err) => {
+                        console.error("Subscribe to remote track failed:", err);
+                    });
                 }
             });
         });
+
 
         socket.on("sfu:new-producer", ({ trackId, kind, peerId }) => {
             if (peerId !== user.id) {
@@ -319,29 +348,62 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             }
         });
 
+
         socket.on("sfu:subscribed", async({ trackId, sdp }) => {
             try {
                 const pc = subscribersRef.current.get(trackId);
+
                 if (pc && sdp) {
-                    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                    await pc.setRemoteDescription(
+                        new RTCSessionDescription(sdp)
+                    );
+
+                    await flushPendingIce(`subscriber:${trackId}`, pc);
                 }
             } catch (err) {
                 console.error("Subscriber answer failed:", err);
             }
         });
 
-        socket.on("sfu:ice-candidate", async({ candidate, peerId }) => {
-            try {
+
+
+
+        socket.on(
+            "sfu:ice-candidate",
+            async({ candidate, peerId, target, trackId }) => {
                 if (!candidate) return;
 
-                console.log("REMOTE ICE CANDIDATE RECEIVED:", {
-                    peerId,
-                    candidate,
-                });
-            } catch (err) {
-                console.error("ICE candidate handling failed:", err);
+                let key;
+                let pc;
+
+                if (target === "publisher") {
+                    key = "publisher";
+                    pc = publisherRef.current;
+                } else if (target === "subscriber" && trackId) {
+                    key = `subscriber:${trackId}`;
+                    pc = subscribersRef.current.get(trackId);
+                } else {
+                    console.warn("Unknown ICE candidate target:", {
+                        target,
+                        trackId,
+                    });
+                    return;
+                }
+
+                if (!pc || !pc.remoteDescription) {
+                    queueIceCandidate(key, candidate);
+                    console.log("ICE candidate queued:", { key, peerId });
+                    return;
+                }
+
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log("Remote ICE candidate added:", { key, peerId });
+                } catch (err) {
+                    console.error("Adding remote ICE candidate failed:", err);
+                }
             }
-        });
+        );
 
         return () => {
             socket.emit("meeting:leave", { meetingCode });
@@ -357,6 +419,8 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         startMedia,
         subscribeToTrack,
         stopMedia,
+        flushPendingIce,
+        queueIceCandidate,
     ]);
 
     const toggleMic = () => {

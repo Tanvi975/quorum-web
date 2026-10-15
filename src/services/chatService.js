@@ -40,3 +40,73 @@ export async function getMessages(conversationId, limit = 20, cursor) {
 
     return res.data;
 }
+
+
+export async function createGroupConversation({
+    name,
+    avatar = null,
+    participantIds,
+})
+
+{
+    const res = await api.post("/api/conversations/group", {
+        name: name.trim(),
+        ...(avatar ? { avatar } : {}),
+        participantIds,
+    });
+
+    return res.data;
+}
+
+export async function addGroupParticipants(conversationId, participantIds) {
+    const res = await api.post(
+        `/api/conversations/${conversationId}/participants`, { participantIds }
+    );
+
+    return res.data;
+}
+
+export async function promoteGroupAdmin(conversationId, userId) {
+    const res = await api.post(
+        `/api/conversations/${conversationId}/admins`, { userId }
+    );
+
+    return res.data;
+}
+
+export async function demoteGroupAdmin(conversationId, userId) {
+    const res = await api.delete(
+        `/api/conversations/${conversationId}/admins/${userId}`
+    );
+
+    return res.data;
+}
+
+export async function removeGroupParticipant(conversationId, userId) {
+    const res = await api.delete(
+        `/api/conversations/${conversationId}/participants/${userId}`
+    );
+
+    return res.data;
+}
+
+export async function leaveGroupConversation(conversationId) {
+    const res = await api.delete(
+        `/api/conversations/${conversationId}/leave`
+    );
+
+    return res.data;
+}
+
+export async function updateGroupConversation(
+    conversationId, { name, avatar }
+) {
+    const res = await api.patch(
+        `/api/conversations/${conversationId}`, {
+            ...(name !== undefined ? { name: name.trim() } : {}),
+            ...(avatar !== undefined ? { avatar } : {}),
+        }
+    );
+
+    return res.data;
+}
