@@ -79,6 +79,14 @@ function VideoCall() {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
+const [chatInput, setChatInput] = useState("");
+const chatEndRef = useRef(null);
+
+useEffect(() => {
+  chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [messages]);
+
+
   useEffect(() => {
     if (videoRef.current && localStream) {
       videoRef.current.srcObject = localStream;
@@ -304,22 +312,68 @@ function VideoCall() {
 )}
 </div>
            {/* Chat Panel */}
-           {showChat && (
-          <div className="w-72 shrink-0 h-full rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 flex flex-col">
-            <h3 className="font-semibold text-sm mb-4">
-              Meeting Chat
-            </h3>
+         
+{showChat && (
+  <div className="w-72 shrink-0 h-full rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 flex flex-col">
+    <h3 className="font-semibold text-sm mb-4">
+      Meeting Chat
+    </h3>
 
-            <div className="flex-1 flex items-center justify-center text-xs text-white/40">
-              No messages yet
-            </div>
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-3 mb-3">
+      {messages.length === 0 ? (
+        <div className="text-xs text-white/40 text-center mt-6">
+          No messages yet
+        </div>
+      ) : (
+        messages.map((message, index) => (
+          <div
+            key={message._id || message.id || index}
+            className="rounded-lg bg-white/10 p-2"
+          >
+            <p className="text-xs font-semibold text-blue-200">
+              {message.name || message.senderName || message.userName || "Participant"}
+            </p>
 
-            <input
-              placeholder="Type a message..."
-              className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-xs outline-none placeholder:text-white/30"
-            />
+            <p className="text-sm text-white break-words mt-1">
+              {message.content || message.message}
+            </p>
           </div>
-        )}
+        ))
+      )}
+      <div ref={chatEndRef} />
+    </div>
+
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+
+        const content = chatInput.trim();
+        if (!content) return;
+
+        sendMessage(content);
+        setChatInput("");
+      }}
+    >
+      <input
+        type="text"
+        value={chatInput}
+        onChange={(e) => setChatInput(e.target.value)}
+        placeholder="Type a message..."
+        className="min-w-0 flex-1 rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-xs outline-none placeholder:text-white/30"
+      />
+
+      <button
+        type="submit"
+        disabled={!chatInput.trim()}
+        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium disabled:opacity-40"
+      >
+        Send
+      </button>
+    </form>
+  </div>
+)}
+
           </div>
 
         {/* Participants Panel */}
