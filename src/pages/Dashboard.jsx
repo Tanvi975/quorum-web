@@ -124,111 +124,69 @@ function handleJoinMeeting() {
         <div className="flex">
           <aside
             className="
-              hidden md:block
-              w-[76px]
-              lg:w-[88px]
+            hidden md:block
+            w-[76px]
+            lg:w-[220px]
               min-h-[calc(100vh-64px)]
               bg-[#062C5F]/90
               border-r border-white/10
             "
           >
-            <div className="flex flex-col items-center pt-7 gap-6">
+           <div className="flex flex-col items-stretch pt-6 px-2 lg:px-3 gap-2">
+  <button
+    title="Home"
+    onClick={() => navigate("/dashboard")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl bg-white/15 text-white px-2 py-3 lg:px-3"
+  >
+    <FiHome className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Home</span>
+  </button>
 
-            <button
-             className="
-              w-[42px]
-              h-[42px]
-              rounded-xl
-              bg-white/15
-              text-white
-              flex
-              items-center
-              justify-center "
-              >
-             <FiHome className="w-5 h-5" />
-             </button>
-             <button
-             className="
-              w-[42px]
-              h-[42px]
-              rounded-xl
-              text-white/60
-              hover:bg-white/10
-              flex
-              items-center
-              justify-center "
-            >
-           <FiCalendar className="w-5 h-5" />
-          </button>
+  <button
+    title="Meetings"
+    onClick={() => navigate("/dashboard")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+  >
+    <FiCalendar className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Meetings</span>
+  </button>
 
-             <button
-            className="
-             w-[42px]
-             h-[42px]
-             rounded-xl
-             text-white/60
-             hover:bg-white/10
-             flex
-             items-center
-             justify-center"
-            >
-           <FiBookmark className="w-5 h-5" />
-           </button>
+  <button
+    title="Saved Items"
+    onClick={() => navigate("/dashboard")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+  >
+    <FiBookmark className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Saved Items</span>
+  </button>
 
-          <button
-           onClick={() => navigate("/organization")}
-          className="
-           w-[42px]
-           h-[42px]
-           rounded-xl
-           text-white/60
-           hover:bg-white/10
-           flex
-           items-center
-           justify-center "
-          >
-         <FiUsers className="w-5 h-5" />
-         </button>
+  <button
+    title="Organizations"
+    onClick={() => navigate("/organization")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+  >
+    <FiUsers className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Organizations</span>
+  </button>
 
+  <button
+    title="Chat"
+    onClick={() => navigate("/chat")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+  >
+    <FiMessageCircle className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Chat</span>
+  </button>
 
-           <button
-           onClick={() => navigate("/chat")}
-           title="Chat"
-           aria-label="Open Chat"
-           className="
-           w-[42px]
-           h-[42px]
-           rounded-xl
-           text-white/60
-           hover:bg-white/10
-           flex
-           items-center
-           justify-center
-           "
-          >
-          <FiMessageCircle className="w-5 h-5" />
-          </button>
-
-          <button
-          onClick={() => navigate("/communities")}
-          title="Communities"
-          aria-label="Open Communities"
-          className="
-          w-[42px]
-          h-[42px]
-          rounded-xl
-          text-white/60
-          hover:bg-white/10
-          flex
-          items-center
-         justify-center
-         "
-        >
-  <FiGlobe className="w-5 h-5" />
-</button>
-
-
-            </div>
+  <button
+    title="Communities"
+    onClick={() => navigate("/communities")}
+    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+  >
+    <FiGlobe className="w-5 h-5 shrink-0" />
+    <span className="text-[11px] lg:text-sm">Communities</span>
+  </button>
+</div>
           </aside>
           <main className="flex-1 px-5 sm:px-8 lg:px-12 py-8">
 

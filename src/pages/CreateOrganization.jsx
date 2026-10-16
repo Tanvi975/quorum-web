@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OnboardingLayout from "../components/OnboardingLayout";
+import api from "../services/api";
 
 const memberOptions = [
   "1-10 members",
@@ -14,7 +15,9 @@ function CreateOrganization() {
   const [orgType, setOrgType] = useState("");
   const [memberCount, setMemberCount] = useState("");
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  
 
   function validate() {
     const newErrors = {};
@@ -36,10 +39,48 @@ function CreateOrganization() {
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleSubmit() {
-    if (!validate()) return;
-
-    navigate("/dashboard");
+  async function handleSubmit(e) {
+    e.preventDefault();
+  
+    if (submitting || !validate()) return;
+  
+    setSubmitting(true);
+    setErrors({});
+  
+    try {
+      await api.post("/api/organizations", {
+        name: orgName.trim(),
+      });
+  
+      navigate("/organization");
+    } catch (err) {
+      const status = err.response?.status;
+      const message = err.response?.data?.message;
+  
+      if (status === 400) {
+        setErrors({
+          orgName: message || "Please check the organization details.",
+        });
+      } else if (status === 401) {
+        setErrors({
+          form: "Your session has expired. Please sign in again.",
+        });
+      } else if (status === 403) {
+        setErrors({
+          form: "You don't have permission to create an organization.",
+        });
+      } else if (!err.response) {
+        setErrors({
+          form: "Unable to connect. Please check your internet connection.",
+        });
+      } else {
+        setErrors({
+          form: message || "Unable to create organization. Please try again.",
+        });
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -136,16 +177,23 @@ function CreateOrganization() {
         {errors.memberCount || ""}
       </p>
 
-      <button
-        onClick={handleSubmit}
-        className="w-full text-white text-sm font-medium py-2.5 rounded-lg"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, #0068FF, #003D99)",
-        }}
-      >
-        Set Up Organization
-      </button>
+      {errors.form && (
+  <p role="alert" className="text-xs text-red-400 mb-3">
+    {errors.form}
+  </p>
+)}
+
+<button
+  type="button"
+  onClick={handleSubmit}
+  disabled={submitting}
+  className="w-full text-white text-sm font-medium py-2.5 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+  style={{
+    backgroundImage: "linear-gradient(to right, #0068FF, #003D99)",
+  }}
+>
+  {submitting ? "Creating Organization..." : "Set Up Organization"}
+</button>
     </OnboardingLayout>
   );
 }

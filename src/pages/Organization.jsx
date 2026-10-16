@@ -71,6 +71,18 @@ function Organization() {
       <p className="text-xs text-red-400 min-h-[18px] mt-3">
         {error}
       </p>
+      <button
+  type="button"
+  onClick={() => navigate("/organizations")}
+  className="w-full mt-4 flex items-center justify-center gap-2
+    rounded-lg border border-white/20 bg-white/10
+    px-4 py-3 text-sm font-medium text-white
+    hover:bg-white/15 transition-colors"
+>
+  <FiBriefcase size={18} />
+  View My Organizations
+  <span aria-hidden="true">→</span>
+</button>
     </OnboardingLayout>
   );
 }

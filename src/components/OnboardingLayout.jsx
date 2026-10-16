@@ -6,7 +6,7 @@ function OnboardingLayout({ stepLabel, children }) {
       <DashboardBackground />
       <div className="relative z-10 min-h-screen flex items-start justify-center pt-24 px-4">
       <div
-        className="w-full max-w-[820px] rounded-xl p-5 sm:p-6 md:px-10 md:py-5"
+        className="w-full max-w-[900px] rounded-xl p-5 sm:p-6 md:px-10 md:py-5"
         style={{
         backgroundColor: "rgba(215, 215, 215, 0.25)",
         border: "1px solid rgba(255, 255, 255, 0.14)",
