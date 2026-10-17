@@ -18,7 +18,7 @@ function OnboardingLayout({ stepLabel, children }) {
           <p className="text-xs text-white/70 mt-3">{stepLabel}</p>
         </div>
       </div>
-    </div>
+     </div>
   );
 }
 

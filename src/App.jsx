@@ -20,6 +20,7 @@ import JoinOrganization from "./pages/JoinOrganization";
 import CommunityDetails from "./pages/communities/CommunityDetails";
 import CommunityInvite from "./pages/communities/CommunityInvite";
 import OrganizationsList from "./pages/organization/OrganizationsList";
+import OrganizationWorkspace from "./pages/organization/OrganizationWorkspace";
 
 function App() {
   useEffect(() => {
@@ -42,36 +43,15 @@ function App() {
           <Route path="/video-call" element={<VideoCall />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/organizations" element={<OrganizationsList />} />
-          <Route
-    path="/communities/invite/:token"
-    element={<CommunityInvite />}
-/>
-          <Route
-  path="/communities/:communityId"
-  element={
-    <ProtectedRoute>
-      <CommunityDetails />
-    </ProtectedRoute>
-  }
-/>
-          <Route
-  path="/organization/join"
-  element={<JoinOrganization />}
-/>
-          
+          <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
+          <Route path="/communities/invite/:token" element={<CommunityInvite />}/>
+          <Route path="/communities/:communityId" element={ <ProtectedRoute> <CommunityDetails /></ProtectedRoute>}/>
+          <Route path="/organization/join" element={<JoinOrganization />}/>
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
-          <Route
-  path="/communities"
-  element={<ProtectedRoute><Communities /></ProtectedRoute> }
-/>
-<Route path="/organization" element={<Organization />} />
-<Route
-  path="/organization/create"
-  element={<CreateOrganization />}
-/>
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+          <Route path="/communities"element={<ProtectedRoute><Communities /></ProtectedRoute> }/>
+          <Route path="/organization" element={<Organization />} />
+          <Route path="/organization/create"element={<CreateOrganization />}/>
+        </Routes> </BrowserRouter></AuthProvider>
   );
 }
 
