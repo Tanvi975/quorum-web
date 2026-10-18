@@ -13,14 +13,15 @@ import { useEffect } from "react";
 import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
 import Organization from "./pages/Organization";
-import CreateOrganization from "./pages/CreateOrganization";
+import CreateOrganization from "./pages/organization/CreateOrganization";
 import Chat from "./pages/Chat";
 import Communities from "./pages/communities/Communities";
-import JoinOrganization from "./pages/JoinOrganization";
+import JoinOrganization from "./pages/organization/JoinOrganization";
 import CommunityDetails from "./pages/communities/CommunityDetails";
 import CommunityInvite from "./pages/communities/CommunityInvite";
 import OrganizationsList from "./pages/organization/OrganizationsList";
 import OrganizationWorkspace from "./pages/organization/OrganizationWorkspace";
+import InvitePreview from "./pages/organization/InvitePreview";
 
 function App() {
   useEffect(() => {
@@ -45,12 +46,13 @@ function App() {
           <Route path="/organizations" element={<OrganizationsList />} />
           <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
           <Route path="/communities/invite/:token" element={<CommunityInvite />}/>
-          <Route path="/communities/:communityId" element={ <ProtectedRoute> <CommunityDetails /></ProtectedRoute>}/>
+          <Route path="/communities/:communityId" element={  <CommunityDetails />}/>
           <Route path="/organization/join" element={<JoinOrganization />}/>
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
-          <Route path="/communities"element={<ProtectedRoute><Communities /></ProtectedRoute> }/>
+          <Route path="/communities"element={<Communities />}/>
           <Route path="/organization" element={<Organization />} />
           <Route path="/organization/create"element={<CreateOrganization />}/>
+          <Route path="/join/:token" element={<InvitePreview />} />
         </Routes> </BrowserRouter></AuthProvider>
   );
 }

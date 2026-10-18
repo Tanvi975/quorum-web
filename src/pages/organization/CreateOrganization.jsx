@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import OnboardingLayout from "../components/OnboardingLayout";
-import api from "../services/api";
+import OnboardingLayout from "../../components/OnboardingLayout";
+import api from "../../services/api";
 
 const memberOptions = [
   "1-10 members",

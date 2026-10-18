@@ -19,6 +19,7 @@ import {
 
 import api from "../../services/api";
 import OnboardingLayout from "../../components/OnboardingLayout";
+import AddTeamMember from "./AddTeamMember";
 const btn =
   "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition";
 
@@ -115,6 +116,7 @@ function OrganizationWorkspace() {
   const [search, setSearch] = useState("");
   const [openMenu, setOpenMenu] = useState("");
   const [modal, setModal] = useState("")
+  const [showAddTeamMember, setShowAddTeamMember] = useState(false);
   const [teamForm, setTeamForm] = useState({
     name: "",
     description: "",
@@ -834,20 +836,32 @@ function OrganizationWorkspace() {
                   Organize people around shared work.
                 </p>
               </div>
-              {canCreateTeam && (
-                <button
-                  type="button"
-                  onClick={() => setModal("create-team")}
-                  className={primary}
-                >
-                  <FaPlus />
-                  Create team
-                </button>
-              )}
-            </div>
-            <div className="relative mb-4">
-              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
+             
+             {canCreateTeam && (
+             <div className="flex flex-wrap gap-2">
+           <button
+            type="button"
+           onClick={() => setModal("create-team")}
+           className={primary}
+            >
+            <FaPlus />
+           Create team
+         </button>
+   
+         <button
+         type="button"
+         onClick={() => setShowAddTeamMember(true)}
+        className={primary}
+       >
+      <FaUserPlus />
+      Add Team Member
+     </button>
+     </div>
+      )}
+       </div>
+        <div className="relative mb-4">
+           <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search teams..."
@@ -1186,6 +1200,19 @@ function OrganizationWorkspace() {
           </form>
         </Modal>
       )}
+      {showAddTeamMember && (
+  <AddTeamMember
+    organizationId={organizationId}
+    teams={teams}
+    members={members}
+    onClose={() => setShowAddTeamMember(false)}
+    onSuccess={async () => {
+      setShowAddTeamMember(false);
+      setNotice("Member added to team successfully.");
+      await loadWorkspace(false);
+    }}
+  />
+)}
     </OnboardingLayout>
   );
 }

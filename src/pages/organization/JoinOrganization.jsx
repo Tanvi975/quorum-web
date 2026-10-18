@@ -1,9 +1,9 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import OnboardingLayout from "../components/OnboardingLayout";
+import OnboardingLayout from "../../components/OnboardingLayout";
 import { FiArrowLeft, FiLink } from "react-icons/fi";
-import api from "../services/api";
+import api from "../../services/api";
 
 function JoinOrganization() {
   const [inviteCode, setInviteCode] = useState("");
