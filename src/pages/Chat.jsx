@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getConversations,
@@ -1220,7 +1219,6 @@ const handleAddMembers = async (event) => {
               </div>
             </aside>
           )}
-          ```jsx
       {showGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <form
@@ -1342,7 +1340,6 @@ const handleAddMembers = async (event) => {
           </form>
         </div>
       )}
-```
 {showAddMembersModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
     <form

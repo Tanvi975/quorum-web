@@ -22,6 +22,8 @@ import CommunityInvite from "./pages/communities/CommunityInvite";
 import OrganizationsList from "./pages/organization/OrganizationsList";
 import OrganizationWorkspace from "./pages/organization/OrganizationWorkspace";
 import InvitePreview from "./pages/organization/InvitePreview";
+import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
+import Calendar from "./pages/Calendar";
 
 function App() {
   useEffect(() => {
@@ -53,6 +55,8 @@ function App() {
           <Route path="/organization" element={<Organization />} />
           <Route path="/organization/create"element={<CreateOrganization />}/>
           <Route path="/join/:token" element={<InvitePreview />} />
+          <Route path="/ai-assistant"  element={<QuorumAIAssistant />}/>
+          <Route path="/calendar" element={<Calendar />} />
         </Routes> </BrowserRouter></AuthProvider>
   );
 }
