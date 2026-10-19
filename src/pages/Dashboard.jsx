@@ -4,6 +4,7 @@ import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle, FiGlobe,} from
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
 import { useState } from "react";
+import NotificationBell from "../components/NotificationBell";
 
 function Dashboard() {
   const { user } = useAuth();
@@ -114,7 +115,7 @@ function handleJoinMeeting() {
   <p className="text-sm text-red-500">{meetingError}</p>
 )}
 
-
+<NotificationBell />
             <div className="w-[36px] h-[36px] rounded-full bg-[#0068FF] text-white flex items-center justify-center font-semibold text-sm">
               {userName.charAt(0).toUpperCase()}
             </div>
