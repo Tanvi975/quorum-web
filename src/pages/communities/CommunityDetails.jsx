@@ -256,37 +256,59 @@ const [searchingMembers, setSearchingMembers] = useState(false);
     
 
     
-async function handleInvite() {
-    setError("");
-    setNotice("");
-    setInviteLink("");
-
-    try {
-        const response = await createCommunityInvite(communityId);
-        const result = response?.data ?? response;
-
-        const invite = result?.data ?? result;
-        const token = invite?.token;
-
-        if (!token) {
-            throw new Error("Backend did not return an invite token.");
+    async function handleInvite() {
+        setError("");
+        setNotice("");
+        setInviteLink("");
+    
+        try {
+            const response = await createCommunityInvite(communityId);
+            const result = response?.data ?? response;
+    
+            const inviteUrl =
+                result?.data?.inviteUrl ??
+                result?.inviteUrl;
+    
+            if (!inviteUrl) {
+                throw new Error(
+                    "Backend response mein inviteUrl nahi mila."
+                );
+            }
+    
+            setInviteLink(inviteUrl);
+            setNotice("Invitation created. Copy and share this link.");
+        } catch (err) {
+            console.error("Failed to create invite:", err);
+            setError(
+                err.response?.data?.message ||
+                err.message ||
+                "Could not generate an invitation link."
+            );
         }
-
-        const url = `${window.location.origin}/communities/invite/${token}`;
-
-        setInviteLink(url);
-        setNotice("Invitation created. Copy and share this link.");
-    } catch (err) {
-        console.error("Failed to create invite:", err);
-        setError(
-            err.response?.data?.message ||
-            err.message ||
-            "Could not generate an invitation link."
-        );
     }
-}
 
-
+    async function handleLeaveCommunity() {
+        const confirmed = window.confirm(
+            "Are you sure you want to leave this community?"
+        );
+    
+        if (!confirmed) return;
+    
+        setError("");
+        setNotice("");
+    
+        try {
+            await leaveCommunity(communityId);
+            navigate("/communities");
+        } catch (err) {
+            console.error("Failed to leave community:", err);
+            setError(
+                err.response?.data?.message ||
+                "Could not leave the community."
+            );
+        }
+    }
+    
 async function handleSearchMembers(query) {
     setSearch(query);
 
@@ -816,6 +838,19 @@ className="rounded-xl border border-white/10 bg-white/[0.05] p-5"
                                     {communityId}
                                 </p>
                             </div>
+
+                      <div className="mt-6 border-t border-white/10 pt-5">
+                    <h3 className="text-sm font-semibold text-blue-100/60">
+                    COMMUNITY ACTIONS
+                   </h3>
+
+                <button
+                  type="button"
+                  onClick={handleLeaveCommunity}
+                   className="mt-4 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/20">
+                 Leave Community
+               </button>
+                 </div>
                         </div>
                     )}
                 </section>

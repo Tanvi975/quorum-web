@@ -105,9 +105,10 @@ export async function deletePostComment(commentId) {
 }
 
 export async function leaveCommunity(communityId) {
-    const response = await api.delete(
+    const response = await api.post(
         `/api/communities/${communityId}/leave`
     );
+
     return response.data;
 }
 
@@ -117,6 +118,30 @@ export async function removeCommunityMember(communityId, userId) {
     );
     return response.data;
 }
+
+export async function updateCommunityMemberRole(
+    communityId,
+    userId,
+    role
+) {
+    const response = await api.patch(
+        `/api/communities/${communityId}/members/${userId}/role`, { role }
+    );
+
+    return response.data;
+}
+
+export async function transferCommunityOwnership(
+    communityId,
+    newOwnerId
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/transfer-ownership`, { newOwnerId }
+    );
+
+    return response.data;
+}
+
 
 export async function getInvitePreview(token) {
     const response = await api.get(

@@ -47,7 +47,7 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/organizations" element={<OrganizationsList />} />
           <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
-          <Route path="/communities/invite/:token" element={<CommunityInvite />}/>
+          <Route path="/communities/invites/:token" element={<CommunityInvite />} />
           <Route path="/communities/:communityId" element={  <CommunityDetails />}/>
           <Route path="/organization/join" element={<JoinOrganization />}/>
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
