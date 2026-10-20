@@ -1,6 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import DashboardBackground from "../components/DashboardBackground";
-import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle, FiGlobe,} from "react-icons/fi";
+import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle, FiGlobe, FiCpu} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
 import { useState } from "react";
@@ -160,6 +160,15 @@ function handleJoinMeeting() {
     <FiBookmark className="w-5 h-5 shrink-0" />
     <span className="text-[11px] lg:text-sm">Saved Items</span>
   </button>
+ 
+<button
+  title="AI Assistant"
+  onClick={() => navigate("/ai-assistant")}
+  className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
+>
+  <FiCpu className="w-5 h-5 shrink-0" />
+  <span className="text-[11px] lg:text-sm">AI Assistant</span>
+</button>
 
   <button
     title="Organizations"
