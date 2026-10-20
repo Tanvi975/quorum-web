@@ -1,12 +1,12 @@
 import api from "./api";
 
 export async function getCommunities() {
-    const response = await api.get("/communities");
+    const response = await api.get("/api/communities");
     return response.data;
 }
 
 export async function createCommunity(communityData) {
-    const response = await api.post("/communities", communityData);
+    const response = await api.post("/api/communities", communityData);
     return response.data;
 }
 

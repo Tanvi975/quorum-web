@@ -1,6 +1,6 @@
 import api from "./api";
 
-const BASE = "/notifications";
+const BASE = "/api/notifications";
 
 export const notificationService = {
     getNotifications: (page = 1, limit = 20, unreadOnly = false) =>
