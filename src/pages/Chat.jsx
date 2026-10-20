@@ -1348,156 +1348,158 @@ const handleRenameGroup = async (event) => {
           </main>
 
          
-<div className="mb-5 flex items-center justify-between">
-  <h2 className="text-xs font-semibold text-white">
-    {activeIsGroup ? "Group info" : "Contact info"}
-  </h2>
-  <IconButton
-    label="Close contact information"
-    onClick={() => setShowInfo(false)}
-  >
-    <FiX size={14} />
-  </IconButton>
-</div>
+          {showInfo && activeConversation && (
+  <aside className="hidden w-[240px] shrink-0 flex-col rounded-lg border border-[#253D57] bg-[#192D43] p-3 lg:flex xl:w-[260px]">
+    <div className="mb-5 flex items-center justify-between">
+      <h2 className="text-xs font-semibold text-white">
+        {activeIsGroup ? "Group info" : "Contact info"}
+      </h2>
+      <IconButton
+        label="Close contact information"
+        onClick={() => setShowInfo(false)}
+      >
+        <FiX size={14} />
+      </IconButton>
+    </div>
 
-{activeIsGroup ? (
-  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-    <div className="border-b border-[#304A64] pb-3 text-center">
-      <div className="flex justify-center">
-        <Avatar name={activeConversationName} size={52} />
-      </div>
-      <h3 className="mt-3 break-words text-sm font-semibold text-white">
-        {activeConversationName}
-      </h3>
-      <p className="mt-1 text-[10px] text-[#94A9BE]">
-        {activeConversation?.participants?.length || 0} members
-      </p>
+    {activeIsGroup ? (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        <div className="border-b border-[#304A64] pb-3 text-center">
+          <div className="flex justify-center">
+            <Avatar name={activeConversationName} size={52} />
+          </div>
+          <h3 className="mt-3 break-words text-sm font-semibold text-white">
+            {activeConversationName}
+          </h3>
+          <p className="mt-1 text-[10px] text-[#94A9BE]">
+            {activeConversation?.participants?.length || 0} members
+          </p>
 
-      {activeIsGroupAdmin && (
+          {activeIsGroupAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setRenamedGroup(activeConversation.name || "");
+                setShowRenameGroup(true);
+              }}
+              className="mt-3 w-full rounded-md border border-[#46617C] px-3 py-2 text-xs text-white hover:bg-[#263F59]"
+            >
+              Rename Group
+            </button>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-[#7F95AB]">
+            Members
+          </p>
+
+          {(activeConversation?.participants || []).map((participant) => {
+            const person = getUser(participant);
+            const userId = participant?.userId || getUserId(person);
+            const isCurrentUser = String(userId) === String(currentUserId);
+            const isAdmin = participant?.role === "admin";
+
+            return (
+              <div
+                key={String(userId)}
+                className="mb-3 rounded-md bg-[#20374E] p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Avatar name={getUserName(person)} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] text-white">
+                      {getUserName(person)}
+                      {isCurrentUser ? " (You)" : ""}
+                    </p>
+                    <p className="text-[10px] text-[#94A9BE]">
+                      {isAdmin ? "Admin" : "Member"}
+                    </p>
+                  </div>
+                </div>
+
+                {activeIsGroupAdmin && !isCurrentUser && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={updatingMemberId === String(userId)}
+                      onClick={() =>
+                        isAdmin
+                          ? handleDemoteAdmin(participant)
+                          : handlePromoteAdmin(participant)
+                      }
+                      className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                    >
+                      {updatingMemberId === String(userId)
+                        ? "Updating..."
+                        : isAdmin
+                          ? "Remove admin"
+                          : "Make admin"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={removingMemberId === String(userId)}
+                      onClick={() => handleRemoveMember(participant)}
+                      className="rounded border border-red-800 px-2 py-1 text-[10px] text-red-300 disabled:opacity-50"
+                    >
+                      {removingMemberId === String(userId)
+                        ? "Removing..."
+                        : "Remove"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         <button
           type="button"
-          onClick={() => {
-            setRenamedGroup(activeConversation.name || "");
-            setShowRenameGroup(true);
-          }}
-          className="mt-3 w-full rounded-md border border-[#46617C] px-3 py-2 text-xs text-white hover:bg-[#263F59]"
+          disabled={leavingGroup}
+          onClick={handleLeaveGroup}
+          className="mt-auto rounded-md border border-red-800 px-3 py-2 text-xs text-red-300 disabled:opacity-50"
         >
-          Rename Group
+          {leavingGroup ? "Leaving..." : "Leave Group"}
         </button>
-      )}
-    </div>
+      </div>
+    ) : (
+      <>
+        <div className="flex flex-col items-center border-b border-[#304A64] pb-5 text-center">
+          <Avatar name={getUserName(activeContact)} size={52} />
+          <h3 className="mt-3 text-sm font-semibold text-white">
+            {getUserName(activeContact)}
+          </h3>
+          <p className="mt-1 break-all text-[10px] text-[#94A9BE]">
+            {activeContact.email || "No email available"}
+          </p>
+        </div>
 
-    <div>
-      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-[#7F95AB]">
-        Members
-      </p>
+        <div className="border-b border-[#304A64] py-4">
+          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
+            Contact details
+          </p>
+          <p className="mb-1 text-[10px] text-[#7F95AB]">Name</p>
+          <p className="break-words text-xs text-[#E6EDF5]">
+            {getUserName(activeContact)}
+          </p>
+          <p className="mb-1 mt-4 text-[10px] text-[#7F95AB]">Email</p>
+          <p className="break-all text-xs text-[#E6EDF5]">
+            {activeContact.email || "Not provided"}
+          </p>
+        </div>
 
-      {(activeConversation?.participants || []).map((participant) => {
-        const person = getUser(participant);
-        const userId =
-          participant?.userId || getUserId(person);
-        const isCurrentUser =
-          String(userId) === String(currentUserId);
-        const isAdmin = participant?.role === "admin";
-
-        return (
-          <div
-            key={String(userId)}
-            className="mb-3 rounded-md bg-[#20374E] p-2"
-          >
-            <div className="flex items-center gap-2">
-              <Avatar name={getUserName(person)} size={28} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] text-white">
-                  {getUserName(person)}
-                  {isCurrentUser ? " (You)" : ""}
-                </p>
-                <p className="text-[10px] text-[#94A9BE]">
-                  {isAdmin ? "Admin" : "Member"}
-                </p>
-              </div>
-            </div>
-
-            {activeIsGroupAdmin && !isCurrentUser && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={updatingMemberId === String(userId)}
-                  onClick={() =>
-                    isAdmin
-                      ? handleDemoteAdmin(participant)
-                      : handlePromoteAdmin(participant)
-                  }
-                  className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
-                >
-                  {updatingMemberId === String(userId)
-                    ? "Updating..."
-                    : isAdmin
-                      ? "Remove admin"
-                      : "Make admin"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={removingMemberId === String(userId)}
-                  onClick={() => handleRemoveMember(participant)}
-                  className="rounded border border-red-800 px-2 py-1 text-[10px] text-red-300 disabled:opacity-50"
-                >
-                  {removingMemberId === String(userId)
-                    ? "Removing..."
-                    : "Remove"}
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-
-    <button
-      type="button"
-      disabled={leavingGroup}
-      onClick={handleLeaveGroup}
-      className="mt-auto rounded-md border border-red-800 px-3 py-2 text-xs text-red-300 disabled:opacity-50"
-    >
-      {leavingGroup ? "Leaving..." : "Leave Group"}
-    </button>
-  </div>
-) : (
-  <>
-    <div className="flex flex-col items-center border-b border-[#304A64] pb-5 text-center">
-      <Avatar name={getUserName(activeContact)} size={52} />
-      <h3 className="mt-3 text-sm font-semibold text-white">
-        {getUserName(activeContact)}
-      </h3>
-      <p className="mt-1 break-all text-[10px] text-[#94A9BE]">
-        {activeContact.email || "No email available"}
-      </p>
-    </div>
-
-    <div className="border-b border-[#304A64] py-4">
-      <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
-        Contact details
-      </p>
-      <p className="mb-1 text-[10px] text-[#7F95AB]">Name</p>
-      <p className="break-words text-xs text-[#E6EDF5]">
-        {getUserName(activeContact)}
-      </p>
-      <p className="mb-1 mt-4 text-[10px] text-[#7F95AB]">Email</p>
-      <p className="break-all text-xs text-[#E6EDF5]">
-        {activeContact.email || "Not provided"}
-      </p>
-    </div>
-
-    <div className="py-4">
-      <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
-        Shared media
-      </p>
-      <p className="text-[10px] text-[#8196AC]">
-        Media integration is not connected yet.
-      </p>
-    </div>
-  </>
+        <div className="py-4">
+          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
+            Shared media
+          </p>
+          <p className="text-[10px] text-[#8196AC]">
+            Media integration is not connected yet.
+          </p>
+        </div>
+      </>
+    )}
+  </aside>
 )}
 
       {showGroupModal && (
