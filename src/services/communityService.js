@@ -16,35 +16,36 @@ export async function getCommunityDetails(communityId) {
     );
     return response.data;
 }
-
-export async function getCommunityMembers(communityId) {
+export async function getCommunityMembers(
+    communityId, { cursor, limit = 20 } = {}
+) {
     const response = await api.get(
-        `/api/communities/${communityId}/members`, { params: { limit: 20 } }
+        `/api/communities/${communityId}/members`, { params: { cursor, limit } }
     );
     return response.data;
 }
-
-export async function getCommunityPosts(communityId) {
+export async function getCommunityPosts(
+    communityId, { cursor, limit = 20 } = {}
+) {
     const response = await api.get(
-        `/api/communities/${communityId}/posts`, { params: { limit: 20 } }
+        `/api/communities/${communityId}/posts`, { params: { cursor, limit } }
     );
     return response.data;
 }
-
 export async function createCommunityPost(communityId, content) {
     const response = await api.post(
         `/api/communities/${communityId}/posts`, { content }
     );
     return response.data;
 }
-
-export async function getPostComments(postId) {
+export async function getPostComments(
+    postId, { cursor, limit = 20 } = {}
+) {
     const response = await api.get(
-        `/api/community-posts/${postId}/comments`, { params: { limit: 20 } }
+        `/api/community-posts/${postId}/comments`, { params: { cursor, limit } }
     );
     return response.data;
 }
-
 export async function createPostComment(postId, content) {
     const response = await api.post(
         `/api/community-posts/${postId}/comments`, { content }
@@ -55,6 +56,14 @@ export async function createPostComment(postId, content) {
 export async function createCommunityInvite(communityId) {
     const response = await api.post(
         `/api/communities/${communityId}/invites`, { expiresInDays: 7 }
+    );
+
+    return response.data;
+}
+
+export async function revokeCommunityInvite(communityId, inviteId) {
+    const response = await api.delete(
+        `/api/communities/${communityId}/invites/${inviteId}`
     );
 
     return response.data;
@@ -146,6 +155,13 @@ export async function transferCommunityOwnership(
 export async function getInvitePreview(token) {
     const response = await api.get(
         `/api/communities/invites/${token}`
+    );
+    return response.data;
+}
+
+export async function joinCommunityInvite(token) {
+    const response = await api.post(
+        `/api/communities/invites/${token}/join`
     );
     return response.data;
 }

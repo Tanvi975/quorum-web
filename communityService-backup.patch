@@ -1,0 +1,230 @@
+diff --git a/src/services/communityService.js b/src/services/communityService.js
+index da3feb0..886fbe4 100644
+--- a/src/services/communityService.js
++++ b/src/services/communityService.js
+@@ -4,162 +4,128 @@ export async function getCommunities() {
+     const response = await api.get("/api/communities");
+     return response.data;
+ }
+-
+ export async function createCommunity(communityData) {
+     const response = await api.post("/api/communities", communityData);
+     return response.data;
+ }
+-
+ export async function getCommunityDetails(communityId) {
+-    const response = await api.get(
+-        `/api/communities/${communityId}`
+-    );
++    const response = await api.get(`/api/communities/${communityId}`);
+     return response.data;
+ }
+-
+-export async function getCommunityMembers(communityId) {
+-    const response = await api.get(
+-        `/api/communities/${communityId}/members`, { params: { limit: 20 } }
+-    );
++export async function updateCommunity(communityId, data) {
++    const response = await api.patch(`/api/communities/${communityId}`, data);
+     return response.data;
+ }
+-
+-export async function getCommunityPosts(communityId) {
++export async function deleteCommunity(communityId) {
++    const response = await api.delete(`/api/communities/${communityId}`);
++    return response.data;
++}
++export async function getCommunityMembers(
++    communityId, { cursor, limit = 20 } = {}
++) {
+     const response = await api.get(
+-        `/api/communities/${communityId}/posts`, { params: { limit: 20 } }
++        `/api/communities/${communityId}/members`, { params: { cursor, limit } }
+     );
+     return response.data;
+ }
+-
+-export async function createCommunityPost(communityId, content) {
+-    const response = await api.post(
+-        `/api/communities/${communityId}/posts`, { content }
++export async function leaveCommunity(communityId) {
++    const response = await api.post(`/api/communities/${communityId}/leave`);
++    return response.data;
++}
++export async function removeCommunityMember(communityId, userId) {
++    const response = await api.delete(
++        `/api/communities/${communityId}/members/${userId}`
+     );
+     return response.data;
+ }
+-
+-export async function getPostComments(postId) {
+-    const response = await api.get(
+-        `/api/community-posts/${postId}/comments`, { params: { limit: 20 } }
++export async function updateCommunityMemberRole(
++    communityId,
++    userId,
++    role
++) {
++    const response = await api.patch(
++        `/api/communities/${communityId}/members/${userId}/role`, { role }
+     );
+     return response.data;
+ }
+-
+-export async function createPostComment(postId, content) {
++export async function transferCommunityOwnership(communityId, newOwnerId) {
+     const response = await api.post(
+-        `/api/community-posts/${postId}/comments`, { content }
++        `/api/communities/${communityId}/transfer-ownership`, { newOwnerId }
+     );
+     return response.data;
+ }
+-
+ export async function createCommunityInvite(communityId) {
+     const response = await api.post(
+         `/api/communities/${communityId}/invites`, { expiresInDays: 7 }
+     );
+-
+-    return response.data;
+-}
+-
+-export async function updateCommunity(communityId, data) {
+-    const response = await api.patch(
+-        `/api/communities/${communityId}`,
+-        data
+-    );
+     return response.data;
+ }
+-export async function searchCommunityUsers(communityId, query) {
+-    const response = await api.get(
+-        `/api/communities/${communityId}/users/search`, {
+-            params: {
+-                q: query,
+-                limit: 20,
+-            },
+-        }
+-    );
+-
++export async function getInvitePreview(token) {
++    const response = await api.get(`/api/communities/invites/${token}`);
+     return response.data;
+ }
+-
+-export async function deleteCommunity(communityId) {
+-    const response = await api.delete(
+-        `/api/communities/${communityId}`
++export async function joinCommunityInvite(token) {
++    const response = await api.post(
++        `/api/communities/invites/${token}/join`
+     );
+-
+     return response.data;
+ }
+-
+-export async function deleteCommunityPost(postId) {
+-    const response = await api.delete(
+-        `/api/community-posts/${postId}`
++export async function searchCommunityUsers(
++    communityId,
++    query, { cursor, limit = 20 } = {}
++) {
++    const response = await api.get(
++        `/api/communities/${communityId}/users/search`, { params: { q: query, cursor, limit } }
+     );
+-
+     return response.data;
+ }
+-
+-export async function deletePostComment(commentId) {
+-    const response = await api.delete(
+-        `/api/community-comments/${commentId}`
++export async function getCommunityPosts(
++    communityId, { cursor, limit = 20 } = {}
++) {
++    const response = await api.get(
++        `/api/communities/${communityId}/posts`, { params: { cursor, limit } }
+     );
+-
+     return response.data;
+ }
+-
+-export async function leaveCommunity(communityId) {
++export async function createCommunityPost(communityId, content) {
+     const response = await api.post(
+-        `/api/communities/${communityId}/leave`
+-    );
+-
+-    return response.data;
+-}
+-
+-export async function removeCommunityMember(communityId, userId) {
+-    const response = await api.delete(
+-        `/api/communities/${communityId}/members/${userId}`
++        `/api/communities/${communityId}/posts`, { content }
+     );
+     return response.data;
+ }
+-
+-export async function updateCommunityMemberRole(
+-    communityId,
+-    userId,
+-    role
+-) {
++export async function updateCommunityPost(postId, content) {
+     const response = await api.patch(
+-        `/api/communities/${communityId}/members/${userId}/role`, { role }
++        `/api/community-posts/${postId}`, { content }
+     );
+-
+     return response.data;
+ }
+-
+-export async function transferCommunityOwnership(
+-    communityId,
+-    newOwnerId
+-) {
+-    const response = await api.post(
+-        `/api/communities/${communityId}/transfer-ownership`, { newOwnerId }
+-    );
+-
++export async function deleteCommunityPost(postId) {
++    const response = await api.delete(`/api/community-posts/${postId}`);
+     return response.data;
+ }
+-
+-
+-export async function getInvitePreview(token) {
++export async function getPostComments(
++    postId, { cursor, limit = 20 } = {}
++) {
+     const response = await api.get(
+-        `/api/communities/invites/${token}`
++        `/api/community-posts/${postId}/comments`, { params: { cursor, limit } }
+     );
+     return response.data;
+ }
+-
+-export async function updateCommunityPost(postId, content) {
+-    const response = await api.patch(
+-        `/api/community-posts/${postId}`, { content }
++export async function createPostComment(postId, content) {
++    const response = await api.post(
++        `/api/community-posts/${postId}/comments`, { content }
+     );
+     return response.data;
+ }
+-
+ export async function updatePostComment(commentId, content) {
+     const response = await api.patch(
+         `/api/community-comments/${commentId}`, { content }
+     );
+     return response.data;
++}
++export async function deletePostComment(commentId) {
++    const response = await api.delete(
++        `/api/community-comments/${commentId}`
++    );
++    return response.data;
+ }
+\ No newline at end of file
