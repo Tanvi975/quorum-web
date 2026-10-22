@@ -856,14 +856,28 @@ const handlePromoteAdmin = async (participant) => {
     participant?.userId || getUserId(person);
 
   if (!activeConversation?.id || !userId) return;
-  const adminCount = (activeConversation?.participants || []).filter(
-    (p) => p.role === "admin"
-  ).length;
-
-  if (adminCount <= 1) {
-    setError("Cannot demote the last admin of the group");
-    return;
-  }
+  const handlePromoteAdmin = async (participant) => {
+      const person = getUser(participant);
+      const userId =
+        participant?.userId || getUserId(person);
+    
+      if (!activeConversation?.id || !userId) return;
+    
+      try {
+        setUpdatingMemberId(String(userId));
+        setError("");
+    
+        await promoteGroupAdmin(activeConversation.id, userId);
+        await refreshActiveGroup();
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Could not promote this member."
+        );
+      } finally {
+        setUpdatingMemberId(null);
+      }
+    };
   try {
     setUpdatingMemberId(String(userId));
     setError("");
