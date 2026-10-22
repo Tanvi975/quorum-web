@@ -68,7 +68,16 @@ function OnboardingStep3() {
   ];
 
   return (
-    <OnboardingLayout stepLabel="Step 3 of 3">
+    <OnboardingLayout>
+      <div className="mb-4 flex justify-end">
+  <button
+    type="button"
+    onClick={() => navigate("/dashboard")}
+    className="rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+  >
+    Skip
+  </button>
+</div>
       <h1 className="text-2xl font-bold text-white mb-1">Build your team & define your role</h1>
       <p className="text-sm text-white/70 mb-5">
         Select how you'll be using Quorum and invite collaborators to your workspace.

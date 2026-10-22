@@ -97,9 +97,9 @@ export async function removeGroupParticipant(conversationId, userId) {
     return res.data;
 }
 
-export async function leaveGroupConversation(conversationId) {
+export async function leaveGroupConversation(conversationId, userId) {
     const res = await api.delete(
-        `/api/conversations/${conversationId}/leave`
+        `/api/conversations/${conversationId}/participants/${userId}`
     );
 
     return res.data;

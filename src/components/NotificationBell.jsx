@@ -29,12 +29,12 @@ function getNotificationTarget(notification) {
             data.commentId ? `#comment-${data.commentId}` : ""
           }`
         : null;
-
-    case "COMMUNITY_INVITE":
-      return data.communityId
-        ? `/communities/join/${data.communityId}`
-        : null;
-
+        case "COMMUNITY_INVITE":
+          return data.token
+            ? `/communities/invites/${encodeURIComponent(data.token)}`
+            : data.communityId
+              ? `/communities/${data.communityId}`
+              : null;     
     case "MEETING_STARTED":
       return data.meetingId
         ? `/meetings/${data.meetingId}`

@@ -678,7 +678,7 @@ function Calendar() {
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Add an agenda or a short note..."
-                  className="w-full resize-y rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                  className="w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
                 />
                 <p className="mt-1 text-right text-xs text-[#94A3B8]">
                   {form.description.length}/{MAX_DESCRIPTION}

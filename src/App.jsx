@@ -49,6 +49,7 @@ function App() {
           <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
           <Route path="/communities/invites/:token" element={<CommunityInvite />} />
           <Route path="/communities/:communityId" element={  <CommunityDetails />}/>
+          <Route path="/communities/:communityId/posts/:postId" element={<CommunityDetails />}/>
           <Route path="/organization/join" element={<JoinOrganization />}/>
           <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
           <Route path="/communities"element={<Communities />}/>

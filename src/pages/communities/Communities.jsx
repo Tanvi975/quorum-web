@@ -330,7 +330,7 @@ function Communities() {
                 placeholder="What is this community about?"
                 rows={3}
                 maxLength={500}
-                className="mt-2 w-full resize-y rounded-lg border border-white/10 bg-[#061B38] px-3 py-3 text-sm outline-none placeholder:text-blue-100/40 focus:border-blue-400"
+                className="mt-2 w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-white/10 bg-[#061B38] px-3 py-3 text-sm outline-none placeholder:text-blue-100/40 focus:border-blue-400"
               />
 
               {formError && (

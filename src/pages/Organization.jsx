@@ -20,6 +20,15 @@ function Organization() {
 
   return (
     <OnboardingLayout>
+
+<button
+  type="button"
+  onClick={() => navigate("/dashboard")}
+  className="mb-4 inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+>
+  <span aria-hidden="true">←</span>
+</button>
+
       <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
         Welcome to Quorum
       </h1>

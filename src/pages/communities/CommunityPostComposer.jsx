@@ -102,7 +102,7 @@ export default function CommunityPostComposer({
                     rows={4}
                     disabled={disabled || submitting}
                     placeholder="What would you like to share with the community?"
-                    className="w-full resize-y rounded-xl border border-white/10 bg-[#06172E]/80 px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-blue-100/35 focus:border-blue-300/60 disabled:opacity-50"
+                    className="w-full resize-y max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#06172E]/80 px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-blue-100/35 focus:border-blue-300/60 disabled:opacity-50"
                 />
 
                 <div className="flex justify-end">

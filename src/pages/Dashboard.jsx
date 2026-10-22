@@ -3,12 +3,46 @@ import DashboardBackground from "../components/DashboardBackground";
 import {FiHome, FiCalendar, FiBookmark, FiUsers, FiMessageCircle, FiGlobe, FiCpu} from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import NotificationBell from "../components/NotificationBell";
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  
+const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+const profileMenuRef = useRef(null);
+
+useEffect(() => {
+  function handleOutsideClick(event) {
+    if (
+      profileMenuRef.current &&
+      !profileMenuRef.current.contains(event.target)
+    ) {
+      setProfileMenuOpen(false);
+    }
+  }
+
+  function handleEscape(event) {
+    if (event.key === "Escape") {
+      setProfileMenuOpen(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleOutsideClick);
+  document.addEventListener("keydown", handleEscape);
+
+  return () => {
+    document.removeEventListener("mousedown", handleOutsideClick);
+    document.removeEventListener("keydown", handleEscape);
+  };
+}, []);
+
+function handleLogout() {
+  setProfileMenuOpen(false);
+  logout();
+  navigate("/login", { replace: true });
+}
   const [creatingMeeting, setCreatingMeeting] = useState(false);
 const [meetingError, setMeetingError] = useState("");
 const [meetingCode, setMeetingCode] = useState("");
@@ -116,9 +150,51 @@ function handleJoinMeeting() {
 )}
 
 <NotificationBell />
-            <div className="w-[36px] h-[36px] rounded-full bg-[#0068FF] text-white flex items-center justify-center font-semibold text-sm">
-              {userName.charAt(0).toUpperCase()}
-            </div>
+
+<div className="relative" ref={profileMenuRef}>
+  <button
+    type="button"
+    onClick={() => setProfileMenuOpen((open) => !open)}
+    aria-label="Open profile menu"
+    aria-expanded={profileMenuOpen}
+    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0068FF] text-sm font-semibold text-white transition hover:ring-4 hover:ring-blue-100"
+  >
+    {userName.charAt(0).toUpperCase()}
+  </button>
+
+  {profileMenuOpen && (
+    <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-[#E2E8F0] bg-white py-2 shadow-xl">
+      <div className="border-b border-[#E2E8F0] px-4 py-3">
+        <p className="truncate text-sm font-semibold text-[#0F172A]">
+          {userName}
+        </p>
+        <p className="mt-1 text-xs text-[#64748B]">
+          My account
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setProfileMenuOpen(false);
+          navigate("/dashboard");
+        }}
+        className="w-full px-4 py-2.5 text-left text-sm text-[#334155] hover:bg-[#F1F5F9]"
+      >
+        Profile
+      </button>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+      >
+        Logout
+      </button>
+    </div>
+  )}
+</div>
+
           </div>
         </header>
 

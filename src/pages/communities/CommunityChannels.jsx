@@ -297,7 +297,7 @@ export default function CommunityChannels({
                             maxLength={300}
                             rows={2}
                             placeholder="What should members discuss here? (optional)"
-                            className="w-full resize-y rounded-xl border border-white/10 bg-[#06172E] px-3 py-3 text-sm outline-none placeholder:text-white/35 focus:border-blue-300"
+                            className="w-full resize-y max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#06172E] px-3 py-3 text-sm outline-none placeholder:text-white/35 focus:border-blue-300"
                         />
                         <button
                             disabled={saving || !name.trim()}

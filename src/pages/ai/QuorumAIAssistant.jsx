@@ -492,7 +492,7 @@ export default function QuorumAIAssistant() {
                   maxLength={10000}
                   rows={2}
                   placeholder="Add relevant context (optional)..."
-                  className="mb-3 w-full resize-y rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                  className="mb-3 w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
                 />
                 <div className="flex items-end gap-3">
                   <textarea
@@ -503,7 +503,7 @@ export default function QuorumAIAssistant() {
                     required
                     placeholder="Message Quorum AI..."
                     aria-label="Message Quorum AI"
-                    className="min-w-0 flex-1 resize-y rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                    className="min-w-0 flex-1 resize-y max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
                   />
                   <button
                     type="submit"
