@@ -80,6 +80,29 @@ function handleJoinMeeting() {
   navigate(`/video-call?code=${encodeURIComponent(code)}`);
 }
 
+async function handleNewMeeting() {
+  try {
+    setCreatingMeeting(true);
+    setMeetingError("");
+
+    const meeting = await createMeeting();
+
+    if (!meeting?.code) {
+      throw new Error("Meeting code was not returned by the server.");
+    }
+
+    navigate(`/video-call?code=${encodeURIComponent(meeting.code)}&host=1`);
+  } catch (error) {
+    setMeetingError(
+      error.response?.data?.message ||
+        error.message ||
+        "Could not create meeting."
+    );
+  } finally {
+    setCreatingMeeting(false);
+  }
+}
+
   const userName = user?.name || "Karan";
 
   return (
@@ -114,36 +137,6 @@ function handleJoinMeeting() {
           </div>
 
           <div className="flex items-center gap-4">
-
-         
-<div className="flex flex-wrap items-center gap-2">
-  <input
-    type="text"
-    value={meetingCode}
-    onChange={(e) => setMeetingCode(e.target.value)}
-    onKeyDown={(e) => {
-      if (e.key === "Enter") handleJoinMeeting();
-    }}
-    placeholder="Enter meeting code"
-    aria-label="Meeting code"
-    className="w-36 sm:w-44 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#334155] outline-none focus:border-[#0068FF]"
-  />
-
-  <button
-    onClick={handleJoinMeeting}
-    className="rounded-lg bg-[#0B8FD8] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#087FBF]"
-  >
-    Join Meeting
-  </button>
-
-  <button
-    onClick={handleNewMeeting}
-    disabled={creatingMeeting}
-    className="hidden sm:block rounded-lg bg-[#0068FF] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#005BE0] disabled:opacity-60"
-  >
-    {creatingMeeting ? "Creating..." : "+ New Meeting"}
-  </button>
-</div>
 
 {meetingError && (
   <p className="text-sm text-red-500">{meetingError}</p>
@@ -279,7 +272,7 @@ function handleJoinMeeting() {
             <div className="max-w-[1180px] mx-auto">
               <section
                 className="
-                  h-[105px]
+                min-h-[105px] py-6
                   rounded-[10px]
                   bg-[#1F5A91]/80
                   border border-white/10
@@ -294,17 +287,46 @@ function handleJoinMeeting() {
                   <h1 className="text-white text-[18px] sm:text-[20px] font-semibold">
                     Welcome back, {userName}
                   </h1>
-
                   <p className="text-white/60 text-[12px] sm:text-[13px] mt-2">
                     Here's what's happening with your workspace today.
                   </p>
-                </div>
+ <div className="mt-5 flex flex-wrap items-center gap-3">
+  <input
+    type="text"
+    value={meetingCode}
+    onChange={(e) => setMeetingCode(e.target.value)}
+    placeholder="Enter meeting code"
+    className="min-w-0 flex-1 rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-white/60 outline-none focus:border-white/50"
+  />
 
-                <div className="hidden sm:block text-white/50 text-xs">
-                  2 upcoming syncs today
-                </div>
-              </section>
-              <section className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-5 mt-5">
+  <button
+    type="button"
+    onClick={handleJoinMeeting}
+    className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#062C5F] hover:bg-blue-50"
+  >
+    Join Meeting
+  </button>
+
+  <button
+    type="button"
+    onClick={handleNewMeeting}
+    disabled={creatingMeeting}
+    className="rounded-lg bg-[#0068FF] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#005BE0] disabled:opacity-60"
+  >
+    {creatingMeeting ? "Creating..." : "+ New Meeting"}
+  </button>
+</div>
+
+{meetingError && (
+  <p className="mt-3 text-sm text-red-200">
+    {meetingError}
+  </p>
+)}
+
+
+</div>
+   </section>
+   <section className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-5 mt-5">
                 <div
                   className="
                     min-h-[360px]
@@ -357,8 +379,7 @@ function handleJoinMeeting() {
                       No summaries available
                     </p>
                   </div>
-                </div>
-
+                </div>             
               </section>
 
             </div>
