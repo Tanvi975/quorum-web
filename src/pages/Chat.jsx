@@ -709,18 +709,22 @@ setMessages(normalizedList);
       setCreatingGroup(false);
     }
   };
-  
+  const isCurrentUserOwner =
+    activeIsGroup &&
+    Boolean(activeConversation?.ownerId) &&
+    String(activeConversation.ownerId) === String(currentUserId);
   const activeIsGroupAdmin =
   activeIsGroup &&
-  activeConversation?.participants?.some((participant) => {
-    const participantId =
-      participant?.userId || getUserId(getUser(participant));
+  (isCurrentUserOwner ||
+    activeConversation?.participants?.some((participant) => {
+      const participantId =
+        participant?.userId || getUserId(getUser(participant));
 
-    return (
-      String(participantId) === String(currentUserId) &&
-      participant?.role === "admin"
-    );
-  });
+      return (
+        String(participantId) === String(currentUserId) &&
+        participant?.role === "admin"
+      );
+    }));
 
 useEffect(() => {
   if (!showAddMembersModal || !addMemberSearch.trim()) {
@@ -850,34 +854,18 @@ const refreshActiveGroup = async () => {
   }
 };
 
+
 const handlePromoteAdmin = async (participant) => {
   const person = getUser(participant);
-  const userId =
-    participant?.userId || getUserId(person);
+  const userId = participant?.userId || getUserId(person);
+
+  if (!activeIsGroupAdmin) {
+    setError("Only group admins or owner can promote members.");
+    return;
+  }
 
   if (!activeConversation?.id || !userId) return;
-  const handlePromoteAdmin = async (participant) => {
-      const person = getUser(participant);
-      const userId =
-        participant?.userId || getUserId(person);
-    
-      if (!activeConversation?.id || !userId) return;
-    
-      try {
-        setUpdatingMemberId(String(userId));
-        setError("");
-    
-        await promoteGroupAdmin(activeConversation.id, userId);
-        await refreshActiveGroup();
-      } catch (err) {
-        setError(
-          err.response?.data?.message ||
-            "Could not promote this member."
-        );
-      } finally {
-        setUpdatingMemberId(null);
-      }
-    };
+
   try {
     setUpdatingMemberId(String(userId));
     setError("");
@@ -919,8 +907,7 @@ const handleDemoteAdmin = async (participant) => {
 
 const handleRemoveMember = async (participant) => {
   const person = getUser(participant);
-  const userId =
-    participant?.userId || getUserId(person);
+  const userId = participant?.userId || getUserId(person);
 
   if (!activeConversation?.id || !userId) return;
 
@@ -928,16 +915,24 @@ const handleRemoveMember = async (participant) => {
     setError("Admins cannot kick themselves. Use Leave Group to leave.");
     return;
   }
-  if (participant?.role === "admin") {
-    const adminCount = (activeConversation?.participants || []).filter(
-      (p) => p.role === "admin"
-    ).length;
 
-    if (adminCount <= 1) {
-      setError("Cannot remove the last admin of the group");
-      return;
-    }
+  const isTargetOwner =
+    Boolean(activeConversation?.ownerId) &&
+    String(userId) === String(activeConversation.ownerId);
+
+  const isTargetAdmin =
+    participant?.role === "admin" || isTargetOwner;
+
+  if (isTargetOwner) {
+    setError("Nobody can remove the group owner.");
+    return;
   }
+
+  if (isTargetAdmin && !isCurrentUserOwner) {
+    setError("Only the group owner can remove an admin.");
+    return;
+  }
+
   if (!window.confirm(`Remove ${getUserName(person)} from this group?`)) {
     return;
   }
@@ -1458,7 +1453,11 @@ const handleRenameGroup = async (event) => {
             const person = getUser(participant);
             const userId = participant?.userId || getUserId(person);
             const isCurrentUser = String(userId) === String(currentUserId);
-            const isAdmin = participant?.role === "admin";
+            const isTargetOwner =
+            Boolean(activeConversation?.ownerId) &&
+            String(activeConversation.ownerId) === String(userId);
+          const isTargetAdmin =
+            participant?.role === "admin" || isTargetOwner;
 
             return (
               <div
@@ -1468,45 +1467,69 @@ const handleRenameGroup = async (event) => {
                 <div className="flex items-center gap-2">
                   <Avatar name={getUserName(person)} size={28} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] text-white">
-                      {getUserName(person)}
-                      {isCurrentUser ? " (You)" : ""}
-                    </p>
+                  <div className="flex items-center gap-1.5">
+                      <p className="truncate text-[11px] text-white">
+                        {getUserName(person)}
+                        {isCurrentUser ? " (You)" : ""}
+                      </p>
+                      {isTargetOwner && (
+                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">
+                          Owner
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-[#94A9BE]">
-                      {isAdmin ? "Admin" : "Member"}
+                    {isTargetOwner
+                        ? "Group Owner"
+                        : isTargetAdmin
+                          ? "Admin"
+                          : "Member"}
                     </p>
                   </div>
                 </div>
 
-                {activeIsGroupAdmin && !isCurrentUser && (
+                {!isCurrentUser && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={updatingMemberId === String(userId)}
-                      onClick={() =>
-                        isAdmin
-                          ? handleDemoteAdmin(participant)
-                          : handlePromoteAdmin(participant)
-                      }
-                      className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
-                    >
-                      {updatingMemberId === String(userId)
-                        ? "Updating..."
-                        : isAdmin
-                          ? "Remove admin"
+                    {activeIsGroupAdmin && !isTargetAdmin && (
+                      <button
+                        type="button"
+                        disabled={updatingMemberId === String(userId)}
+                        onClick={() => handlePromoteAdmin(participant)}
+                        className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                      >
+                        {updatingMemberId === String(userId)
+                          ? "Updating..."
                           : "Make admin"}
                     </button>
+                     )}
+       {isCurrentUserOwner && isTargetAdmin && !isTargetOwner && (
+                      <button
+                        type="button"
+                        disabled={updatingMemberId === String(userId)}
+                        onClick={() => handleDemoteAdmin(participant)}
+                        className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                      >
+                        {updatingMemberId === String(userId)
+                          ? "Updating..."
+                          : "Dismiss as Admin"}
+                      </button>
+                    )}
 
-                    <button
-                      type="button"
-                      disabled={removingMemberId === String(userId)}
-                      onClick={() => handleRemoveMember(participant)}
-                      className="rounded border border-red-800 px-2 py-1 text-[10px] text-red-300 disabled:opacity-50"
-                    >
-                      {removingMemberId === String(userId)
-                        ? "Removing..."
-                        : "Remove"}
-                    </button>
+                    {!isTargetOwner &&
+                      (isTargetAdmin
+                        ? isCurrentUserOwner
+                        : activeIsGroupAdmin) && (
+                        <button
+                          type="button"
+                          disabled={removingMemberId === String(userId)}
+                          onClick={() => handleRemoveMember(participant)}
+                          className="rounded border border-red-800 px-2 py-1 text-[10px] text-red-300 disabled:opacity-50"
+                        >
+                          {removingMemberId === String(userId)
+                            ? "Removing..."
+                            : "Remove"}
+                        </button>
+                      )}
                   </div>
                 )}
               </div>
