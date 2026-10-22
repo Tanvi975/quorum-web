@@ -44,7 +44,6 @@ export default function CommunityInvitations({
                     await getInvitableCommunityUsers(communityId, query.trim())
                 );
             } catch (err) {
-                // Backward-compatible fallback for the original user-search endpoint.
                 if (err.response?.status !== 404) throw err;
                 result = unwrap(
                     await searchCommunityUsers(communityId, query.trim())

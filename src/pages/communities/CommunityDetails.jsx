@@ -4,16 +4,18 @@ import { useAuth } from "../../context/AuthContext";
 import CommunityChannels from "./CommunityChannels";
 import CommunityPostComposer from "./CommunityPostComposer";
 import CommunityInvitations from "./CommunityInvitations";
+import { PostAttachment } from "./CommunityAttachments";
 import {
     getCommunityDetails,
     getCommunityMembers,
     getCommunityPosts,
+    getCommunityChannelPosts,
     createCommunityPost,
-    createCommunityInvite,
     updateCommunityPost,
     deleteCommunityPost,
     getPostComments,
     createPostComment,
+    updatePostComment,
     deletePostComment,
     searchCommunityUsers,
     removeCommunityMember,
@@ -21,7 +23,6 @@ import {
     leaveCommunity,
     updateCommunity,
     deleteCommunity,
-    updatePostComment,
     updateCommunityMemberRole,
     transferCommunityOwnership,
 } from "../../services/communityService";
@@ -36,144 +37,140 @@ import {
     FiUserPlus,
     FiRefreshCw,
     FiMoreVertical,
+    FiTrash2,
+    FiEdit2,
+    FiCornerDownRight,
 } from "react-icons/fi";
-
 
 const tabs = [
     { label: "Posts", icon: FiMessageSquare },
     { label: "Members", icon: FiUsers },
+    { label: "Invitations", icon: FiUserPlus },
     { label: "About", icon: FiInfo },
 ];
-
 
 function CommunityDetails() {
     const navigate = useNavigate();
     const { communityId } = useParams();
+    const { user } = useAuth();
 
     const [activeTab, setActiveTab] = useState("Posts");
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
-const [searchingMembers, setSearchingMembers] = useState(false);
+    const [searchingMembers, setSearchingMembers] = useState(false);
 
     const [community, setCommunity] = useState(null);
     const [posts, setPosts] = useState([]);
     const [members, setMembers] = useState([]);
+    const [channels, setChannels] = useState([]);
 
-    const [postContent, setPostContent] = useState("");
-    const [creatingPost, setCreatingPost] = useState(false);
-    const { user } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
 
-    const currentUserId = user?.id ?? user?._id;
-    
-    const currentMember = members.find(
-        
-        (member) =>
-            String(member.user?.id ?? member.user?._id ?? member.id) ===
-            String(currentUserId)
-    )
-    const currentUserRole = currentMember?.role?.toUpperCase();
-    const isOwner = currentUserRole === "OWNER";
-    const isAdmin = currentUserRole === "ADMIN";
-    const canManageMembers = isOwner || isAdmin;
-     const [notice, setNotice] = useState("");
-    const [inviteLink, setInviteLink] = useState("");
-    const [inviteId, setInviteId] = useState("");
+    const [selectedChannelId, setSelectedChannelId] = useState(null);
+    const [feedSearch, setFeedSearch] = useState("");
+
+    // Post Editing state
     const [editingPostId, setEditingPostId] = useState(null);
     const [editingPostContent, setEditingPostContent] = useState("");
-    const [editingCommunity, setEditingCommunity] = useState(false);
-    const [showCommunityActions, setShowCommunityActions] = useState(false);
-    const [openMemberActionsId, setOpenMemberActionsId] = useState(null);
-    const [communityName, setCommunityName] = useState("");
-    const [communityDescription, setCommunityDescription] = useState("");
-    const [savingCommunity, setSavingCommunity] = useState(false);
+    const [editingRemoveAttachment, setEditingRemoveAttachment] = useState(false);
+
+    // Comments state
     const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
     const [commentsByPost, setCommentsByPost] = useState({});
     const [commentInputs, setCommentInputs] = useState({});
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentContent, setEditingCommentContent] = useState("");
-    const [loading, setLoading] = useState(false);
+
+    // Member & Community management state
+    const [editingCommunity, setEditingCommunity] = useState(false);
+    const [communityName, setCommunityName] = useState("");
+    const [communityDescription, setCommunityDescription] = useState("");
+    const [savingCommunity, setSavingCommunity] = useState(false);
+    const [showCommunityActions, setShowCommunityActions] = useState(false);
+    const [openMemberActionsId, setOpenMemberActionsId] = useState(null);
     const [pendingInvites, setPendingInvites] = useState([]);
-    const [error, setError] = useState("");
-    const [selectedChannelId, setSelectedChannelId] = useState(null);
-    const [feedSearch, setFeedSearch] = useState("");
+
+    const currentUserId = user?.id ?? user?._id;
+
+    const currentMember = members.find(
+        (member) =>
+            String(member.user?.id ?? member.user?._id ?? member.id) ===
+            String(currentUserId)
+    );
+    const currentUserRole = currentMember?.role?.toUpperCase();
+    const isOwner = currentUserRole === "OWNER";
+    const isAdmin = currentUserRole === "ADMIN";
+    const canManageMembers = isOwner || isAdmin;
+
+    const loadPosts = useCallback(async () => {
+        if (!communityId) return;
+        setPostsLoading(true);
+
+        try {
+            let response;
+            if (selectedChannelId && selectedChannelId !== "general") {
+                response = await getCommunityChannelPosts(communityId, selectedChannelId, {
+                    limit: 50,
+                    search: feedSearch || undefined,
+                });
+            } else {
+                response = await getCommunityPosts(communityId, {
+                    limit: 50,
+                    channelId: selectedChannelId || undefined,
+                    search: feedSearch || undefined,
+                });
+            }
+
+            const result = response?.data?.data ?? response?.data ?? response;
+            const items = Array.isArray(result?.posts)
+                ? result.posts
+                : Array.isArray(result)
+                ? result
+                : [];
+
+            setPosts(items);
+        } catch (err) {
+            console.error("Failed to load posts:", err);
+  
+        } finally {
+            setPostsLoading(false);
+        }
+    }, [communityId, selectedChannelId, feedSearch]);
+
     const loadCommunityData = useCallback(async () => {
         if (!communityId) {
             setError("Community ID is missing.");
-            setLoading(false);
             return;
         }
-    
+
         setLoading(true);
         setError("");
-    
+
         try {
             const detailsResponse = await getCommunityDetails(communityId);
             const detailsResult =
                 detailsResponse?.data?.data ??
                 detailsResponse?.data ??
                 detailsResponse;
-    
+
             setCommunity(detailsResult?.community ?? detailsResult);
-    
-            const fetchAllPages = async (fetchPage, listKey) => {
-                let allItems = [];
-                let cursor;
-                const seenCursors = new Set();
-    
-                for (let page = 0; page < 100; page++) {
-                    const response = await fetchPage(cursor);
-    
-                    let result = response?.data ?? response;
-                    result = result?.data ?? result;
-    
-                    const items = Array.isArray(result?.[listKey])
-                        ? result[listKey]
-                        : Array.isArray(result)
-                            ? result
-                            : [];
-    
-                    allItems = [...allItems, ...items];
-    
-                    const nextCursor = result?.nextCursor;
-                    const hasNextPage = result?.hasNextPage;
-    
-                    if (
-                        !hasNextPage ||
-                        nextCursor == null ||
-                        seenCursors.has(String(nextCursor))
-                    ) {
-                        break;
-                    }
-    
-                    seenCursors.add(String(nextCursor));
-                    cursor = nextCursor;
-                }
-    
-                return allItems;
-            };
-    
-            const [allMembers, allPosts] = await Promise.all([
-                fetchAllPages(
-                    (cursor) =>
-                        getCommunityMembers(communityId, {
-                            cursor,
-                            limit: 20,
-                        }),
-                    "members"
-                ),
-                fetchAllPages(
-                    (cursor) =>
-                        getCommunityPosts(communityId, {
-                            cursor,
-                            limit: 20,
-                            channelId: selectedChannelId || undefined,
-                        }),
-                    "posts"
-                ),
-            ]);
-    
+
+            const membersResponse = await getCommunityMembers(communityId, { limit: 100 });
+            const membersResult =
+                membersResponse?.data?.data ??
+                membersResponse?.data ??
+                membersResponse;
+
+            const allMembers = Array.isArray(membersResult?.members)
+                ? membersResult.members
+                : Array.isArray(membersResult)
+                ? membersResult
+                : [];
+
             setMembers(allMembers);
-            setPosts(allPosts);
         } catch (err) {
             console.error("Failed to load community:", err);
             setError(
@@ -184,564 +181,298 @@ const [searchingMembers, setSearchingMembers] = useState(false);
             setLoading(false);
         }
     }, [communityId]);
-    
+
     useEffect(() => {
         loadCommunityData();
     }, [loadCommunityData]);
-    
-    async function handleCreatePost(event) {
 
-        event.preventDefault();
-    
-        const content = postContent.trim();
-        if (!content || creatingPost) return;
-    
-        setCreatingPost(true);
-        setError("");
-        setNotice("");
-    
-        try {
-            await createCommunityPost(communityId, {
-                content: postContent.trim(),
-                ...(selectedChannelId
-                    ? { channelId: selectedChannelId }
-                    : {}),
-            });
-            setPostContent("");
-            setNotice("Post published.");
-            await loadCommunityData();
-        } catch (err) {
-            console.error("Failed to publish post:", err);
-            setError(
-                err.response?.data?.message ||
-                "Could not publish the post."
-            );
-        } finally {
-            setCreatingPost(false);
-        }
-    }
+    useEffect(() => {
+        loadPosts();
+    }, [loadPosts]);
 
 
-    async function handleUpdatePost(event, postId) {
+    async function handleUpdatePost(event, postId, currentPost) {
         event.preventDefault();
         const content = editingPostContent.trim();
-        if (!content) return;
-    
+
+        if (!content && (!currentPost?.fileUrl || editingRemoveAttachment)) {
+            setError("A post must contain text or an attachment.");
+            return;
+        }
+
+        setError("");
+
         try {
-            await updateCommunityPost(postId, content);
+            const delta = {
+                content,
+                ...(editingRemoveAttachment ? { fileUrl: null } : {}),
+            };
+
+            await updateCommunityPost(postId, delta);
             setEditingPostId(null);
-            setNotice("Post updated.");
-            await loadCommunityData();
+            setEditingRemoveAttachment(false);
+            setNotice("Post updated successfully.");
+            await loadPosts();
         } catch (err) {
             setError(err.response?.data?.message || "Could not update post.");
         }
     }
-    
+
     async function handleDeletePost(postId) {
-        if (!window.confirm("Delete this post?")) return;
-    
+        if (!window.confirm("Delete this post permanently?")) return;
+
         try {
             await deleteCommunityPost(postId);
             setNotice("Post deleted.");
-            await loadCommunityData();
+            await loadPosts();
         } catch (err) {
             setError(err.response?.data?.message || "Could not delete post.");
         }
     }
-
-    const handleDeleteComment = async (commentId, postId) => {
+    async function fetchPostComments(postId) {
         try {
-            await deletePostComment(commentId);
-            setNotice("Comment deleted successfully.");
-            if (postId) {
-                const allComments = await fetchAllPostComments(postId);
-
-                setCommentsByPost((prev) => ({
-                    ...prev,
-                    [postId]: allComments,
-                }));
-            }
-            setError("");
-        } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not delete comment."
-            );
-        }
-    };
-
-async function handleToggleComments(postId) {
-    async function fetchAllPostComments(postId) {
-        let allComments = [];
-        let cursor;
-        const seenCursors = new Set();
-    
-        for (let page = 0; page < 100; page++) {
-            const response = await getPostComments(postId, {
-                cursor,
-                limit: 20,
-            });
-    
-            let result = response?.data ?? response;
-            result = result?.data ?? result;
-    
-            const comments = Array.isArray(result?.comments)
+            const response = await getPostComments(postId, { limit: 50 });
+            const result = response?.data?.data ?? response?.data ?? response;
+            const items = Array.isArray(result?.comments)
                 ? result.comments
                 : Array.isArray(result)
-                    ? result
-                    : [];
-    
-            allComments = [...allComments, ...comments];
-    
-            const nextCursor = result?.nextCursor;
-    
-            if (
-                !result?.hasNextPage ||
-                nextCursor == null ||
-                seenCursors.has(String(nextCursor))
-            ) {
-                break;
-            }
-    
-            seenCursors.add(String(nextCursor));
-            cursor = nextCursor;
+                ? result
+                : [];
+
+            setCommentsByPost((prev) => ({ ...prev, [postId]: items }));
+        } catch (err) {
+            console.warn("Could not load comments:", err);
         }
-    
-        return allComments;
-    }
-    
-    if (openCommentsPostId === postId) {
-        setOpenCommentsPostId(null);
-        return;
     }
 
-    setOpenCommentsPostId(postId);
+    async function handleToggleComments(postId) {
+        if (openCommentsPostId === postId) {
+            setOpenCommentsPostId(null);
+            return;
+        }
 
-    try {
-        const allComments = await fetchAllPostComments(postId);
-    
-        setCommentsByPost((previous) => ({
-            ...previous,
-            [postId]: allComments,
-        }));
-    } catch (err) {
-        setError(
-            err.response?.data?.message ||
-            "Could not load comments."
-        );
-    }    
-}
+        setOpenCommentsPostId(postId);
+        await fetchPostComments(postId);
+    }
 
     async function handleCreateComment(event, postId) {
         event.preventDefault();
         const content = (commentInputs[postId] || "").trim();
         if (!content) return;
-    
+
         try {
             await createPostComment(postId, content);
-            setCommentInputs((previous) => ({ ...previous, [postId]: "" }));
+            setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
             setNotice("Comment added.");
-
-            const allComments = await fetchAllPostComments(postId);
-
-            setCommentsByPost((previous) => ({
-                ...previous,
-                [postId]: allComments,
-            }));
-            
+            await fetchPostComments(postId);
         } catch (err) {
             setError(err.response?.data?.message || "Could not add comment.");
         }
     }
-        const handleUpdateComment = async (commentId) => {
-            const content = editingCommentContent.trim();
-        
-            if (!content) {
-                setNotice("Comment cannot be empty.");
-                return;
-            }
-        
-            try {
-                await updatePostComment(commentId, content);
-        
-                setCommentsByPost((previous) => {
-                    const updated = { ...previous };
-        
-                    Object.keys(updated).forEach((postId) => {
-                        updated[postId] = updated[postId].map((comment) =>
-                            (comment.id === commentId ||
-                                comment._id === commentId)
-                                ? { ...comment, content }
-                                : comment
-                        );
-                    });
-        
-                    return updated;
-                });
-        
-                setEditingCommentId(null);
-                setEditingCommentContent("");
-                setNotice("Comment updated successfully.");
-            } catch (error) {
-                setNotice(
-                    error.response?.data?.message ||
-                    "Could not update the comment."
-                );
-            }
-        };
-    
 
+    async function handleUpdateComment(commentId, postId) {
+        const content = editingCommentContent.trim();
+        if (!content) return;
 
-        async function handleInvite() {
-            setError("");
-            setNotice("");
-            setInviteLink("");
-            setInviteId("");
-        
-            try {
-                const response = await createCommunityInvite(communityId);
-                const result = response?.data ?? response;
-                const inviteData = result?.data ?? result;
-        
-                const inviteUrl = inviteData?.inviteUrl;
-                const newInviteId =
-                    inviteData?.id ??
-                    inviteData?._id ??
-                    inviteData?.inviteId;
-        
-                if (!inviteUrl) {
-                    throw new Error(
-                        "Backend response mein inviteUrl nahi mila."
-                    );
-                }
-        
-                setInviteLink(inviteUrl);
-        
-                if (newInviteId != null) {
-                    setInviteId(String(newInviteId));
-                }
-        
-                setNotice(
-                    newInviteId != null
-                        ? "Invitation created. Copy and share this link."
-                        : "Invitation created. Revoke option needs the invite ID from the API response."
-                );
-            } catch (err) {
-                console.error("Failed to create invite:", err);
-                setError(
-                    err.response?.data?.message ||
-                    err.message ||
-                    "Could not generate an invitation link."
-                );
-            }
+        try {
+            await updatePostComment(commentId, content);
+            setEditingCommentId(null);
+            setEditingCommentContent("");
+            setNotice("Comment updated.");
+            if (postId) await fetchPostComments(postId);
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not update comment.");
+        }
+    }
+
+    async function handleDeleteComment(commentId, postId) {
+        if (!window.confirm("Delete this comment?")) return;
+
+        try {
+            await deletePostComment(commentId);
+            setNotice("Comment deleted.");
+            if (postId) await fetchPostComments(postId);
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not delete comment.");
+        }
+    }
+    async function handleSearchMembers(query) {
+        setSearch(query);
+
+        if (!query.trim()) {
+            setSearchResults([]);
+            return;
         }
 
-        async function handleRevokeInvite() {
-            if (!inviteId) {
-                setError("Invite ID nahi mili. Pehle naya invite generate karo.");
-                return;
-            }
-        
-            const confirmed = window.confirm(
-                "Are you sure you want to revoke this invitation link?"
-            );
-        
-            if (!confirmed) return;
-        
-            setError("");
-            setNotice("");
-        
-            try {
-                await revokeCommunityInvite(communityId, inviteId);
-        
-                setInviteId("");
-                setInviteLink("");
-                setNotice("Invitation revoked successfully.");
-            } catch (err) {
-                setError(
-                    err.response?.data?.message ||
-                    "Could not revoke this invitation."
-                );
-            }
-        }
-                
-async function handleLeaveCommunity() {
-    if (
-        !window.confirm(
-            "Are you sure you want to leave this community?"
-        )
-    ) {
-        return;
-    }
-    setError("");
-    setNotice("");
+        setSearchingMembers(true);
 
-    try {
-        await leaveCommunity(communityId);
-        navigate("/communities", { replace: true });
-    } catch (err) {
-        setError(
-            err.response?.data?.message ||
-            "Could not leave community."
-        );
+        try {
+            const response = await searchCommunityUsers(communityId, query.trim());
+            const result = response?.data?.data ?? response?.data ?? response;
+            const list = Array.isArray(result?.users)
+                ? result.users
+                : Array.isArray(result?.members)
+                ? result.members
+                : Array.isArray(result)
+                ? result
+                : [];
+
+            setSearchResults(list);
+        } catch (err) {
+            console.warn("Member search failed:", err);
+        } finally {
+            setSearchingMembers(false);
+        }
     }
-}
+
+    async function handleLeaveCommunity() {
+        if (!window.confirm("Are you sure you want to leave this community?")) return;
+
+        try {
+            await leaveCommunity(communityId);
+            navigate("/communities", { replace: true });
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not leave community.");
+        }
+    }
+
     async function handleUpdateCommunity(event) {
         event.preventDefault();
-    
         const name = communityName.trim();
         const description = communityDescription.trim();
-    
+
         if (!name) {
             setError("Community name cannot be empty.");
             return;
         }
-    
+
         setSavingCommunity(true);
         setError("");
-        setNotice("");
-    
+
         try {
-            await updateCommunity(communityId, {
-                name,
-                description,
-            });
-    
+            await updateCommunity(communityId, { name, description });
             setEditingCommunity(false);
             setNotice("Community updated successfully.");
             await loadCommunityData();
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not update community."
-            );
+            setError(err.response?.data?.message || "Could not update community.");
         } finally {
             setSavingCommunity(false);
         }
     }
-    
+
     async function handleDeleteCommunity() {
-        if (
-            !window.confirm(
-                "Delete this community permanently? This action cannot be undone."
-            )
-        ) {
-            return;
-        }
-        setError("");
-        setNotice("");
+        if (!window.confirm("Delete this community permanently? All channels, posts and data will be removed.")) return;
+
         try {
             await deleteCommunity(communityId);
             navigate("/communities", { replace: true });
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not delete community."
-            );
+            setError(err.response?.data?.message || "Could not delete community.");
         }
     }
-async function handleSearchMembers(query) {
-    setSearch(query);
 
-    if (!query.trim()) {
-        setSearchResults([]);
-        return;
-    }
-
-    setSearchingMembers(true);
-
-    try {
-        const response = await searchCommunityUsers(
-            communityId,
-            query.trim()
-        );
-
-        const result = response?.data ?? response;
-        const data = result?.data ?? result;
-
-        setSearchResults(
-            Array.isArray(data?.users)
-                ? data.users
-                : Array.isArray(data?.members)
-                    ? data.members
-                    : Array.isArray(data)
-                        ? data
-                        : []
-        );
-    } catch (err) {
-        setError(
-            err.response?.data?.message ||
-            "Could not search community members."
-        );
-    } finally {
-        setSearchingMembers(false);
-    }
-}
-
-    const isEmpty = {
-        Posts: posts.length === 0,
-        Members: members.length === 0,
-    };
-
-    const activeTabData = tabs.find(
-        (tab) => tab.label === activeTab
-    );
-
-    const EmptyState = ({
-        icon: Icon,
-        title,
-        description,
-        actionLabel,
-        onAction,
-    }) => (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-14 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/10 text-blue-200">
-                <Icon size={25} />
+    const EmptyState = ({ icon: Icon, title, description, actionLabel, onAction }) => (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] px-6 py-14 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-200">
+                <Icon size={26} />
             </div>
-
-            <h3 className="mt-4 text-base font-semibold text-white">
-                {title}
-            </h3>
-
-            <p className="mt-2 max-w-sm text-sm leading-6 text-blue-100/60">
-                {description}
-            </p>
-
+            <h3 className="mt-4 text-base font-bold text-white">{title}</h3>
+            <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-blue-100/60">{description}</p>
             {actionLabel && (
                 <button
                     type="button"
                     onClick={onAction}
-                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400"
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-400"
                 >
-                    <FiPlus size={17} />
-                    {actionLabel}
+                    <FiPlus size={17} /> {actionLabel}
                 </button>
             )}
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#062C5F] text-white">
+        <div className="min-h-screen bg-gradient-to-br from-[#061833] via-[#062C5F] to-[#04142B] text-white">
             {/* Header */}
-            <header className="sticky top-0 z-30 border-b border-white/10 bg-[#062C5F]">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
+            <header className="sticky top-0 z-30 border-b border-white/10 bg-[#062C5F]/95 backdrop-blur-md">
+                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-8">
                     <button
                         type="button"
                         onClick={() => navigate("/communities")}
-                        className="flex items-center gap-2 text-sm text-white/75 transition hover:text-white"
+                        className="flex items-center gap-2 text-sm font-medium text-white/75 transition hover:text-white"
                     >
                         <FiArrowLeft size={18} />
                         <span>Communities</span>
                     </button>
 
-                    <span className="text-lg font-bold tracking-widest">
+                    <span className="text-lg font-black tracking-widest text-blue-200">
                         QUORUM
                     </span>
 
                     <button
                         type="button"
-                      onClick={() => setActiveTab("About")}
+                        onClick={() => setActiveTab("About")}
                         aria-label="Community settings"
-                        className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white"
+                        className="rounded-xl p-2.5 text-white/75 transition hover:bg-white/10 hover:text-white"
                     >
                         <FiSettings size={19} />
                     </button>
                 </div>
             </header>
 
-            <main className="mx-auto max-w-7xl px-5 py-7 sm:px-8 sm:py-9">
-
-            {/* Community header  */}
-                <section className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 sm:p-7">
-                    <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+            <main className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
+                {/* Community Banner */}
+                <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.07] to-white/[0.02] p-6 shadow-xl backdrop-blur-xl sm:p-8">
+                    <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-200">
-                                <FiUsers size={30} />
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/30 to-indigo-500/20 text-blue-200 shadow-inner">
+                                <FiUsers size={32} />
                             </div>
 
                             <div className="min-w-0">
-                                <h1 className="break-words text-2xl font-bold sm:text-3xl">
+                                <h1 className="break-words text-2xl font-black sm:text-3xl">
                                     {community?.name || "Community"}
                                 </h1>
-
-                                <p className="mt-2 text-sm text-blue-100/70">
-                                    {community?.description ||
-                                        "Your space to connect and collaborate."}
+                                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-blue-100/70">
+                                    {community?.description || "Your shared workspace to connect and collaborate."}
                                 </p>
-
-                                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-blue-100/60">
-                                    <FiUsers size={15} />
-                                    {community?.memberCount ?? "—"} members
+                                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-blue-100/60">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5">
+                                        <FiUsers size={13} /> {community?.memberCount ?? members.length} members
+                                    </span>
                                     <span>·</span>
-                                    <span>Community workspace</span>
+                                    <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-0.5 font-medium text-blue-200">
+                                        {currentUserRole || "MEMBER"}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-wrap gap-2">
+                        <div className="flex shrink-0 gap-2">
                             <button
                                 type="button"
-                                onClick={handleInvite}
-                                className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold transition hover:bg-blue-400"
+                                onClick={() => setActiveTab("Invitations")}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2.5 text-sm font-bold shadow-lg shadow-blue-950/30 transition hover:brightness-110"
                             >
-                                <FiUserPlus size={17} />
-                                Invite
+                                <FiUserPlus size={17} /> Invite members
                             </button>
                         </div>
                     </div>
                 </section>
 
-                {/* Error */}
                 {error && (
-                    <div
-                        role="status"
-                        className="mt-4 flex items-start justify-between gap-3 rounded-lg border border-blue-300/20 bg-blue-400/10 p-4 text-sm text-blue-100"
-                    >
+                    <div role="alert" className="mt-4 flex items-start justify-between gap-3 rounded-2xl border border-red-400/20 bg-red-500/15 p-4 text-sm text-red-200 shadow-lg">
                         <p>{error}</p>
-
-                        <button
-                            type="button"
-                            onClick={() => setError("")}
-                            aria-label="Dismiss message"
-                            className="text-white/70 hover:text-white"
-                        >
-                            ×
-                        </button>
+                        <button type="button" onClick={() => setError("")} className="text-white/60 hover:text-white">✕</button>
                     </div>
                 )}
 
-{notice && (
-    <div
-        role="status"
-        className="fixed right-5 top-20 z-[100] max-w-sm rounded-lg border border-green-300/20 bg-[#064E3B] p-4 text-sm text-green-100 shadow-xl shadow-black/20"
-    >
-        {notice}
-    </div>
-)}
-
-
-{inviteLink && (
-    <div className="mt-3 rounded-lg border border-white/10 p-4">
-        <p className="break-all text-sm">{inviteLink}</p>
-        <button
-            type="button"
-            onClick={() => navigator.clipboard.writeText(inviteLink)}
-            className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm"
-        >
-            Copy invite link
-        </button>
-        {inviteId && (
-    <button
-        type="button"
-        onClick={handleRevokeInvite}
-        className="mt-3 rounded-lg border border-red-400/30 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
-    >
-        Revoke invite
-    </button>
-)}
-    </div>
-)}    
-            <nav className="mt-7 flex gap-1 overflow-x-auto border-b border-white/10">
+                {notice && (
+                    <div role="status" className="fixed right-5 top-20 z-50 max-w-sm rounded-2xl border border-emerald-300/20 bg-emerald-900/90 p-4 text-sm text-emerald-100 shadow-2xl backdrop-blur-md">
+                        {notice}
+                    </div>
+                )}
+                <nav className="mt-6 flex gap-2 overflow-x-auto border-b border-white/10 pb-px">
                     {tabs.map(({ label, icon: Icon }) => (
                         <button
                             key={label}
@@ -750,9 +481,9 @@ async function handleSearchMembers(query) {
                                 setActiveTab(label);
                                 setError("");
                             }}
-                            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${
+                            className={`flex shrink-0 items-center gap-2.5 border-b-2 px-5 py-3 text-sm font-semibold transition ${
                                 activeTab === label
-                                    ? "border-blue-300 text-white"
+                                    ? "border-blue-400 text-blue-200"
                                     : "border-transparent text-blue-100/60 hover:text-white"
                             }`}
                         >
@@ -762,803 +493,567 @@ async function handleSearchMembers(query) {
                     ))}
                 </nav>
 
-                {/* tab content */}
                 <section className="mt-6">
-                <CommunityInvitations
-               communityId={communityId}
-               canManageInvites={isOwner || isAdmin}
-                pendingInvites={pendingInvites}
-                onRefresh={loadCommunityData}
-                 />
                     {loading ? (
-                        <div className="flex flex-col items-center py-16 text-blue-100/70">
-                            <FiRefreshCw className="animate-spin" size={24} />
-                            <p className="mt-3 text-sm">
-                                Loading community...
-                            </p>
+                        <div className="flex flex-col items-center py-20 text-blue-100/70">
+                            <FiRefreshCw className="animate-spin" size={26} />
+                            <p className="mt-3 text-sm">Loading community space…</p>
                         </div>
                     ) : activeTab === "Posts" ? (
-                        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-                            <div className="min-w-0 space-y-5">
+                        <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
                             <CommunityChannels
-                         communityId={communityId}
-                        canManageChannels={isOwner || isAdmin}
-                        selectedChannelId={selectedChannelId}
-                         onSelectChannel={setSelectedChannelId}
-/>  
-                                <div className="rounded-xl border border-white/10 bg-white/[0.05] p-4 sm:p-5">
-                                    <h2 className="font-semibold">
-                                        Community discussion
-                                    </h2>
+                                communityId={communityId}
+                                canManageChannels={isOwner || isAdmin}
+                                selectedChannelId={selectedChannelId}
+                                onSelectChannel={(id) => {
+                                    setSelectedChannelId(id);
+                                }}
+                            />
+                            <div className="min-w-0 space-y-6">
+   
+                                <CommunityPostComposer
+                                    selectedChannelId={selectedChannelId}
+                                    channelName={
+                                        selectedChannelId
+                                            ? selectedChannelId === "general"
+                                                ? "General"
+                                                : "Selected Channel"
+                                            : "Community Feed"
+                                    }
+                                    onSubmit={async (postData) => {
+                                        await createCommunityPost(communityId, postData);
+                                        setNotice("Post published successfully.");
+                                        await loadPosts();
+                                    }}
+                                />
 
-                                    <p className="mt-2 text-sm text-blue-100/60">
-                                        Share announcements, questions and updates with members.
-                                    </p>
+                                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
+                                    <FiSearch className="shrink-0 text-blue-200/50" />
+                                    <input
+                                        value={feedSearch}
+                                        onChange={(e) => setFeedSearch(e.target.value)}
+                                        placeholder="Search posts in this channel or community…"
+                                        className="w-full bg-transparent text-sm outline-none placeholder:text-blue-100/35"
+                                    />
+                                    {feedSearch && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFeedSearch("")}
+                                            className="text-xs text-blue-200 hover:text-white"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
 
-                                  
+                                {postsLoading ? (
+                                    <div className="flex justify-center py-12">
+                                        <FiRefreshCw className="animate-spin text-blue-300" size={22} />
+                                    </div>
+                                ) : posts.length === 0 ? (
+                                    <EmptyState
+                                        icon={FiMessageSquare}
+                                        title="No discussions yet"
+                                        description={feedSearch ? "No posts match your search query." : "Be the first to start a conversation or share a document in this space."}
+                                    />
+                                ) : (
+                                    <div className="space-y-4">
+                                        {posts.map((post) => {
+                                            const postId = post.id || post._id;
+                                            const postAuthorId =
+                                                post.author?.id ??
+                                                post.author?._id ??
+                                                post.user?.id ??
+                                                post.user?._id ??
+                                                post.authorId ??
+                                                post.userId;
+                                            const isPostAuthor =
+                                                postAuthorId != null &&
+                                                currentUserId != null &&
+                                                String(postAuthorId) === String(currentUserId);
+                                            const canDelete = isPostAuthor || isOwner || isAdmin;
 
-                                    <CommunityPostComposer
-    selectedChannelId={selectedChannelId}
-    onSubmit={async (postData) => {
-        if (postData.file) {
-            throw new Error(
-                "File upload is not connected with backend."
-            );
-        }
+                                            const isEditingThisPost = editingPostId === postId;
 
-        await createCommunityPost(communityId, {
-            content: postData.content,
-            ...(postData.channelId
-                ? { channelId: postData.channelId }
-                : {}),
-        });
+                                            return (
+                                                <article
+                                                    key={postId}
+                                                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-lg transition hover:border-white/20"
+                                                >
+                                                    {/* Post Header */}
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 font-bold text-blue-200">
+                                                                {(post.author?.name || "M").slice(0, 1).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-white">
+                                                                    {post.author?.name || "Community Member"}
+                                                                </p>
+                                                                <p className="text-xs text-blue-100/50">
+                                                                    {post.createdAt
+                                                                        ? new Date(post.createdAt).toLocaleString()
+                                                                        : "Recent"}
+                                                                </p>
+                                                            </div>
+                                                        </div>
 
-        await loadCommunityData();
-    }}
-/>
+                                                        {post.channel && (
+                                                            <span className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-200">
+                                                                #{post.channel.name || "general"}
+                                                            </span>
+                                                        )}
+                                                    </div>
 
-</div>
+                        
+                                                    <div className="mt-3">
+                                                        {isEditingThisPost ? (
+                                                            <form
+                                                                onSubmit={(e) => handleUpdatePost(e, postId, post)}
+                                                                className="space-y-3"
+                                                            >
+                                                                <textarea
+                                                                    value={editingPostContent}
+                                                                    onChange={(e) => setEditingPostContent(e.target.value)}
+                                                                    maxLength={10000}
+                                                                    rows={3}
+                                                                    required
+                                                                    className="w-full rounded-xl border border-white/15 bg-[#06172E] p-3 text-sm text-white outline-none focus:border-blue-300"
+                                                                />
 
-{isEmpty.Posts ? (
-<EmptyState
-icon={FiMessageSquare}
-title="No posts yet"
-description="Start a conversation with your community. Posts will appear here once the API is connected."
-/>
-) : (
-posts.map((post) => (
-<article
-key={post.id || post._id}
-className="rounded-xl border border-white/10 bg-white/[0.05] p-5"
->
-     <p className="text-xs text-blue-100/60">
-         {post.author?.name || "Community member"}
-            </p>
+                                                                {post.fileUrl && !editingRemoveAttachment && (
+                                                                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3 text-xs">
+                                                                        <span className="text-blue-100">
+                                                                            Attachment: {post.fileName || "File"}
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setEditingRemoveAttachment(true)}
+                                                                            className="font-semibold text-red-300 hover:text-red-200"
+                                                                        >
+                                                                            Remove attachment
+                                                                        </button>
+                                                                    </div>
+                                                                )}
 
-                                            
-<div className="mt-2">
-    {editingPostId === (post.id || post._id) ? (
-        <form
-            onSubmit={(event) => handleUpdatePost(event, post.id || post._id)}
-        >
-            <textarea
-                value={editingPostContent}
-                onChange={(event) => setEditingPostContent(event.target.value)}
-                maxLength={5000}
-                required
-                className="w-full rounded-lg border border-white/10 bg-[#061B38] p-3 text-sm text-white"
-            />
-            <button type="submit" className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm">
-                Save
-            </button>
-            <button
-                type="button"
-                onClick={() => setEditingPostId(null)}
-                className="ml-2 rounded-lg border border-white/20 px-3 py-2 text-sm"
-            >
-                Cancel
-            </button>
-        </form>
-    ) : (
-        <p className="whitespace-pre-wrap text-sm leading-6 text-blue-100/75">
-            {post.content}
-        </p>
-    )}
-</div>
+                                                                {editingRemoveAttachment && (
+                                                                    <p className="text-xs text-amber-200">
+                                                                        Attachment will be detached on save.
+                                                                    </p>
+                                                                )}
 
-<div className="mt-4 flex flex-wrap gap-3">
-{(() => {
-    const postAuthorId =
-        post.author?.id ??
-        post.author?._id ??
-        post.user?.id ??
-        post.user?._id ??
-        post.authorId ??
-        post.userId;
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        type="submit"
+                                                                        className="rounded-xl bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-400"
+                                                                    >
+                                                                        Save changes
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditingPostId(null);
+                                                                            setEditingRemoveAttachment(false);
+                                                                        }}
+                                                                        className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold"
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        ) : (
+                                                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-100/85">
+                                                                {post.content}
+                                                            </p>
+                                                        )}
+                                                        {!isEditingThisPost && (
+                                                            <PostAttachment
+                                                                fileUrl={post.fileUrl}
+                                                                fileType={post.fileType}
+                                                                fileName={post.fileName}
+                                                                fileSize={post.fileSize}
+                                                            />
+                                                        )}
+                                                    </div>
 
-    const isPostAuthor =
-        postAuthorId != null &&
-        currentUserId != null &&
-        String(postAuthorId) === String(currentUserId);
+                                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs">
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleComments(postId)}
+                                                                className="flex items-center gap-1.5 font-semibold text-blue-200 hover:text-white"
+                                                            >
+                                                                <FiMessageSquare size={14} />
+                                                                {openCommentsPostId === postId ? "Hide comments" : "Comments"}
+                                                            </button>
+                                                        </div>
 
-    return (
-        <>
-            {isPostAuthor && (
-                <button
-                    type="button"
-                    onClick={() => {
-                        setEditingPostId(post.id || post._id);
-                        setEditingPostContent(post.content || "");
-                    }}
-                    className="text-sm text-blue-200 hover:text-white"
-                >
-                    Edit post
-                </button>
-            )}
+                                                        <div className="flex items-center gap-3">
+                                                            {isPostAuthor && !isEditingThisPost && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingPostId(postId);
+                                                                        setEditingPostContent(post.content || "");
+                                                                        setEditingRemoveAttachment(false);
+                                                                    }}
+                                                                    className="flex items-center gap-1 text-blue-200/80 hover:text-white"
+                                                                >
+                                                                    <FiEdit2 size={13} /> Edit
+                                                                </button>
+                                                            )}
 
-            {(isPostAuthor || isOwner || isAdmin) && (
-                <button
-                    type="button"
-                    onClick={() =>
-                        handleDeletePost(post.id || post._id)
-                    }
-                    className="text-sm text-red-300 hover:text-red-200"
-                >
-                    Delete post
-                </button>
-            )}
-        </>
-    );
-})()}
-<button
-    type="button"
-    onClick={() => handleToggleComments(post.id || post._id)}
-    className="text-sm text-blue-200 hover:text-white"
->
-    {openCommentsPostId === (post.id || post._id)
-        ? "Hide comments"
-        : "Comments"}
-</button>
-</div>
+                                                            {canDelete && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeletePost(postId)}
+                                                                    className="flex items-center gap-1 text-red-300/80 hover:text-red-200"
+                                                                >
+                                                                    <FiTrash2 size={13} /> Delete
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
 
-{openCommentsPostId === (post.id || post._id) && (
-    <div className="mt-4 border-t border-white/10 pt-4">
-        <form onSubmit={(event) => handleCreateComment(event, post.id || post._id)}>
-            <input
-                value={commentInputs[post.id || post._id] || ""}
-                onChange={(event) =>
-                    setCommentInputs((previous) => ({
-                        ...previous,
-                        [post.id || post._id]: event.target.value,
-                    }))
-                }
-                placeholder="Write a comment..."
-                maxLength={2000}
-                required
-                className="w-full rounded-lg border border-white/10 bg-[#061B38] px-3 py-2 text-sm text-white"
-            />
-            <button type="submit" className="mt-2 rounded-lg bg-blue-500 px-3 py-2 text-sm">
-                Add comment
-            </button>
-        </form>   
-{(commentsByPost[post.id || post._id] || []).map((comment) => {
-    const commentId = comment.id || comment._id;
-    const isEditing = editingCommentId === commentId;
-    const commentAuthorId =
-    comment.author?.id ??
-    comment.author?._id ??
-    comment.user?.id ??
-    comment.user?._id ??
-    comment.authorId ??
-    comment.userId;
+                                                    {openCommentsPostId === postId && (
+                                                        <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-[#06172E]/80 p-4">
+                                                            <form
+                                                                onSubmit={(e) => handleCreateComment(e, postId)}
+                                                                className="flex gap-2"
+                                                            >
+                                                                <input
+                                                                    value={commentInputs[postId] || ""}
+                                                                    onChange={(e) =>
+                                                                        setCommentInputs((prev) => ({
+                                                                            ...prev,
+                                                                            [postId]: e.target.value,
+                                                                        }))
+                                                                    }
+                                                                    placeholder="Write a reply…"
+                                                                    maxLength={2000}
+                                                                    required
+                                                                    className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-blue-300"
+                                                                />
+                                                                <button
+                                                                    type="submit"
+                                                                    className="rounded-xl bg-blue-500 px-4 py-2 text-xs font-bold shadow hover:bg-blue-400"
+                                                                >
+                                                                    Reply
+                                                                </button>
+                                                            </form>
 
-const isCommentAuthor =
-    commentAuthorId != null &&
-    currentUserId != null &&
-    String(commentAuthorId) === String(currentUserId);
-    return (
-        <div
-            key={commentId}
-            className="mt-3 rounded-lg bg-white/5 p-3"
-        >
-            <p className="text-xs text-blue-100/60">
-                {comment.author?.name ||
-                    comment.user?.name ||
-                    "Member"}
-            </p>
+                                                            <div className="space-y-2 pt-2">
+                                                                {(commentsByPost[postId] || []).map((comment) => {
+                                                                    const commentId = comment.id || comment._id;
+                                                                    const commentAuthorId =
+                                                                        comment.author?.id ??
+                                                                        comment.author?._id ??
+                                                                        comment.user?.id ??
+                                                                        comment.user?._id;
+                                                                    const isCommentAuthor =
+                                                                        commentAuthorId != null &&
+                                                                        currentUserId != null &&
+                                                                        String(commentAuthorId) === String(currentUserId);
+                                                                    const canDeleteComment =
+                                                                        isCommentAuthor || isOwner || isAdmin;
 
-            {isEditing ? (
-                <div className="mt-2">
-                    <textarea
-                        value={editingCommentContent}
-                        onChange={(e) =>
-                            setEditingCommentContent(e.target.value)
-                        }
-                        rows={3}
-                        maxLength={5000}
-                        className="w-full rounded-lg border border-white/10 bg-slate-900 p-3 text-sm text-white outline-none focus:border-blue-400"
-                        placeholder="Edit your comment..."
-                    />
-
-                    <div className="mt-2 flex flex-wrap gap-3">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleUpdateComment(commentId)
-                            }
-                            className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-500"
-                        >
-                            Save
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setEditingCommentId(null);
-                                setEditingCommentContent("");
-                            }}
-                            className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70 hover:bg-white/5"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <>
-                    <p className="mt-1 whitespace-pre-wrap text-sm">
-                        {comment.content}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-3">
-    {isCommentAuthor && (
-        <button
-            type="button"
-            onClick={() => {
-                setEditingCommentId(commentId);
-                setEditingCommentContent(comment.content || "");
-            }}
-            className="text-xs text-blue-300 hover:text-blue-200"
-        >
-            Edit
-        </button>
-    )}
-{(
-    isCommentAuthor ||
-    (currentMember?.role?.toUpperCase() === "OWNER") ||
-    (currentMember?.role?.toUpperCase() === "ADMIN")
-) && (
-        <button
-            type="button"
-            onClick={() =>
-                handleDeleteComment(
-                    commentId,
-                    post.id || post._id
-                )
-            }
-            className="text-xs text-red-300 hover:text-red-200"
-        >
-            Delete comment
-        </button>
-    )}
-</div>
-                </>
-            )}
-        </div>
-    );
-})}
-    </div>
-)}
-
-
-          {post.createdAt && (
-          <p className="mt-3 text-xs text-blue-100/50">
-            {new Date(post.createdAt).toLocaleString()}
-                 </p>
-             )}
-          </article>
-                                        
-             ))
-          )}
-                                
-          </div>
-
-          
-     <aside className="space-y-5">
-       <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5">
-       <h2 className="font-semibold">
-       About community
-      </h2>
-  <p className="mt-3 text-sm leading-6 text-blue-100/65">
-   {community?.description ||
-       "Community information will appear here once loaded."}
-        </p>
-  <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4 text-sm text-blue-100/65">
-     <FiUsers size={18} />
-        {community?.memberCount ?? "—"} members
-           </div>
-         </div>
-     <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5">
-       <div className="flex items-center justify-between gap-2">
-       <h2 className="font-semibold">
-                   Members
-                   </h2>
-           <button
-             type="button"
-             onClick={() => setActiveTab("Members")}
-             className="text-xs text-blue-200 hover:text-white" >
-              View all
-            </button>
-        </div>
-         {isEmpty.Members ? (
-           <p className="mt-4 text-sm leading-6 text-blue-100/55">
-         Member information will appear here after integration.
-          </p>
-         ) : (
-            members.slice(0, 4).map((member) => (
-           <p key={member.id} className="mt-3 text-sm">
-           {member.user?.name ?? member.name ?? "Community member"}
-             </p>
-         ))
-      )}
-           </div>
-      </aside>
-        </div>
-      ) : activeTab === "Members" ? (
-         <div>
-           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-          <h2 className="text-xl font-bold">
-          Community members
-          </h2>
-          <p className="mt-1 text-sm text-blue-100/60">
-           View and manage community members.
-          </p>
-          </div>
-<button
-type="button"
-onClick={handleInvite}
-className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold hover:bg-blue-400">
-<FiUserPlus size={17} />
-Invite members
-</button>
-</div>
-     <div className="mt-5 flex max-w-lg items-center gap-3 rounded-lg border border-white/10 bg-white/[0.05] px-4 py-3">
-    <FiSearch className="shrink-0 text-blue-100/50" />
-       <input
-          value={search}
-         onChange={(event) => handleSearchMembers(event.target.value)} 
-          placeholder="Search members"
-          aria-label="Search members"
-         className="w-full bg-transparent text-sm outline-none placeholder:text-blue-100/40"/>
-          </div>
-           {(search.trim() ? searchResults : members).length === 0 ? (
-           <div className="mt-5">
-             <EmptyState
-          icon={FiUsers}
-            title="No members found"
-             description={searchingMembers ? "Searching users...": search.trim()
-             ? "No matching users found."
-              : "No community members are available to display."}  />
-              </div>
-          ) : (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {(search.trim() ? searchResults : members).map((member) => {
-                    const userId = member.user?.id ?? member.user?._id;
-                    const memberName =
-                        member.user?.name ??
-                        member.name ??
-                        "Community member";
-            
-                    const role = String(member.role ?? "MEMBER").toUpperCase();
-            
-                    const isActualMember = members.some((item) => {
-                        const itemUserId = item.user?.id ?? item.user?._id;
-                        return (
-                            userId != null &&
-                            itemUserId != null &&
-                            String(userId) === String(itemUserId)
-                        );
-                    });
-            
-                    const canChangeRole =
-                        isOwner &&
-                        isActualMember &&
-                        userId != null &&
-                        String(userId) !== String(currentUserId) &&
-                        role !== "OWNER";
-            
-                    const canRemove =
-                        canManageMembers &&
-                        isActualMember &&
-                        userId != null &&
-                        String(userId) !== String(currentUserId) &&
-                        (role === "MEMBER" || (isOwner && role === "ADMIN"));
-            
-                    const canTransferOwnership =
-                        isOwner &&
-                        isActualMember &&
-                        userId != null &&
-                        String(userId) !== String(currentUserId);
-            
-  
-                        const memberKey = userId ?? member.id ?? member._id;
-
-                  return (
-                   <div
-                    key={memberKey}
-                     className="relative rounded-xl border border-white/10 bg-white/[0.05] p-4"
-                     >
-                    <div className="flex items-start justify-between gap-3">
-                   <div className="min-w-0">
-                     <p className="break-words font-medium text-white">
-                       {memberName}
-                    </p>
-                 <span className="mt-2 inline-block rounded-full border border-white/10 px-2.5 py-1 text-xs text-blue-100/80">
-                    {role}
-                </span>
-                   </div>
-                {(canChangeRole ||
-                 canTransferOwnership ||
-                    canRemove) && (
-                      <div className="relative shrink-0">
-                        <button
-                       type="button"
-                         onClick={() =>
-                         setOpenMemberActionsId((previous) =>
-                          String(previous) === String(memberKey)
-                           ? null
-                           : memberKey
-                             )
-                         }
-                            aria-label={`Actions for ${memberName}`}
-                             aria-expanded={
-                               String(openMemberActionsId) ===
-                              String(memberKey)
-                                }
-                                 className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-100/70 transition hover:bg-white/10 hover:text-white"
-                                  >
-                                 <FiMoreVertical size={20} />
-                                   </button>
-                             {String(openMemberActionsId) ===
-                               String(memberKey) && (
-                                <div className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-white/10 bg-[#09254A] p-1.5 shadow-xl shadow-black/30">
-                                {canChangeRole && (
-                                   <button
-                                  type="button"
-                                   onClick={async () => {
-                                   setOpenMemberActionsId(null);
-                                      const nextRole =
-                                      role === "ADMIN"
-                                      ? "MEMBER"
-                                      : "ADMIN";
-
-                              if (
-                                  !window.confirm(
-                                      `Change ${memberName}'s role to ${nextRole}?`
-                                  )
-                              ) return;
-
-                              try {
-                                  await updateCommunityMemberRole(
-                                      communityId,
-                                      userId,
-                                      nextRole
-                                  );
-                                  setNotice("Member role updated.");
-                                  await loadCommunityData();
-                              } catch (err) {
-                                  setError(
-                                      err.response?.data?.message ||
-                                      "Could not update member role."
-                                  );
-                              }
-                          }}
-                      >
-                          {role === "ADMIN"
-                              ? "Change to member"
-                              : "Make admin"}
-                      </button>
-                  )}
-
-                  {canTransferOwnership && (
-                      <button
-                          type="button"
-                          className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-amber-300 transition hover:bg-white/10 hover:text-amber-200"
-                          onClick={async () => {
-                              setOpenMemberActionsId(null);
-
-                              if (
-                                  !window.confirm(
-                                      `Transfer community ownership to ${memberName}? You will become an admin.`
-                                  )
-                              ) return;
-
-                              try {
-                                  await transferCommunityOwnership(
-                                      communityId,
-                                      userId
-                                  );
-                                  setNotice(
-                                      "Community ownership transferred."
-                                  );
-                                  await loadCommunityData();
-                              } catch (err) {
-                                  setError(
-                                      err.response?.data?.message ||
-                                      "Could not transfer ownership."
-                                  );
-                              }
-                          }}
-                      >
-                          Transfer ownership
-                      </button>
-                  )}
-
-                  {canRemove && (
-                      <button
-                          type="button"
-                          className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
-                          onClick={async () => {
-                              setOpenMemberActionsId(null);
-
-                              if (
-                                  !window.confirm(
-                                      `Remove ${memberName} from this community?`
-                                  )
-                              ) return;
-
-                              try {
-                                  await removeCommunityMember(
-                                      communityId,
-                                      userId
-                                  );
-                                  setNotice("Member removed.");
-                                  await loadCommunityData();
-                              } catch (err) {
-                                  setError(
-                                      err.response?.data?.message ||
-                                      "Could not remove member."
-                                  );
-                              }
-                          }}
-                      >                                                               
-                       Remove member
-                       </button>
-                     )}
+                                                                    return (
+                                                                        <div
+                                                                            key={commentId}
+                                                                            className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm"
+                                                                        >
+                                                                            <div className="flex items-center justify-between text-xs text-blue-100/60">
+                                                                                <span className="font-semibold text-blue-100">
+                                                                                    {comment.author?.name || comment.user?.name || "Member"}
+                                                                                </span>
+                                                                                {canDeleteComment && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleDeleteComment(commentId, postId)}
+                                                                                        className="text-red-300 hover:text-red-200"
+                                                                                    >
+                                                                                        Delete
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                            <p className="mt-1 text-sm text-blue-100/85">
+                                                                                {comment.content}
+                                                                            </p>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </article>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                     )}
-                 </div>
-                 )}
-                 </div>
-                </div>
-              );
-             })}
-            </div>
-      )}
-           </div>
-        ) : (
-   <div className="rounded-xl border border-white/10 bg-white/[0.05] p-5 sm:p-7">
-     <div className="flex items-center gap-3">
-      <div className="rounded-xl bg-blue-500/15 p-3 text-blue-200">
-    <FiInfo size={24} />
-      </div>
-      <div>
-      <h2 className="text-xl font-bold">
-         About this community
-         </h2>
-      <p className="mt-1 text-sm text-blue-100/60">
-      Community details and settings.
-     </p>
-      </div>
-      </div>
-      <div className="mt-6 border-t border-white/10 pt-5">
-       <h3 className="text-sm font-semibold text-blue-100/60">
-        DESCRIPTION
-     </h3>
- <p className="mt-2 text-sm leading-7 text-blue-100/80">
-      {community?.description ||
-      "The community description will appear here when details are fetched from the backend."}
-    </p>
-  </div>
+                    ) : activeTab === "Members" ? (
+                        <div className="space-y-6">
+                            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                                <div>
+                                    <h2 className="text-xl font-bold">Community members</h2>
+                                    <p className="mt-1 text-sm text-blue-100/60">
+                                        View member roles and collaborate.
+                                    </p>
+                                </div>
 
-   <div className="mt-6 border-t border-white/10 pt-5">
-    <h3 className="text-sm font-semibold text-blue-100/60">
-        COMMUNITY ID
-       </h3>
-         <p className="mt-2 break-all font-mono text-sm text-blue-100/75">
-              {communityId}
-           </p>
-             </div> 
-<div className="mt-6 border-t border-white/10 pt-5">
-    <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-blue-100/60">
-            COMMUNITY ACTIONS
-        </h3>
-
-        <div className="relative">
-            <button
-                type="button"
-                onClick={() =>
-                    setShowCommunityActions((previous) => !previous)
-                }
-                aria-label="Community actions"
-                aria-expanded={showCommunityActions}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-blue-100/80 transition hover:bg-white/10 hover:text-white"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                >
-                    <circle cx="12" cy="5" r="1.8" />
-                    <circle cx="12" cy="12" r="1.8" />
-                    <circle cx="12" cy="19" r="1.8" />
-                </svg>
-            </button>
-
-            {showCommunityActions && (
-                <>
-                    <button
-                        type="button"
-                        aria-label="Close community actions menu"
-                        className="fixed inset-0 z-10 cursor-default"
-                        onClick={() => setShowCommunityActions(false)}
-                    />
-
-                    <div className="absolute right-0 top-11 z-20 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-xl shadow-black/30">
-                        {isOwner && (
-                            <>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setCommunityName(community?.name ?? "");
-                                        setCommunityDescription(
-                                            community?.description ?? ""
+                                    onClick={() => setActiveTab("Invitations")}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold hover:bg-blue-400"
+                                >
+                                    <FiUserPlus size={17} /> Invite members
+                                </button>
+                            </div>
+
+                            <div className="flex max-w-lg items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                                <FiSearch className="shrink-0 text-blue-100/50" />
+                                <input
+                                    value={search}
+                                    onChange={(event) => handleSearchMembers(event.target.value)}
+                                    placeholder="Search members by name or email…"
+                                    className="w-full bg-transparent text-sm outline-none placeholder:text-blue-100/40"
+                                />
+                            </div>
+
+                            {(search.trim() ? searchResults : members).length === 0 ? (
+                                <EmptyState
+                                    icon={FiUsers}
+                                    title="No members found"
+                                    description={searchingMembers ? "Searching users…" : "No community members match your search."}
+                                />
+                            ) : (
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {(search.trim() ? searchResults : members).map((member) => {
+                                        const userId = member.user?.id ?? member.user?._id ?? member.id;
+                                        const memberName = member.user?.name ?? member.name ?? "Community member";
+                                        const role = String(member.role ?? "MEMBER").toUpperCase();
+                                        const memberKey = userId ?? member.id;
+
+                                        const canChangeRole =
+                                            isOwner &&
+                                            userId != null &&
+                                            String(userId) !== String(currentUserId) &&
+                                            role !== "OWNER";
+                                        const canRemove =
+                                            canManageMembers &&
+                                            userId != null &&
+                                            String(userId) !== String(currentUserId) &&
+                                            (role === "MEMBER" || (isOwner && role === "ADMIN"));
+                                        const canTransferOwnership =
+                                            isOwner &&
+                                            userId != null &&
+                                            String(userId) !== String(currentUserId);
+
+                                        return (
+                                            <div
+                                                key={memberKey}
+                                                className="relative rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/20 font-bold text-blue-100">
+                                                            {memberName.slice(0, 1).toUpperCase()}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-white">{memberName}</p>
+                                                            <span className="mt-1 inline-block rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-blue-100/80">
+                                                                {role}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {(canChangeRole || canTransferOwnership || canRemove) && (
+                                                        <div className="relative">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setOpenMemberActionsId((prev) =>
+                                                                        String(prev) === String(memberKey) ? null : memberKey
+                                                                    )
+                                                                }
+                                                                className="rounded-lg p-1.5 text-blue-100/70 hover:bg-white/10 hover:text-white"
+                                                            >
+                                                                <FiMoreVertical size={18} />
+                                                            </button>
+
+                                                            {String(openMemberActionsId) === String(memberKey) && (
+                                                                <div className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-white/10 bg-[#09254A] p-1.5 shadow-xl">
+                                                                    {canChangeRole && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={async () => {
+                                                                                setOpenMemberActionsId(null);
+                                                                                const nextRole = role === "ADMIN" ? "MEMBER" : "ADMIN";
+                                                                                await updateCommunityMemberRole(communityId, userId, nextRole);
+                                                                                setNotice(`Updated ${memberName} to ${nextRole}`);
+                                                                                await loadCommunityData();
+                                                                            }}
+                                                                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-blue-100 hover:bg-white/10"
+                                                                        >
+                                                                            {role === "ADMIN" ? "Demote to member" : "Promote to admin"}
+                                                                        </button>
+                                                                    )}
+
+                                                                    {canTransferOwnership && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={async () => {
+                                                                                setOpenMemberActionsId(null);
+                                                                                if (!window.confirm(`Transfer ownership to ${memberName}?`)) return;
+                                                                                await transferCommunityOwnership(communityId, userId);
+                                                                                setNotice("Ownership transferred.");
+                                                                                await loadCommunityData();
+                                                                            }}
+                                                                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-amber-300 hover:bg-white/10"
+                                                                        >
+                                                                            Transfer ownership
+                                                                        </button>
+                                                                    )}
+
+                                                                    {canRemove && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={async () => {
+                                                                                setOpenMemberActionsId(null);
+                                                                                if (!window.confirm(`Remove ${memberName}?`)) return;
+                                                                                await removeCommunityMember(communityId, userId);
+                                                                                setNotice("Member removed.");
+                                                                                await loadCommunityData();
+                                                                            }}
+                                                                            className="w-full rounded-lg px-3 py-2 text-left text-xs text-red-300 hover:bg-red-500/10"
+                                                                        >
+                                                                            Remove member
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         );
-                                        setEditingCommunity(true);
-                                        setError("");
-                                        setNotice("");
-                                        setShowCommunityActions(false);
-                                    }}
-                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-blue-100/90 transition hover:bg-white/[0.07] hover:text-white"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="17"
-                                        height="17"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.8"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <path d="M12 20h9" />
-                                        <path d="m16.5 3.5 4 4L8 20l-5 1 1-5Z" />
-                                    </svg>
-                                    Edit Community
-                                </button>
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : activeTab === "Invitations" ? (
+                        <div className="max-w-3xl space-y-6">
+                            <CommunityInvitations
+                                communityId={communityId}
+                                canManageInvites={isOwner || isAdmin}
+                                pendingInvites={pendingInvites}
+                                onRefresh={loadCommunityData}
+                            />
+                        </div>
+                    ) : (
+    
+                        <div className="max-w-2xl space-y-6 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-2xl bg-blue-500/20 p-3 text-blue-200">
+                                    <FiInfo size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">About this community</h2>
+                                    <p className="mt-1 text-sm text-blue-100/60">Community settings and overview.</p>
+                                </div>
+                            </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowCommunityActions(false);
-                                        handleDeleteCommunity();
-                                    }}
-                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-300 transition hover:bg-red-500/10"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="17"
-                                        height="17"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.8"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <path d="M3 6h18" />
-                                        <path d="M8 6V4h8v2" />
-                                        <path d="m19 6-1 14H6L5 6" />
-                                        <path d="M10 11v5M14 11v5" />
-                                    </svg>
-                                    Delete Community
-                                </button>
+                            <div className="border-t border-white/10 pt-5">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200">Description</h3>
+                                <p className="mt-2 text-sm leading-relaxed text-blue-100/80">
+                                    {community?.description || "No description provided."}
+                                </p>
+                            </div>
 
-                                <div className="my-1 border-t border-white/10" />
-                            </>
-                        )}
+                            <div className="border-t border-white/10 pt-5">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200">Community ID</h3>
+                                <p className="mt-2 font-mono text-xs text-blue-100/70">{communityId}</p>
+                            </div>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setShowCommunityActions(false);
-                                handleLeaveCommunity();
-                            }}
-                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-blue-100/90 transition hover:bg-white/[0.07] hover:text-white"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="17"
-                                height="17"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <path d="m16 17 5-5-5-5" />
-                                <path d="M21 12H9" />
-                            </svg>
-                            Leave Community
-                        </button>
-                    </div>
-                </>
-            )}
-        </div>
-    </div>
+                            <div className="border-t border-white/10 pt-5">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-200">Actions</h3>
+                                <div className="mt-3 flex flex-wrap gap-3">
+                                    {isOwner && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setCommunityName(community?.name || "");
+                                                    setCommunityDescription(community?.description || "");
+                                                    setEditingCommunity(true);
+                                                }}
+                                                className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold hover:bg-white/5"
+                                            >
+                                                Edit community details
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteCommunity}
+                                                className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/20"
+                                            >
+                                                Delete community
+                                            </button>
+                                        </>
+                                    )}
 
-    {isOwner && editingCommunity && (
-        <form
-            onSubmit={handleUpdateCommunity}
-            className="mt-4 space-y-4 rounded-xl border border-white/10 p-4"
-        >
-            <div>
-                <label className="mb-1 block text-sm text-blue-100/70">
-                    Community name
-                </label>
-                <input
-                    type="text"
-                    value={communityName}
-                    onChange={(event) =>
-                        setCommunityName(event.target.value)
-                    }
-                    maxLength={100}
-                    required
-                    className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-400"
-                />
-            </div>
+                                    {!isOwner && (
+                                        <button
+                                            type="button"
+                                            onClick={handleLeaveCommunity}
+                                            className="rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-white/5"
+                                        >
+                                            Leave community
+                                        </button>
+                                    )}
+                                </div>
 
-            <div>
-                <label className="mb-1 block text-sm text-blue-100/70">
-                    Description
-                </label>
-                <textarea
-                    value={communityDescription}
-                    onChange={(event) =>
-                        setCommunityDescription(event.target.value)
-                    }
-                    rows={4}
-                    maxLength={2000}
-                    className="w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-400"
-                />
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-                <button
-                    type="submit"
-                    disabled={savingCommunity}
-                    className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {savingCommunity ? "Saving..." : "Save changes"}
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => setEditingCommunity(false)}
-                    disabled={savingCommunity}
-                    className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/5 disabled:opacity-50"
-                >
-                    Cancel
-                </button>
-            </div>
-        </form>
-    )}
-</div>
+                                {isOwner && editingCommunity && (
+                                    <form onSubmit={handleUpdateCommunity} className="mt-4 space-y-4 rounded-2xl border border-white/10 bg-[#06172E] p-5">
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-blue-100/70">Community name</label>
+                                            <input
+                                                value={communityName}
+                                                onChange={(e) => setCommunityName(e.target.value)}
+                                                maxLength={100}
+                                                required
+                                                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-300"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="mb-1 block text-xs font-medium text-blue-100/70">Description</label>
+                                            <textarea
+                                                value={communityDescription}
+                                                onChange={(e) => setCommunityDescription(e.target.value)}
+                                                maxLength={2000}
+                                                rows={3}
+                                                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-300"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="submit"
+                                                disabled={savingCommunity}
+                                                className="rounded-xl bg-blue-500 px-4 py-2 text-xs font-bold disabled:opacity-50"
+                                            >
+                                                {savingCommunity ? "Saving…" : "Save changes"}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingCommunity(false)}
+                                                className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
                         </div>
                     )}
                 </section>

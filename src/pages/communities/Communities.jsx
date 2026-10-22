@@ -114,7 +114,7 @@ function Communities() {
 
   return (
     <div className="min-h-screen bg-[#062C5F] text-white">
-      {/* Header */}
+
       <header className="border-b border-white/10 bg-[#062C5F]">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
           <button

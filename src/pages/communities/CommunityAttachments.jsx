@@ -1,23 +1,106 @@
-
 import { useEffect, useState } from "react";
 
-const MAX_SIZE = 25 * 1024 * 1024;
+const MAX_SIZE = 26214400; 
 
-function formatSize(bytes = 0) {
+export function formatSize(bytes = 0) {
+    if (!bytes || isNaN(bytes)) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function getFileType(file) {
+export function getFileType(file) {
+    if (!file) return "file";
     if (file.type?.startsWith("image/")) return "image";
 
     const documentExtensions = [
-        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt",
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "rtf",
     ];
-    const extension = file.name.split(".").pop()?.toLowerCase();
+    const extension = file.name?.split(".").pop()?.toLowerCase();
 
     return documentExtensions.includes(extension) ? "document" : "file";
+}
+
+export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove, canRemove = false }) {
+    if (!fileUrl) return null;
+
+    const isImage = fileType === "image" || /\.(jpeg|jpg|png|gif|webp|svg)$/i.test(fileUrl || "");
+    const isDoc = fileType === "document" || /\.(pdf|docx?|xlsx?|pptx?|txt)$/i.test(fileUrl || "");
+
+    return (
+        <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+            {isImage ? (
+                <div className="group relative max-h-96 overflow-hidden bg-black/20">
+                    <img
+                        src={fileUrl}
+                        alt={fileName || "Post attachment"}
+                        loading="lazy"
+                        className="max-h-96 w-full object-contain transition group-hover:scale-[1.01]"
+                    />
+                    <div className="flex items-center justify-between border-t border-white/10 bg-[#071B35]/90 p-2.5 text-xs text-blue-100">
+                        <span className="truncate">{fileName || "Image"}</span>
+                        <div className="flex items-center gap-3">
+                            {fileSize && <span>{formatSize(fileSize)}</span>}
+                            <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={fileName || true}
+                                className="font-semibold text-blue-300 hover:text-white"
+                            >
+                                Open ↗
+                            </a>
+                            {canRemove && (
+                                <button
+                                    type="button"
+                                    onClick={onRemove}
+                                    className="text-red-300 hover:text-red-200"
+                                >
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex items-center justify-between gap-3 p-3 text-sm">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-xl text-blue-200">
+                            {isDoc ? "📄" : "📁"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-white">{fileName || "Attached file"}</p>
+                            <p className="mt-0.5 text-xs text-blue-100/60">
+                                {fileType || (isDoc ? "document" : "file")}
+                                {fileSize ? ` · ${formatSize(fileSize)}` : ""}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={fileName || true}
+                            className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-200 transition hover:bg-blue-500/30 hover:text-white"
+                        >
+                            Download ↓
+                        </a>
+                        {canRemove && (
+                            <button
+                                type="button"
+                                onClick={onRemove}
+                                className="rounded-lg px-2 py-1.5 text-xs text-red-300 hover:bg-red-500/10"
+                            >
+                                Remove
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default function CommunityAttachments({
@@ -30,7 +113,7 @@ export default function CommunityAttachments({
 
     useEffect(() => {
         if (!value?.file) {
-            setPreviewUrl("");
+            setPreviewUrl(value?.fileUrl || "");
             return;
         }
 
@@ -53,7 +136,7 @@ export default function CommunityAttachments({
         }
 
         if (file.size > MAX_SIZE) {
-            setError("File exceeds the 25 MiB limit.");
+            setError("File exceeds the 25 MiB limit (max 26,214,400 bytes).");
             return;
         }
 

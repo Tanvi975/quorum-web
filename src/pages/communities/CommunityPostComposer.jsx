@@ -1,6 +1,6 @@
-
 import { useState } from "react";
 import CommunityAttachments from "./CommunityAttachments";
+import { uploadAttachment } from "../../services/communityService";
 
 export default function CommunityPostComposer({
     selectedChannelId = null,
@@ -11,6 +11,7 @@ export default function CommunityPostComposer({
     const [content, setContent] = useState("");
     const [attachment, setAttachment] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
     const [error, setError] = useState("");
 
     async function handleSubmit(event) {
@@ -34,23 +35,40 @@ export default function CommunityPostComposer({
         setError("");
 
         try {
+            let uploadedMeta = null;
+
+            if (attachment?.file && !attachment.fileUrl) {
+                setStatusMessage("Uploading attachment to secure storage…");
+                uploadedMeta = await uploadAttachment(attachment.file);
+            } else if (attachment?.fileUrl) {
+                uploadedMeta = {
+                    fileUrl: attachment.fileUrl,
+                    fileType: attachment.fileType,
+                    fileName: attachment.fileName,
+                    fileSize: attachment.fileSize,
+                };
+            }
+
+            setStatusMessage("Publishing post…");
+
             await onSubmit?.({
                 content: text,
                 ...(selectedChannelId ? { channelId: selectedChannelId } : {}),
-                ...(attachment
+                ...(uploadedMeta
                     ? {
-                        file: attachment.file,
-                        fileUrl: attachment.fileUrl,
-                        fileType: attachment.fileType,
-                        fileName: attachment.fileName,
-                        fileSize: attachment.fileSize,
-                    }
+                          fileUrl: uploadedMeta.fileUrl,
+                          fileType: uploadedMeta.fileType,
+                          fileName: uploadedMeta.fileName,
+                          fileSize: uploadedMeta.fileSize,
+                      }
                     : {}),
             });
 
             setContent("");
             setAttachment(null);
+            setStatusMessage("");
         } catch (err) {
+            console.error("Post creation error:", err);
             setError(
                 err.response?.data?.message ||
                 err.message ||
@@ -58,6 +76,7 @@ export default function CommunityPostComposer({
             );
         } finally {
             setSubmitting(false);
+            setStatusMessage("");
         }
     }
 
@@ -71,7 +90,7 @@ export default function CommunityPostComposer({
                 <p className="mt-1 text-sm text-blue-100/60">
                     {channelName
                         ? `Publishing to #${channelName}`
-                        : "Share an update with your community."}
+                        : "Share an update, link or file with your community."}
                 </p>
             </div>
 
@@ -98,6 +117,12 @@ export default function CommunityPostComposer({
                     disabled={disabled || submitting}
                 />
 
+                {statusMessage && (
+                    <p className="text-xs font-medium text-blue-200 animate-pulse">
+                        {statusMessage}
+                    </p>
+                )}
+
                 {error && (
                     <p role="alert" className="rounded-xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-200">
                         {error}
@@ -106,7 +131,7 @@ export default function CommunityPostComposer({
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
                     <span className="text-xs text-blue-100/50">
-                        Be helpful, respectful and constructive.
+                        Images, documents and files supported · Max 25 MiB
                     </span>
                     <button
                         type="submit"
