@@ -70,6 +70,16 @@ function SectionTitle({ title, subtitle }) {
       <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
     </div>
   );
+  }
+function formatAIResponse(text = "") {
+  return String(text)
+      .replace(/\\n/g, "\n")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "$1")
+      .replace(/^[-*]\s+/gm, "• ")
+      .replace(/^\d+\.\s+/gm, "• ");
 }
 
 function ResultBox({ title, children }) {
@@ -445,7 +455,7 @@ export default function QuorumAIAssistant() {
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words text-sm leading-7">
-                        {message.text}
+                      {formatAIResponse(message.text)}
                       </p>
                       {message.metadata?.model && (
                         <p className="mt-2 text-[11px] text-slate-400">
@@ -616,7 +626,9 @@ export default function QuorumAIAssistant() {
 
             {searchResult && (
               <>
-                <ResultBox title="AI answer">{searchResult.answer}</ResultBox>
+                <ResultBox title="AI answer">
+               {formatAIResponse(searchResult.answer)}
+              </ResultBox>
                 <div className="mt-5">
                   <h3 className="mb-3 font-medium">
                     Sources ({searchResult.sources?.length || 0})
@@ -757,7 +769,7 @@ export default function QuorumAIAssistant() {
 
             {activeTab === "project" && projectResult && (
               <ResultBox title={`Assistance — ${getProjectLabel(project)}`}>
-                {projectResult.answer}
+                {formatAIResponse(projectResult.answer)}
                 {project?.description && `\n\n${project.description}`}
                 {project && (
                   `\n\nMembers: ${project.memberCount ?? 0}` +
@@ -783,7 +795,7 @@ export default function QuorumAIAssistant() {
                   </p>
                 </div>
                 <ResultBox title="Status update">
-                  {statusResult.statusUpdate}
+                {formatAIResponse(statusResult.statusUpdate)}
                 </ResultBox>
                 <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4">
                   <h3 className="text-sm font-medium text-amber-200">Important note</h3>
@@ -878,7 +890,7 @@ export default function QuorumAIAssistant() {
                     </button>
                   </div>
                   <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">
-                    {item.response}
+                  {formatAIResponse(item.response)}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
                     {item.createdAt && (

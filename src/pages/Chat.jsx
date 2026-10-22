@@ -1024,8 +1024,8 @@ const handleRenameGroup = async (event) => {
   }
 };
   return (
-    <div className="min-h-screen bg-[#121419] p-3 text-[#E8EDF5] sm:p-5">
-      <div className="mx-auto flex min-h-[calc(100vh-24px)] w-full max-w-[1440px] flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#0D1F33] sm:min-h-[calc(100vh-40px)]">
+    <div className="h-screen overflow-hidden bg-[#121419] p-3 text-[#E8EDF5] sm:p-5">
+      <div className="mx-auto flex h-[calc(100vh-24px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#0D1F33] sm:h-[calc(100vh-40px)]">
         <header className="flex h-11 shrink-0 items-center justify-between border-b border-[#253D57] bg-[#0D1F33] px-4">
           <div className="flex items-center gap-2">
             <FiMessageSquare className="text-[#38BDF8]" size={17} />
@@ -1250,7 +1250,7 @@ const handleRenameGroup = async (event) => {
           <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#263F5B]">
             {activeConversation ? (
               <>
-                <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-[#35516E] bg-[#20364F] px-3 sm:px-4">
+               <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-[#35516E] bg-[#20364F] px-3 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <button
                       type="button"
@@ -1293,12 +1293,6 @@ const handleRenameGroup = async (event) => {
                <FiPlus size={16} />
             </IconButton>
               )}
-                    <IconButton label="Audio call">
-                      <FiPhone size={15} />
-                    </IconButton>
-                    <IconButton label="Video call">
-                      <FiVideo size={16} />
-                    </IconButton>
                     <IconButton
                       label="Contact information"
                       onClick={() => setShowInfo(!showInfo)}
@@ -1376,9 +1370,6 @@ const handleRenameGroup = async (event) => {
                       placeholder={`Send message to ${activeConversationName}...`}
                       className="min-w-0 flex-1 bg-transparent py-2 text-xs text-white outline-none placeholder:text-[#91A5BB]"
                     />
-                    <IconButton label="Emoji">
-                      <FiSmile size={16} />
-                    </IconButton>
                     <button
                       type="submit"
                       disabled={!message.trim() || sending || !connected}
