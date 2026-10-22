@@ -28,7 +28,7 @@ export async function startDirectChat(targetUserId) {
     return res.data;
 }
 
-export async function getMessages(conversationId, limit = 20, cursor) {
+export async function getMessages(conversationId, limit = 50, cursor) {
     const res = await api.get(
         `/api/conversations/${conversationId}/messages`, {
             params: {
@@ -51,16 +51,23 @@ export async function createGroupConversation({
 {
     const res = await api.post("/api/conversations/group", {
         name: name.trim(),
-        ...(avatar ? { avatar } : {}),
+        avatar: avatar || undefined,
         participantIds,
+        userIds: participantIds,
+        members: participantIds,
+        memberIds: participantIds,
     });
 
     return res.data;
 }
 
-export async function addGroupParticipants(conversationId, participantIds) {
+export async function addGroupParticipants(conversationId, participantIds = []) {
     const res = await api.post(
-        `/api/conversations/${conversationId}/participants`, { participantIds }
+        `/api/conversations/${conversationId}/participants`, {
+            participantIds,
+            userIds: participantIds,
+            members: participantIds,
+        }
     );
 
     return res.data;

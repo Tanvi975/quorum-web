@@ -156,6 +156,8 @@ const [removingMemberId, setRemovingMemberId] = useState(null);
 const [leavingGroup, setLeavingGroup] = useState(false);
 const [showRenameGroup, setShowRenameGroup] = useState(false);
 const [renamedGroup, setRenamedGroup] = useState("");
+const [renamedAvatar, setRenamedAvatar] = useState("");
+const [groupAvatar, setGroupAvatar] = useState("");
 
   const messageEndRef = useRef(null);
   const searchRequestRef = useRef(0);
@@ -352,10 +354,40 @@ const [renamedGroup, setRenamedGroup] = useState("");
     const handleConversationUpdate = () => {
       loadConversations();
     };
+    const handleConversationUpdated = (payload) => {
+      const updated = payload?.conversation || payload;
+      if (!updated?.id) return;
+
+      setConversations((previous) =>
+        previous.map((item) =>
+          String(item.id) === String(updated.id) ? { ...item, ...updated } : item
+        )
+      );
+
+      if (String(activeConversationRef.current?.id) === String(updated.id)) {
+        setActiveConversation((previous) => ({
+          ...previous,
+          ...updated,
+        }));
+      }
+    };
+
+    const handleConversationRemoved = (payload) => {
+      if (
+        String(activeConversationRef.current?.id) ===
+        String(payload?.conversationId)
+      ) {
+        setActiveConversation(null);
+        setMessages([]);
+        setError("You were removed from this group.");
+      }
+      loadConversations();
+    };
 
     socket.on("message:new", handleNewMessage);
     socket.on("conversation:update", handleConversationUpdate);
-
+    socket.on("conversation:updated", handleConversationUpdated);
+    socket.on("conversation:removed", handleConversationRemoved);
 
 const handleMessageRead = (data) => {
     if (
@@ -387,6 +419,8 @@ const handleMessageRead = (data) => {
       socket.emit("conversation:leave", { conversationId });
       socket.off("message:new", handleNewMessage);
       socket.off("conversation:update", handleConversationUpdate);
+      socket.off("conversation:updated", handleConversationUpdated);
+      socket.off("conversation:removed", handleConversationRemoved);
       socket.off("message:read", handleMessageRead);
     };
   }, [
@@ -635,6 +669,7 @@ setMessages(normalizedList);
   
       const response = await createGroupConversation({
         name: groupName.trim(),
+        avatar: groupAvatar.trim() || null,
         participantIds: selectedGroupUsers
           .map(getUserId)
           .filter(Boolean),
@@ -659,6 +694,7 @@ setMessages(normalizedList);
       setActiveConversation(newGroup);
       setShowGroupModal(false);
       setGroupName("");
+      setGroupAvatar("");
       setGroupSearch("");
       setGroupUsers([]);
       setSelectedGroupUsers([]);
@@ -820,7 +856,14 @@ const handlePromoteAdmin = async (participant) => {
     participant?.userId || getUserId(person);
 
   if (!activeConversation?.id || !userId) return;
+  const adminCount = (activeConversation?.participants || []).filter(
+    (p) => p.role === "admin"
+  ).length;
 
+  if (adminCount <= 1) {
+    setError("Cannot demote the last admin of the group");
+    return;
+  }
   try {
     setUpdatingMemberId(String(userId));
     setError("");
@@ -868,10 +911,19 @@ const handleRemoveMember = async (participant) => {
   if (!activeConversation?.id || !userId) return;
 
   if (String(userId) === String(currentUserId)) {
-    setError("Use Leave Group to leave this group.");
+    setError("Admins cannot kick themselves. Use Leave Group to leave.");
     return;
   }
+  if (participant?.role === "admin") {
+    const adminCount = (activeConversation?.participants || []).filter(
+      (p) => p.role === "admin"
+    ).length;
 
+    if (adminCount <= 1) {
+      setError("Cannot remove the last admin of the group");
+      return;
+    }
+  }
   if (!window.confirm(`Remove ${getUserName(person)} from this group?`)) {
     return;
   }
@@ -942,16 +994,18 @@ const handleRenameGroup = async (event) => {
 
     await updateGroupConversation(activeConversation.id, {
       name: renamedGroup.trim(),
+      avatar: renamedAvatar.trim() || null,
     });
 
     await refreshActiveGroup();
 
     setShowRenameGroup(false);
     setRenamedGroup("");
+    setRenamedAvatar("");
   } catch (err) {
     setError(
       err.response?.data?.message ||
-        "Could not rename the group."
+      "Could not update group details." 
     );
   }
 };
@@ -1380,11 +1434,12 @@ const handleRenameGroup = async (event) => {
               type="button"
               onClick={() => {
                 setRenamedGroup(activeConversation.name || "");
+                setRenamedAvatar(activeConversation.avatar || "");
                 setShowRenameGroup(true);
               }}
               className="mt-3 w-full rounded-md border border-[#46617C] px-3 py-2 text-xs text-white hover:bg-[#263F59]"
             >
-              Rename Group
+              Edit Group Details
             </button>
           )}
         </div>
@@ -1530,6 +1585,16 @@ const handleRenameGroup = async (event) => {
               onChange={(event) => setGroupName(event.target.value)}
               maxLength={80}
               placeholder="Enter group name"
+              className="mb-3 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
+              />
+  
+              <label className="mb-1 text-xs text-[#C3D1E0]">
+                Group icon / avatar URL (optional)
+              </label>
+              <input
+                value={groupAvatar}
+                onChange={(event) => setGroupAvatar(event.target.value)}
+                placeholder="https://... (optional)"
               className="mb-4 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
             />
 
@@ -1729,25 +1794,37 @@ const handleRenameGroup = async (event) => {
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
     <form
       onSubmit={handleRenameGroup}
-      className="w-full max-w-sm rounded-xl border border-[#304A64] bg-[#192D43] p-5"
+      className="w-full max-w-sm rounded-xl border border-[#304A64] bg-[#192D43] p-5 shadow-2xl"
     >
       <h2 className="mb-4 text-base font-semibold text-white">
-        Rename Group
+      Edit Group Details
       </h2>
-
+      <label className="mb-1 block text-xs text-[#C3D1E0]">Group name</label>
       <input
         value={renamedGroup}
         onChange={(event) => setRenamedGroup(event.target.value)}
         maxLength={80}
         required
         placeholder="Enter group name"
-        className="h-10 w-full rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none focus:border-[#38BDF8]"
+        className="mb-3 h-10 w-full rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none focus:border-[#38BDF8]"
+        />
+  
+        <label className="mb-1 block text-xs text-[#C3D1E0]">Group avatar URL (optional)</label>
+        <input
+          value={renamedAvatar}
+          onChange={(event) => setRenamedAvatar(event.target.value)}
+          placeholder="https://... (optional)"
+          className="mb-4 h-10 w-full rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none focus:border-[#38BDF8]"
       />
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"
-          onClick={() => setShowRenameGroup(false)}
+          onClick={() => {
+            setShowRenameGroup(false);
+            setRenamedGroup("");
+            setRenamedAvatar("");
+          }}
           className="rounded-md border border-[#46617C] px-3 py-2 text-xs text-white"
         >
           Cancel
