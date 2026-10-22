@@ -1,7 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-
+import CommunityChannels from "./CommunityChannels";
+import CommunityPostComposer from "./CommunityPostComposer";
+import CommunityInvitations from "./CommunityInvitations";
 import {
     getCommunityDetails,
     getCommunityMembers,
@@ -90,9 +92,10 @@ const [searchingMembers, setSearchingMembers] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentContent, setEditingCommentContent] = useState("");
     const [loading, setLoading] = useState(false);
+    const [pendingInvites, setPendingInvites] = useState([]);
     const [error, setError] = useState("");
-
-
+    const [selectedChannelId, setSelectedChannelId] = useState(null);
+    const [feedSearch, setFeedSearch] = useState("");
     const loadCommunityData = useCallback(async () => {
         if (!communityId) {
             setError("Community ID is missing.");
@@ -163,6 +166,7 @@ const [searchingMembers, setSearchingMembers] = useState(false);
                         getCommunityPosts(communityId, {
                             cursor,
                             limit: 20,
+                            channelId: selectedChannelId || undefined,
                         }),
                     "posts"
                 ),
@@ -197,7 +201,12 @@ const [searchingMembers, setSearchingMembers] = useState(false);
         setNotice("");
     
         try {
-            await createCommunityPost(communityId, content);
+            await createCommunityPost(communityId, {
+                content: postContent.trim(),
+                ...(selectedChannelId
+                    ? { channelId: selectedChannelId }
+                    : {}),
+            });
             setPostContent("");
             setNotice("Post published.");
             await loadCommunityData();
@@ -755,6 +764,12 @@ async function handleSearchMembers(query) {
 
                 {/* tab content */}
                 <section className="mt-6">
+                <CommunityInvitations
+               communityId={communityId}
+               canManageInvites={isOwner || isAdmin}
+                pendingInvites={pendingInvites}
+                onRefresh={loadCommunityData}
+                 />
                     {loading ? (
                         <div className="flex flex-col items-center py-16 text-blue-100/70">
                             <FiRefreshCw className="animate-spin" size={24} />
@@ -765,7 +780,12 @@ async function handleSearchMembers(query) {
                     ) : activeTab === "Posts" ? (
                         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
                             <div className="min-w-0 space-y-5">
-                               
+                            <CommunityChannels
+                         communityId={communityId}
+                        canManageChannels={isOwner || isAdmin}
+                        selectedChannelId={selectedChannelId}
+                         onSelectChannel={setSelectedChannelId}
+/>  
                                 <div className="rounded-xl border border-white/10 bg-white/[0.05] p-4 sm:p-5">
                                     <h2 className="font-semibold">
                                         Community discussion
@@ -776,25 +796,26 @@ async function handleSearchMembers(query) {
                                     </p>
 
                                   
-<form onSubmit={handleCreatePost}>
-    <textarea
-        value={postContent}
-        onChange={(event) => setPostContent(event.target.value)}
-        placeholder="Share an update with your community..."
-        maxLength={5000}
-        rows={3}
-        required
-        className="mt-4 w-full rounded-lg border border-white/10 bg-[#061B38] px-4 py-3 text-sm text-white outline-none placeholder:text-blue-100/40 focus:border-blue-400"
-    />
 
-    <button
-        type="submit"
-        disabled={creatingPost || !postContent.trim()}
-        className="mt-3 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-        {creatingPost ? "Publishing..." : "Publish post"}
-    </button>
-</form>
+                                    <CommunityPostComposer
+    selectedChannelId={selectedChannelId}
+    onSubmit={async (postData) => {
+        if (postData.file) {
+            throw new Error(
+                "File upload is not connected with backend."
+            );
+        }
+
+        await createCommunityPost(communityId, {
+            content: postData.content,
+            ...(postData.channelId
+                ? { channelId: postData.channelId }
+                : {}),
+        });
+
+        await loadCommunityData();
+    }}
+/>
 
 </div>
 

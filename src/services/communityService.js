@@ -32,10 +32,16 @@ export async function getCommunityPosts(
     );
     return response.data;
 }
-export async function createCommunityPost(communityId, content) {
+export async function createCommunityPost(communityId, postData) {
+    const payload =
+        typeof postData === "string" ? { content: postData } :
+        postData;
+
     const response = await api.post(
-        `/api/communities/${communityId}/posts`, { content }
+        `/api/communities/${communityId}/posts`,
+        payload
     );
+
     return response.data;
 }
 export async function getPostComments(
@@ -176,6 +182,138 @@ export async function updateCommunityPost(postId, content) {
 export async function updatePostComment(commentId, content) {
     const response = await api.patch(
         `/api/community-comments/${commentId}`, { content }
+    );
+    return response.data;
+}
+
+export async function getCommunityChannels(communityId) {
+    const response = await api.get(
+        `/api/communities/${communityId}/channels`
+    );
+    return response.data;
+}
+
+export async function getCommunityChannelDetails(communityId, channelId) {
+    const response = await api.get(
+        `/api/communities/${communityId}/channels/${channelId}`
+    );
+    return response.data;
+}
+
+export async function createCommunityChannel(communityId, channelData) {
+    const response = await api.post(
+        `/api/communities/${communityId}/channels`,
+        channelData
+    );
+    return response.data;
+}
+
+export async function updateCommunityChannel(
+    communityId,
+    channelId,
+    channelData
+) {
+    const response = await api.patch(
+        `/api/communities/${communityId}/channels/${channelId}`,
+        channelData
+    );
+    return response.data;
+}
+
+export async function deleteCommunityChannel(communityId, channelId) {
+    const response = await api.delete(
+        `/api/communities/${communityId}/channels/${channelId}`
+    );
+    return response.data;
+}
+
+export async function getCommunityChannelPosts(
+    communityId,
+    channelId, { cursor, limit = 20, search } = {}
+) {
+    const response = await api.get(
+        `/api/communities/${communityId}/channels/${channelId}/posts`, {
+            params: { cursor, limit, search },
+        }
+    );
+    return response.data;
+}
+
+export async function createCommunityChannelPost(
+    communityId,
+    channelId,
+    postData
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/channels/${channelId}/posts`,
+        postData
+    );
+    return response.data;
+}
+export async function searchCommunityFeed(
+    communityId, { cursor, limit = 20, channelId, search } = {}
+) {
+    const response = await api.get(
+        `/api/communities/${communityId}/posts`, {
+            params: { cursor, limit, channelId, search },
+        }
+    );
+    return response.data;
+}
+
+export async function createCommunityInviteLink(
+    communityId,
+    inviteData = {}
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/invites`, {
+            expiresInDays: inviteData.expiresInDays ?? 7,
+        }
+    );
+
+    return response.data;
+}
+export async function respondToCommunityInvite(inviteId, responseValue) {
+    const response = await api.post(
+        `/api/communities/invites/${inviteId}/respond`, { response: responseValue }
+    );
+    return response.data;
+}
+
+export async function acceptCommunityInvite(token) {
+    const response = await api.post(
+        `/api/communities/invites/${token}/accept`
+    );
+    return response.data;
+}
+
+export async function declineCommunityInvite(token) {
+    const response = await api.post(
+        `/api/communities/invites/${token}/decline`
+    );
+    return response.data;
+}
+
+export async function getInvitableCommunityUsers(communityId, query = "") {
+    const response = await api.get(
+        `/api/communities/${communityId}/invitable-users`, {
+            params: { q: query, limit: 20 },
+        }
+    );
+    return response.data;
+}
+export async function createUploadSignature(uploadData) {
+    const response = await api.post(
+        "/api/uploads/sign",
+        uploadData
+    );
+    return response.data;
+}
+
+export async function uploadFileToS3(uploadData) {
+    const response = await api.post(
+        "/api/uploads/s3",
+        uploadData
     );
     return response.data;
 }
