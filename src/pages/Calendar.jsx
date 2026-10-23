@@ -264,7 +264,7 @@ function Calendar() {
             {[
               { label: "Home", icon: FiHome, path: "/dashboard" },
               { label: "Calendar", icon: FiCalendar, path: "/calendar" },
-              { label: "Saved Items", icon: FiBookmark, path: "/dashboard" },
+              { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
               { label: "Organizations", icon: FiUsers, path: "/organization" },
               { label: "Chat", icon: FiMessageCircle, path: "/chat" },
               { label: "Communities", icon: FiGlobe, path: "/communities" },

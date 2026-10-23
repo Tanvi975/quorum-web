@@ -17,14 +17,13 @@ import {
   FiPlus,
   FiMoreHorizontal,
   FiPaperclip,
-  FiSmile,
   FiSend,
-  FiPhone,
-  FiVideo,
   FiInfo,
   FiMessageSquare,
   FiX,
+  FiBookmark,
 } from "react-icons/fi";
+import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
 
@@ -1018,6 +1017,33 @@ const handleRenameGroup = async (event) => {
     );
   }
 };
+const handleSaveMessage = async (item) => {
+  const messageId = item.id || item._id;
+  if (!messageId) return;
+  try {
+    const isFile = Boolean(item.fileUrl);
+    await saveItem({
+      itemType: isFile ? "FILE" : "MESSAGE",
+      itemId: messageId,
+    });
+    setError("");
+  } catch (err) {
+    setError(err.response?.data?.message || "Could not save bookmark.");
+  }
+};
+
+const handleSaveConversation = async () => {
+  if (!activeConversation?.id) return;
+  try {
+    await saveItem({
+      itemType: "CHAT",
+      itemId: activeConversation.id,
+    });
+    setError("");
+  } catch (err) {
+    setError(err.response?.data?.message || "Could not save conversation.");
+  }
+};
   return (
     <div className="h-screen overflow-hidden bg-[#121419] p-3 text-[#E8EDF5] sm:p-5">
       <div className="mx-auto flex h-[calc(100vh-24px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#0D1F33] sm:h-[calc(100vh-40px)]">
@@ -1294,6 +1320,12 @@ const handleRenameGroup = async (event) => {
                     >
                       <FiInfo size={16} />
                     </IconButton>
+                    <IconButton
+                      label="Save chat"
+                      onClick={handleSaveConversation}
+                    >
+                      <FiBookmark size={16} />
+                    </IconButton>
                     <IconButton label="More options">
                       <FiMoreHorizontal size={18} />
                     </IconButton>
@@ -1339,11 +1371,19 @@ const handleRenameGroup = async (event) => {
                             {item.text}
                           </p>
                           <div
-                            className={`mt-1.5 text-right text-[9px] ${
+                             className={`mt-1.5 flex items-center justify-between gap-2 text-[9px] ${
                               item.mine ? "text-[#D2E9FF]" : "text-[#8FA5BB]"
                             }`}
                           >
-                            {item.time}
+                           <button
+                              type="button"
+                              onClick={() => handleSaveMessage(item)}
+                              title="Save bookmark"
+                              className="opacity-70 hover:opacity-100"
+                            >
+                              <FiBookmark size={11} />
+                            </button>
+                            <span>{item.time}</span>
                           </div>
                         </div>
                       </div>

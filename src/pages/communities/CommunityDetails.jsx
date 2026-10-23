@@ -40,8 +40,9 @@ import {
     FiTrash2,
     FiEdit2,
     FiCornerDownRight,
+    FiBookmark,
 } from "react-icons/fi";
-
+import { saveItem } from "../../services/savedItemsService";
 const tabs = [
     { label: "Posts", icon: FiMessageSquare },
     { label: "Members", icon: FiUsers },
@@ -371,7 +372,18 @@ function CommunityDetails() {
             setError(err.response?.data?.message || "Could not delete community.");
         }
     }
-
+    async function handleBookmarkPost(post) {
+        try {
+            const isDoc = Boolean(post.fileUrl);
+            await saveItem({
+                itemType: isDoc ? "DOCUMENT" : "RESOURCE",
+                itemId: post.id || post._id,
+            });
+            setNotice("Post saved to bookmarks.");
+        } catch (err) {
+            setError(err.response?.data?.message || "Could not save post.");
+        }
+    }
     const EmptyState = ({ icon: Icon, title, description, actionLabel, onAction }) => (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] px-6 py-14 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-200">
@@ -685,6 +697,14 @@ function CommunityDetails() {
                                                             >
                                                                 <FiMessageSquare size={14} />
                                                                 {openCommentsPostId === postId ? "Hide comments" : "Comments"}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleBookmarkPost(post)}
+                                                                className="flex items-center gap-1.5 font-semibold text-blue-200 hover:text-white"
+                                                            >
+                                                                <FiBookmark size={14} />
+                                                                Save
                                                             </button>
                                                         </div>
 

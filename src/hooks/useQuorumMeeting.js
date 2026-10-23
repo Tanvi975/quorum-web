@@ -46,19 +46,29 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     }, []);
 
     const stopMedia = useCallback(() => {
+        const socket = socketRef.current;
+
+        if (socket ?.connected && meetingCode) {
+            socket.emit("sfu:leave", { roomCode: meetingCode });
+        }
+
         publisherRef.current ?.close();
         publisherRef.current = null;
 
         subscribersRef.current.forEach((pc) => pc.close());
         subscribersRef.current.clear();
 
-        localStreamRef.current ?.getTracks().forEach((track) => track.stop());
+        pendingIceRef.current.clear();
+
+        localStreamRef.current ?.getTracks().forEach((track) => {
+            track.stop();
+        });
+
         localStreamRef.current = null;
         setLocalStream(null);
         setRemoteStreams({});
         startedRef.current = false;
-    }, []);
-
+    }, [meetingCode]);
     const startMedia = useCallback(async() => {
         const socket = socketRef.current;
 
@@ -136,7 +146,23 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             );
         }
     }, [meetingCode, user]);
+    const replaceVideoTrack = useCallback(async(newTrack) => {
+        const pc = publisherRef.current;
 
+        if (!pc || !newTrack) {
+            throw new Error("Publisher or video track is unavailable.");
+        }
+
+        const sender = pc.getSenders().find(
+            (item) => item.track ?.kind === "video"
+        );
+
+        if (!sender) {
+            throw new Error("Video sender was not found.");
+        }
+
+        await sender.replaceTrack(newTrack);
+    }, []);
     const subscribeToTrack = useCallback(async(trackId, kind, peerId) => {
         const socket = socketRef.current;
         if (!socket ?.connected || subscribersRef.current.has(trackId)) return;
@@ -535,6 +561,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         isVideoOff,
         toggleMic,
         toggleCamera,
+        replaceVideoTrack,
         sendMessage,
         admitGuest,
         rejectGuest,

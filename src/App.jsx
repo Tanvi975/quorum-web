@@ -24,6 +24,7 @@ import OrganizationWorkspace from "./pages/organization/OrganizationWorkspace";
 import InvitePreview from "./pages/organization/InvitePreview";
 import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
 import Calendar from "./pages/Calendar";
+import SavedItems from "./pages/SavedItems";
 
 function App() {
   useEffect(() => {
@@ -58,6 +59,7 @@ function App() {
           <Route path="/join/:token" element={<InvitePreview />} />
           <Route path="/ai-assistant"  element={<QuorumAIAssistant />}/>
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/saved-items" element={<SavedItems />} />
         </Routes> </BrowserRouter></AuthProvider>
   );
 }

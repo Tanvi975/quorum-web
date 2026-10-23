@@ -223,7 +223,7 @@ async function handleNewMeeting() {
 
   <button
     title="Saved Items"
-    onClick={() => navigate("/dashboard")}
+    onClick={() => navigate("/saved-items")}
     className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
   >
     <FiBookmark className="w-5 h-5 shrink-0" />

@@ -18,24 +18,13 @@ function RemoteVideo({ stream }) {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !stream) return;
-  
-    if (video.srcObject !== stream) {
-      video.srcObject = stream;
+
+    if (!video || !localStream) return;
+
+    if (!screenSharing) {
+        video.srcObject = localStream;
     }
-  
-    const playVideo = async () => {
-      try {
-        await video.play();
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.warn("Remote video playback failed:", err);
-        }
-      }
-    };
-  
-    playVideo();
-  }, [stream]);
+}, [localStream, screenSharing]);
 
   return (
     <video
@@ -67,13 +56,13 @@ function VideoCall() {
     isVideoOff,
     toggleMic,
     toggleCamera,
+    replaceVideoTrack,
     sendMessage,
     admitGuest,
     rejectGuest,
     leaveMeeting,
   } = useQuorumMeeting({ meetingCode, user, isHost });
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
 
   const [screenSharing, setScreenSharing] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
@@ -116,37 +105,77 @@ useEffect(() => {
     }
   }
 
-
-  async function toggleScreenShare() {
-    if (screenSharing) {
-      await startCamera();
-      setScreenSharing(false);
-      return;
-    }
-
-    try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      });
-
-      const screenTrack = screenStream.getVideoTracks()[0];
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = screenStream;
+  const screenStreamRef = useRef(null);
+  const screenTrackRef = useRef(null);
+  
+  async function stopScreenShare() {
+      const screenTrack = screenTrackRef.current;
+      const cameraTrack = localStream?.getVideoTracks()[0];
+  
+      try {
+          if (cameraTrack) {
+              await replaceVideoTrack(cameraTrack);
+          }
+      } catch (error) {
+          console.error("Could not restore camera track:", error);
       }
-
-      screenTrack.onended = () => {
-        startCamera();
-        setScreenSharing(false);
-      };
-
-      setScreenSharing(true);
-    } catch (error) {
-      console.log("Screen sharing cancelled");
-    }
+  
+      if (screenTrack) {
+          screenTrack.onended = null;
+          screenTrack.stop();
+      }
+  
+      screenStreamRef.current = null;
+      screenTrackRef.current = null;
+      setScreenSharing(false);
+  }
+  
+  async function toggleScreenShare() {
+      if (screenSharing) {
+          await stopScreenShare();
+          return;
+      }
+  
+      try {
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({
+              video: true,
+          });
+  
+          const screenTrack = screenStream.getVideoTracks()[0];
+  
+          if (!screenTrack) {
+              screenStream.getTracks().forEach((track) => track.stop());
+              return;
+          }
+  
+          await replaceVideoTrack(screenTrack);
+  
+          screenStreamRef.current = screenStream;
+          screenTrackRef.current = screenTrack;
+  
+          screenTrack.onended = () => {
+              stopScreenShare();
+          };
+  
+          setScreenSharing(true);
+      } catch (error) {
+          console.error("Screen sharing could not start:", error);
+      }
   }
 
   function leaveCall() {
+    if (screenTrackRef.current) {
+        screenTrackRef.current.onended = null;
+        screenTrackRef.current.stop();
+    }
+
+    screenStreamRef.current?.getTracks().forEach((track) => {
+        track.stop();
+    });
+
+    screenTrackRef.current = null;
+    screenStreamRef.current = null;
+
     leaveMeeting();
 }
 
