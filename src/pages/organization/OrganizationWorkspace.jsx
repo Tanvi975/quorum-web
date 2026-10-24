@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   FaArrowLeft,
@@ -106,6 +106,8 @@ function Modal({ title, description, close, children }) {
 function OrganizationWorkspace() {
   const { organizationId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+const requestedTeamId = searchParams.get("teamId");
   const [organization, setOrganization] = useState(null);
   const [teams, setTeams] = useState([]);
   const [members, setMembers] = useState([]);
@@ -202,6 +204,28 @@ function OrganizationWorkspace() {
       loadWorkspace();
     }
   }, [organizationId]);
+  useEffect(() => {
+    if (loading || !requestedTeamId || !teams.length) return;
+  
+    const matchedTeam = teams.find(
+      (team) =>
+        String(team._id || team.id) === String(requestedTeamId)
+    );
+  
+    if (matchedTeam) {
+      setActiveTab("Teams");
+      setSelectedChatTeam(matchedTeam);
+      setSearchParams({}, { replace: true });
+    } else if (organization) {
+      setError("Notification wali team is organization mein nahi mili.");
+    }
+  }, [
+    loading,
+    requestedTeamId,
+    teams,
+    organization,
+    setSearchParams,
+  ]);
   useEffect(() => {
     if (!notice) {
       return;

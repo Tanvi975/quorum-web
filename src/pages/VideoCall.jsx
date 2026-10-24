@@ -34,6 +34,7 @@ function RemoteVideo({ stream }) {
 function VideoCall() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+const token = searchParams.get("token");
   
   const meetingCode = searchParams.get("code");
   const isHost = searchParams.get("host") === "1";

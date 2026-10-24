@@ -18,11 +18,10 @@ function getNotificationTarget(notification) {
         ? `/invites/organization?token=${encodeURIComponent(data.token)}`
         : null;
 
-    case "TEAM_INVITE":
-      return data.organizationId && data.teamId
-        ? `/org/${data.organizationId}/teams/${data.teamId}`
-        : null;
-
+        case "TEAM_INVITE":
+  return data.organizationId && data.teamId
+    ? `/organizations/${encodeURIComponent(data.organizationId)}?teamId=${encodeURIComponent(data.teamId)}`
+    : null;
     case "COMMUNITY_POST_COMMENT":
       return data.communityId && data.postId
         ? `/communities/${data.communityId}/posts/${data.postId}${

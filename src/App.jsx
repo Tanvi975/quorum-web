@@ -1,6 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+} from "react-router-dom";
+
+import { useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -9,8 +18,6 @@ import SSO from "./pages/SSO";
 import VerifyCode from "./pages/VerifyCode";
 import SetNewPassword from "./pages/SetNewPassword";
 import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
-import { useEffect } from "react";
-import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
 import Organization from "./pages/Organization";
 import CreateOrganization from "./pages/organization/CreateOrganization";
@@ -25,53 +32,201 @@ import InvitePreview from "./pages/organization/InvitePreview";
 import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
 import Calendar from "./pages/Calendar";
 import SavedItems from "./pages/SavedItems";
-import { useParams } from "react-router-dom";
+
+import api from "./services/api";
+
 function MeetRedirect() {
   const { code } = useParams();
 
   return (
     <Navigate
-      to={`/video-call?code=${encodeURIComponent(code)}&host=1`}
+      to={`/video-call?code=${encodeURIComponent(code || "")}&host=1`}
       replace
     />
   );
 }
+
 function App() {
   useEffect(() => {
-    api.get("/api/csrf-token")
+    api
+      .get("/api/csrf-token")
       .then(() => console.log("CSRF initialized"))
-      .catch((err) => console.error("CSRF initialization failed", err));
+      .catch((err) =>
+        console.error("CSRF initialization failed", err)
+      );
   }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/xforgot-password" element={<ForgotPassword />} />
           <Route path="/sso" element={<SSO />} />
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/set-new-password" element={<SetNewPassword />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/video-call" element={<VideoCall />} />
-          <Route path="/meet/:code" element={<MeetRedirect />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/organizations" element={<OrganizationsList />} />
-          <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
-          <Route path="/communities/invites/:token" element={<CommunityInvite />} />
-          <Route path="/communities/:communityId" element={  <CommunityDetails />}/>
-          <Route path="/communities/:communityId/posts/:postId" element={<CommunityDetails />}/>
-          <Route path="/organization/join" element={<JoinOrganization />}/>
-          <Route path="/onboarding/step-1" element={<OnboardingStep1 />} />
-          <Route path="/communities"element={<Communities />}/>
-          <Route path="/organization" element={<Organization />} />
-          <Route path="/organization/create"element={<CreateOrganization />}/>
+
           <Route path="/join/:token" element={<InvitePreview />} />
-          <Route path="/ai-assistant"  element={<QuorumAIAssistant />}/>
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/saved-items" element={<SavedItems />} />
-        </Routes> </BrowserRouter></AuthProvider>
+          <Route path="/invites/organization" element={<InvitePreview />} />
+          <Route
+            path="/communities/invites/:token"
+            element={<CommunityInvite />}
+          />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/video-call"
+            element={
+              <ProtectedRoute>
+                <VideoCall />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/meet/:code"
+            element={
+              <ProtectedRoute>
+                <MeetRedirect />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organizations"
+            element={
+              <ProtectedRoute>
+                <OrganizationsList />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organizations/:organizationId"
+            element={
+              <ProtectedRoute>
+                <OrganizationWorkspace />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organization"
+            element={
+              <ProtectedRoute>
+                <Organization />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organization/create"
+            element={
+              <ProtectedRoute>
+                <CreateOrganization />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organization/join"
+            element={
+              <ProtectedRoute>
+                <JoinOrganization />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/communities"
+            element={
+              <ProtectedRoute>
+                <Communities />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/communities/:communityId"
+            element={
+              <ProtectedRoute>
+                <CommunityDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/communities/:communityId/posts/:postId"
+            element={
+              <ProtectedRoute>
+                <CommunityDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/onboarding/step-1"
+            element={
+              <ProtectedRoute>
+                <OnboardingStep1 />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-assistant"
+            element={
+              <ProtectedRoute>
+                <QuorumAIAssistant />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <Calendar />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/saved-items"
+            element={
+              <ProtectedRoute>
+                <SavedItems />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

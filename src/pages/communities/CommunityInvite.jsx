@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
     getInvitePreview,
     acceptCommunityInvite,
@@ -8,8 +7,11 @@ import {
 import { FiUsers, FiCheck, FiX, FiArrowLeft } from "react-icons/fi";
 
 function CommunityInvite() {
-    const { token } = useParams();
+    const { token: pathToken } = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    
+    const token = searchParams.get("token") || pathToken;
 
     const [inviteInfo, setInviteInfo] = useState(null);
     const [loadingPreview, setLoadingPreview] = useState(true);
