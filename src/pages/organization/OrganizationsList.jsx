@@ -19,7 +19,21 @@ const getRoleLabel = (role) =>
     ? role.toString().replaceAll("_", " ").toLowerCase()
         .replace(/\b\w/g, (letter) => letter.toUpperCase())
     : "Member";
-
+    const getCount = (org, fields) => {
+      for (const field of fields) {
+        const value = org?.[field];
+    
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return value;
+        }
+    
+        if (Array.isArray(value)) {
+          return value.length;
+        }
+      }
+    
+      return 0;
+    };
 export default function OrganizationsList() {
   const navigate = useNavigate();
   const [organizations, setOrganizations] = useState([]);
@@ -58,16 +72,62 @@ export default function OrganizationsList() {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
-
+  const fetchOrganizationCounts = async (organizationId) => {
+    try {
+      const [membersResponse, teamsResponse] = await Promise.all([
+        api.get(`/api/organizations/${organizationId}/members`),
+        api.get(`/api/organizations/${organizationId}/teams`),
+      ]);
+  
+      const getItems = (response, key) => {
+        const payload = response?.data?.data ?? response?.data;
+  
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.[key])) return payload[key];
+  
+        return [];
+      };
+  
+      return {
+        membersCount: getItems(membersResponse, "members").length,
+        teamsCount: getItems(teamsResponse, "teams").length,
+      };
+    } catch (error) {
+      console.error("Failed to load organization counts:", organizationId, error);
+      return { membersCount: 0, teamsCount: 0 };
+    }
+  };
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
     setLoadError("");
+  
     try {
       const response = await api.get("/api/organizations");
       const payload = response?.data?.data ?? response?.data;
-      setOrganizations(
-        Array.isArray(payload) ? payload : payload?.organizations ?? []
+  
+      const orgs = Array.isArray(payload)
+        ? payload
+        : payload?.organizations ?? [];
+  
+      const orgsWithCounts = await Promise.all(
+        orgs.map(async (org) => {
+          const organizationId = getOrganizationId(org);
+  
+          if (!organizationId) {
+            return { ...org, membersCount: 0, teamsCount: 0 };
+          }
+  
+          const counts = await fetchOrganizationCounts(organizationId);
+  
+          return {
+            ...org,
+            membersCount: counts.membersCount,
+            teamsCount: counts.teamsCount,
+          };
+        })
       );
+  
+      setOrganizations(orgsWithCounts);
     } catch (error) {
       setLoadError(getErrorMessage(error));
     } finally {
