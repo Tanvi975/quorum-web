@@ -112,19 +112,22 @@ function CommunityDetails() {
 
         try {
             let response;
-            if (selectedChannelId && selectedChannelId !== "general") {
-                response = await getCommunityChannelPosts(communityId, selectedChannelId, {
-                    limit: 50,
-                    search: feedSearch || undefined,
-                });
+
+            if (selectedChannelId) {
+                response = await getCommunityChannelPosts(
+                    communityId,
+                    selectedChannelId,
+                    {
+                        limit: 50,
+                        search: feedSearch || undefined,
+                    }
+                );
             } else {
                 response = await getCommunityPosts(communityId, {
                     limit: 50,
-                    channelId: selectedChannelId || undefined,
                     search: feedSearch || undefined,
                 });
             }
-
             const result = response?.data?.data ?? response?.data ?? response;
             const items = Array.isArray(result?.posts)
                 ? result.posts

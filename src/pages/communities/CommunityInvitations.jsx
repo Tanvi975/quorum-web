@@ -118,7 +118,9 @@ export default function CommunityInvitations({
         setNotice("");
 
         try {
-            await createCommunityInvite(communityId, { userId });
+            await createCommunityInvite(communityId, {
+                invitedUserId: userId,
+            });
             setNotice(`Invitation sent to ${user.name ?? user.email ?? "user"}.`);
             await onRefresh?.();
         } catch (err) {
@@ -135,10 +137,16 @@ export default function CommunityInvitations({
         setSendingId(inviteId);
         setError("");
         setNotice("");
-
+    
         try {
             await respondToCommunityInvite(inviteId, responseValue);
-            setNotice("Invitation response submitted.");
+    
+            setNotice(
+                responseValue === "accept"
+                    ? "Invitation accepted successfully."
+                    : "Invitation declined successfully."
+            );
+    
             await onRefresh?.();
         } catch (err) {
             setError(
@@ -297,7 +305,7 @@ export default function CommunityInvitations({
                                             <button
                                                 type="button"
                                                 disabled={Boolean(sendingId)}
-                                                onClick={() => handleResponse(id, "accept")}
+                                                onClick={() => handleResponse(inviteId, "accept")}
                                                 className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs text-emerald-100 disabled:opacity-50"
                                             >
                                                 Accept
@@ -305,7 +313,7 @@ export default function CommunityInvitations({
                                             <button
                                                 type="button"
                                                 disabled={Boolean(sendingId)}
-                                                onClick={() => handleResponse(id, "decline")}
+                                                onClick={() => handleResponse(inviteId, "decline")}
                                                 className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-100 disabled:opacity-50"
                                             >
                                                 Decline

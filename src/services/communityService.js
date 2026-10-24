@@ -4,13 +4,28 @@ const MAX_ATTACHMENT_SIZE = 26214400;
 
 export function getFileCategory(file) {
     if (!file) return "file";
-    const mime = (file.type || "").toLowerCase();
-    if (mime.startsWith("image/")) return "image";
 
-    const name = file.name || "";
-    const ext = name.split(".").pop() ?.toLowerCase();
-    const docExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "rtf"];
-    if (docExtensions.includes(ext) || mime.includes("pdf") || mime.includes("word") || mime.includes("document") || mime.includes("text/")) {
+    const mime = (file.type || "").toLowerCase();
+    const ext = (file.name || "").split(".").pop() ?.toLowerCase();
+
+    if (mime.startsWith("image/")) return "image";
+    if (mime.startsWith("video/")) return "video";
+    if (mime.startsWith("audio/")) return "audio";
+
+    const documentExtensions = [
+        "pdf", "doc", "docx", "xls", "xlsx",
+        "ppt", "pptx", "txt", "csv", "rtf", "zip",
+    ];
+
+    if (
+        documentExtensions.includes(ext) ||
+        mime.includes("pdf") ||
+        mime.includes("word") ||
+        mime.includes("document") ||
+        mime.startsWith("text/") ||
+        mime.includes("spreadsheet") ||
+        mime.includes("presentation")
+    ) {
         return "document";
     }
 
@@ -21,10 +36,10 @@ export async function uploadAttachment(file) {
     if (!file) return null;
 
     if (file.size > MAX_ATTACHMENT_SIZE) {
-        throw new Error("File exceeds the 25 MiB limit (maximum 26,214,400 bytes).");
+        throw new Error("File exceeds the 25 MiB limit.");
     }
 
-    const fileType = getFileType(file);
+    const fileType = getFileCategory(file);
     const fileName = file.name || "attachment";
     const fileSize = file.size;
 
@@ -36,12 +51,13 @@ export async function uploadAttachment(file) {
 
         const signData = signResponse.data ?.data ?? signResponse.data;
 
-        if (signData ?.uploadUrl && signData ?.signature && signData ?.apiKey) {
+        if (signData ?.uploadUrl && signData.signature && signData.apiKey) {
             const formData = new FormData();
             formData.append("file", file);
             formData.append("api_key", signData.apiKey);
             formData.append("timestamp", signData.timestamp);
             formData.append("signature", signData.signature);
+
             if (signData.folder) {
                 formData.append("folder", signData.folder);
             }
@@ -54,13 +70,14 @@ export async function uploadAttachment(file) {
             if (uploadRes.ok) {
                 const uploadJson = await uploadRes.json();
                 const fileUrl = uploadJson.secure_url || uploadJson.url;
+
                 if (fileUrl) {
                     return { fileUrl, fileType, fileName, fileSize };
                 }
             }
         }
-    } catch (signErr) {
-        console.warn("Signed upload attempt encountered an issue, trying direct upload fallback:", signErr);
+    } catch (err) {
+        console.warn("Signed upload failed:", err);
     }
 
     try {
@@ -78,16 +95,13 @@ export async function uploadAttachment(file) {
         if (fileUrl) {
             return { fileUrl, fileType, fileName, fileSize };
         }
-    } catch (s3Err) {
-        console.warn("Direct upload fallback failed:", s3Err);
+    } catch (err) {
+        console.warn("Direct upload failed:", err);
     }
 
     throw new Error("Could not upload file to storage. Please check storage credentials.");
 }
 
-function getFileType(file) {
-    return getFileCategory(file);
-}
 export async function getCommunities() {
     const response = await api.get("/api/communities");
     return response.data;
@@ -126,233 +140,187 @@ export async function getCommunityMembers(communityId, { cursor, limit = 20 } = 
 }
 
 export async function removeCommunityMember(communityId, userId) {
-    const response = await api.delete(`/api/communities/${communityId}/members/${userId}`);
+    const response = await api.delete(
+        `/api/communities/${communityId}/members/${userId}`
+    );
     return response.data;
 }
 
 export async function updateCommunityMemberRole(communityId, userId, role) {
-    const response = await api.patch(`/api/communities/${communityId}/members/${userId}/role`, {
-        role,
-    });
+    const response = await api.patch(
+        `/api/communities/${communityId}/members/${userId}/role`, { role }
+    );
     return response.data;
 }
 
 export async function transferCommunityOwnership(communityId, newOwnerId) {
-    const response = await api.post(`/api/communities/${communityId}/transfer-ownership`, {
-        newOwnerId,
-    });
+    const response = await api.post(
+        `/api/communities/${communityId}/transfer-ownership`, { newOwnerId }
+    );
     return response.data;
 }
 
 export async function getCommunityChannels(communityId) {
-    try {
-        const response = await api.get(`/api/communities/${communityId}/channels`);
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            return {
-                success: true,
-                data: [{
-                    id: "general",
-                    name: "General",
-                    description: "Default community channel",
-                    isDefault: true,
-                }, ],
-            };
-        }
-        throw err;
-    }
+    const response = await api.get(
+        `/api/v1/communities/${communityId}/channels`
+    );
+    return response.data;
 }
 
 export async function getCommunityChannelDetails(communityId, channelId) {
-    const response = await api.get(`/api/communities/${communityId}/channels/${channelId}`);
+    const response = await api.get(
+        `/api/v1/communities/${communityId}/channels/${channelId}`
+    );
     return response.data;
 }
 
 export async function createCommunityChannel(communityId, channelData) {
-    const response = await api.post(`/api/communities/${communityId}/channels`, channelData);
+    const response = await api.post(
+        `/api/v1/communities/${communityId}/channels`,
+        channelData
+    );
     return response.data;
 }
 
 export async function updateCommunityChannel(communityId, channelId, channelData) {
     const response = await api.patch(
-        `/api/communities/${communityId}/channels/${channelId}`,
+        `/api/v1/communities/${communityId}/channels/${channelId}`,
         channelData
     );
     return response.data;
 }
 
 export async function deleteCommunityChannel(communityId, channelId) {
-    const response = await api.delete(`/api/communities/${communityId}/channels/${channelId}`);
+    const response = await api.delete(
+        `/api/v1/communities/${communityId}/channels/${channelId}`
+    );
     return response.data;
 }
 
-export async function getCommunityPosts(communityId, { cursor, limit = 20, channelId, search } = {}) {
+export async function getCommunityPosts(
+    communityId, { cursor, limit = 20, channelId, search } = {}
+) {
     const params = { cursor, limit };
-    if (channelId) params.channelId = channelId;
-    if (search && search.trim()) params.search = search.trim();
 
-    const response = await api.get(`/api/communities/${communityId}/posts`, { params });
+    if (channelId) params.channelId = channelId;
+    if (search ?.trim()) params.search = search.trim();
+
+    const response = await api.get(
+        `/api/communities/${communityId}/posts`, { params }
+    );
     return response.data;
 }
 
-export async function getCommunityChannelPosts(communityId, channelId, { cursor, limit = 20, search } = {}) {
-    try {
-        const params = { cursor, limit };
-        if (search && search.trim()) params.search = search.trim();
-        const response = await api.get(
-            `/api/communities/${communityId}/channels/${channelId}/posts`, { params }
-        );
-        return response.data;
-    } catch (err) {
+export async function getCommunityChannelPosts(
+    communityId,
+    channelId, { cursor, limit = 20, search } = {}
+) {
+    const params = { page: 1, limit };
 
-        if (err.response ?.status === 404) {
-            return getCommunityPosts(communityId, { cursor, limit, channelId, search });
-        }
-        throw err;
-    }
+    if (cursor) params.cursor = cursor;
+    if (search ?.trim()) params.search = search.trim();
+
+    const response = await api.get(
+        `/api/v1/communities/${communityId}/channels/${channelId}/posts`, { params }
+    );
+    return response.data;
 }
 
 export async function createCommunityPost(communityId, postData) {
-    const payload =
-        typeof postData === "string" ? { content: postData } : {...postData };
+    const payload = typeof postData === "string" ? { content: postData } : {...postData };
 
+    const channelId = payload.channelId;
+    delete payload.channelId;
 
-    if (payload.channelId && payload.channelId !== "general") {
-        try {
-            const response = await api.post(
-                `/api/communities/${communityId}/channels/${payload.channelId}/posts`,
-                payload
-            );
-            return response.data;
-        } catch (err) {
-            if (err.response ?.status !== 404) throw err;
-        }
+    if (channelId) {
+        const response = await api.post(
+            `/api/v1/communities/${communityId}/channels/${channelId}/posts`,
+            payload
+        );
+        return response.data;
     }
 
-    const response = await api.post(`/api/communities/${communityId}/posts`, payload);
+    const response = await api.post(
+        `/api/communities/${communityId}/posts`,
+        payload
+    );
     return response.data;
 }
 
 export async function createCommunityChannelPost(communityId, channelId, postData) {
     const payload = typeof postData === "string" ? { content: postData } : {...postData };
+
     return createCommunityPost(communityId, {...payload, channelId });
 }
 
-export async function updateCommunityPost(postId, delta) {
-    const payload = typeof delta === "string" ? { content: delta } : {...delta };
-
-    try {
-        const response = await api.patch(`/api/communities/posts/${postId}`, payload);
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            try {
-                const response = await api.patch(`/api/community-posts/${postId}`, payload);
-                return response.data;
-            } catch (err2) {
-                if (err2.response ?.status === 404) {
-                    const response = await api.patch(`/api/posts/${postId}`, payload);
-                    return response.data;
-                }
-                throw err2;
-            }
-        }
-        throw err;
-    }
+export async function updateCommunityPost(postId, postData) {
+    const response = await api.patch(`/api/v1/posts/${postId}`, postData);
+    return response.data;
 }
 
 export async function deleteCommunityPost(postId) {
-
-    try {
-        const response = await api.delete(`/api/communities/posts/${postId}`);
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            try {
-                const response = await api.delete(`/api/community-posts/${postId}`);
-                return response.data;
-            } catch (err2) {
-                if (err2.response ?.status === 404) {
-                    const response = await api.delete(`/api/posts/${postId}`);
-                    return response.data;
-                }
-                throw err2;
-            }
-        }
-        throw err;
-    }
+    const response = await api.delete(`/api/v1/posts/${postId}`);
+    return response.data;
 }
 
-export async function searchCommunityFeed(communityId, { cursor, limit = 20, channelId, search } = {}) {
+export async function searchCommunityFeed(
+    communityId, { cursor, limit = 20, channelId, search } = {}
+) {
     return getCommunityPosts(communityId, { cursor, limit, channelId, search });
 }
 
 export async function getPostComments(postId, { cursor, limit = 20 } = {}) {
-    try {
-        const response = await api.get(`/api/community-posts/${postId}/comments`, {
-            params: { cursor, limit },
-        });
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            const response = await api.get(`/api/posts/${postId}/comments`, {
-                params: { cursor, limit },
-            });
-            return response.data;
-        }
-        throw err;
-    }
+    const response = await api.get(`/api/v1/posts/${postId}/comments`, {
+        params: { cursor, limit },
+    });
+    return response.data;
 }
 
 export async function createPostComment(postId, content) {
-    try {
-        const response = await api.post(`/api/community-posts/${postId}/comments`, { content });
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            const response = await api.post(`/api/posts/${postId}/comments`, { content });
-            return response.data;
-        }
-        throw err;
-    }
+    const response = await api.post(
+        `/api/v1/posts/${postId}/comments`, { content }
+    );
+    return response.data;
 }
 
 export async function updatePostComment(commentId, content) {
-    const response = await api.patch(`/api/community-comments/${commentId}`, { content });
+    const response = await api.patch(
+        `/api/community-comments/${commentId}`, { content }
+    );
     return response.data;
 }
 
 export async function deletePostComment(commentId) {
-    const response = await api.delete(`/api/community-comments/${commentId}`);
+    const response = await api.delete(`/api/v1/comments/${commentId}`);
     return response.data;
 }
 
 export async function createCommunityInvite(communityId, inviteData = {}) {
-    const payload =
-        typeof inviteData === "object" ? { expiresInDays: 7, ...inviteData } : { expiresInDays: 7 };
+    const payload = { expiresInHours: 48, ...inviteData };
 
-    const response = await api.post(`/api/communities/${communityId}/invites`, payload);
+    if (payload.userId && !payload.invitedUserId) {
+        payload.invitedUserId = payload.userId;
+    }
+
+    delete payload.userId;
+
+    const response = await api.post(
+        `/api/v1/communities/${communityId}/invites`,
+        payload
+    );
     return response.data;
 }
-export async function createCommunityInviteLink(communityId, inviteData = {}) {
-    try {
-        const response = await api.post(`/api/communities/${communityId}/invite-links`, {
-            expiresInDays: inviteData.expiresInDays ?? 7,
-            ...inviteData,
-        });
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
 
-            return createCommunityInvite(communityId, inviteData);
-        }
-        throw err;
-    }
+export async function createCommunityInviteLink(communityId, inviteData = {}) {
+    return createCommunityInvite(communityId, {
+        expiresInHours: inviteData.expiresInHours ?? 48,
+    });
 }
 
 export async function revokeCommunityInvite(communityId, inviteId) {
-    const response = await api.delete(`/api/communities/${communityId}/invites/${inviteId}`);
+    const response = await api.delete(
+        `/api/communities/${communityId}/invites/${inviteId}`
+    );
     return response.data;
 }
 
@@ -361,64 +329,66 @@ export async function getInvitePreview(token) {
     return response.data;
 }
 
-export async function acceptCommunityInvite(token) {
-    try {
-        const response = await api.post(`/api/communities/invites/${token}/accept`);
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            const response = await api.post(`/api/communities/invites/${token}/join`);
-            return response.data;
-        }
-        throw err;
+export async function acceptCommunityInviteById(inviteId) {
+    const response = await api.post(
+        `/api/v1/communities/invites/${inviteId}/accept`
+    );
+    return response.data;
+}
+
+export async function declineCommunityInvite(inviteId) {
+    const response = await api.post(
+        `/api/v1/communities/invites/${inviteId}/decline`
+    );
+    return response.data;
+}
+
+export async function acceptCommunityInvite(inviteCode) {
+    const response = await api.post(
+        `/api/v1/communities/join/${inviteCode}`
+    );
+    return response.data;
+}
+
+export async function respondToCommunityInvite(inviteId, action) {
+    if (action === "accept") {
+        return acceptCommunityInviteById(inviteId);
     }
+
+    if (action === "decline") {
+        return declineCommunityInvite(inviteId);
+    }
+
+    throw new Error("Invalid invitation action");
 }
 
-export async function declineCommunityInvite(token) {
-    const response = await api.post(`/api/communities/invites/${token}/decline`);
-    return response.data;
-}
-
-export async function respondToCommunityInvite(inviteId, responseValue) {
-    const response = await api.post(`/api/communities/invites/${inviteId}/respond`, {
-        response: responseValue,
-        action: responseValue,
-    });
-    return response.data;
-}
-
-export async function joinCommunityInvite(token) {
-    return acceptCommunityInvite(token);
+export async function joinCommunityInvite(inviteCode) {
+    return acceptCommunityInvite(inviteCode);
 }
 
 export async function getInvitableCommunityUsers(communityId, query = "") {
     const trimmed = (query || "").trim();
+
     if (!trimmed) {
         return { success: true, data: [] };
     }
 
-    try {
-        const response = await api.get(`/api/communities/${communityId}/invitable-users`, {
-            params: { q: trimmed, limit: 20 },
-        });
-        return response.data;
-    } catch (err) {
-        if (err.response ?.status === 404) {
-            return searchCommunityUsers(communityId, trimmed);
-        }
-        throw err;
-    }
+    const response = await api.get(
+        `/api/communities/${communityId}/invitable-users`, { params: { q: trimmed, limit: 20 } }
+    );
+    return response.data;
 }
 
 export async function searchCommunityUsers(communityId, query) {
     const trimmed = (query || "").trim();
+
     if (!trimmed) {
         return { success: true, data: [] };
     }
 
-    const response = await api.get(`/api/communities/${communityId}/users/search`, {
-        params: { q: trimmed, limit: 20 },
-    });
+    const response = await api.get(
+        `/api/communities/${communityId}/users/search`, { params: { q: trimmed, limit: 20 } }
+    );
     return response.data;
 }
 
