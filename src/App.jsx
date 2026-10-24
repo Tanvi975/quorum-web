@@ -12,7 +12,6 @@ import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
 import { useEffect } from "react";
 import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
-<Route path="/meet/:code" element={<MeetRedirect />} />
 import Organization from "./pages/Organization";
 import CreateOrganization from "./pages/organization/CreateOrganization";
 import Chat from "./pages/Chat";
@@ -57,6 +56,7 @@ function App() {
           <Route path="/set-new-password" element={<SetNewPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/video-call" element={<VideoCall />} />
+          <Route path="/meet/:code" element={<MeetRedirect />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/organizations" element={<OrganizationsList />} />
           <Route path="/organizations/:organizationId"element={<OrganizationWorkspace />} />
