@@ -630,7 +630,7 @@ function CommunityDetails() {
                                                                 <textarea
                                                                     value={editingPostContent}
                                                                     onChange={(e) => setEditingPostContent(e.target.value)}
-                                                                    maxLength={10000}
+                                                                    maxLength={20000}
                                                                     rows={3}
                                                                     required
                                                                     className="w-full rounded-xl border border-white/15 bg-[#06172E] p-3 text-sm text-white outline-none focus:border-blue-300"

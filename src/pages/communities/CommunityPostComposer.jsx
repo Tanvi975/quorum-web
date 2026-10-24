@@ -98,7 +98,7 @@ export default function CommunityPostComposer({
                 <textarea
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
-                    maxLength={10000}
+                    maxLength={20000}
                     rows={4}
                     disabled={disabled || submitting}
                     placeholder="What would you like to share with the community?"

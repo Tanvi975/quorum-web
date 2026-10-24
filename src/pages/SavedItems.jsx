@@ -976,6 +976,7 @@ export default function SavedItems() {
             <textarea
               value={noteInput}
               rows={4}
+              maxLength={20000}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="Add your personal notes or reminders..."
               className="w-full rounded-lg border border-white/20 bg-white/10 p-2.5 text-xs text-white outline-none focus:border-white/50"

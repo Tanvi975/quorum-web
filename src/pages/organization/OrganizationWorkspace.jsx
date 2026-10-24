@@ -1119,6 +1119,7 @@ function OrganizationWorkspace() {
               <textarea
                 rows={3}
                 value={orgForm.description}
+                maxLength={20000}
                 onChange={(event) => {
                   setOrgForm({
                     ...orgForm,

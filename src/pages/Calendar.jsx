@@ -782,7 +782,7 @@ function Calendar() {
                 <textarea
                   id="event-description"
                   rows={3}
-                  maxLength={MAX_DESCRIPTION}
+                  maxLength={20000}
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Add an agenda or a short note..."

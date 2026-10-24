@@ -416,7 +416,7 @@ function TeamChat({ organizationId, team, onClose }) {
         >
           <textarea
             rows={1}
-            maxLength={5000}
+            maxLength={20000}
             value={messageText}
             onChange={(event) => setMessageText(event.target.value)}
             onKeyDown={(event) => {

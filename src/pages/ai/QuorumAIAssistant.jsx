@@ -489,7 +489,7 @@ export default function QuorumAIAssistant() {
                   id="ai-context"
                   value={context}
                   onChange={(event) => setContext(event.target.value)}
-                  maxLength={10000}
+                  maxLength={20000}
                   rows={2}
                   placeholder="Add relevant context (optional)..."
                   className="mb-3 w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
@@ -498,7 +498,7 @@ export default function QuorumAIAssistant() {
                   <textarea
                     value={prompt}
                     onChange={(event) => setPrompt(event.target.value)}
-                    maxLength={10000}
+                    maxLength={20000}
                     rows={2}
                     required
                     placeholder="Message Quorum AI..."
@@ -725,7 +725,7 @@ export default function QuorumAIAssistant() {
                 <textarea
                   value={projectPrompt}
                   onChange={(event) => setProjectPrompt(event.target.value)}
-                  maxLength={10000}
+                  maxLength={20000}
                   rows={4}
                   required
                   placeholder="Example: Give me a high-level breakdown of our team structure."
