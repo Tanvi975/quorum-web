@@ -7,6 +7,7 @@ import {
   FiX, FiRefreshCw,
 } from "react-icons/fi";
 import api from "../../services/api";
+import { fetchOrganizationCounts } from "../../services/organizationCounts";
 import OnboardingLayout from "../../components/OnboardingLayout";
 
 const MESSAGE_DURATION = 3000;
@@ -97,6 +98,7 @@ export default function OrganizationsList() {
       return { membersCount: 0, teamsCount: 0 };
     }
   };
+
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
     setLoadError("");
@@ -114,7 +116,11 @@ export default function OrganizationsList() {
           const organizationId = getOrganizationId(org);
   
           if (!organizationId) {
-            return { ...org, membersCount: 0, teamsCount: 0 };
+            return {
+              ...org,
+              membersCount: null,
+              teamsCount: null,
+            };
           }
   
           const counts = await fetchOrganizationCounts(organizationId);
@@ -134,6 +140,7 @@ export default function OrganizationsList() {
       setLoading(false);
     }
   }, []);
+  
 
   useEffect(() => {
     fetchOrganizations();
@@ -372,11 +379,11 @@ export default function OrganizationsList() {
                       <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4">
                         <span className="inline-flex items-center gap-2 text-xs text-blue-100/75">
                           <FiUsers size={15} />
-                          {org.membersCount ?? org.memberCount ?? 0} members
+                          {org.membersCount ?? org.memberCount ?? "—"} members
                         </span>
                         <span className="inline-flex items-center gap-2 text-xs text-blue-100/75">
                           <FiGrid size={15} />
-                          {org.teamsCount ?? org.teamCount ?? 0} teams
+                          {org.teamsCount ?? org.teamCount ?? "—"} teams
                         </span>
                       </div>
 
