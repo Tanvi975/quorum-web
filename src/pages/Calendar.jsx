@@ -1,6 +1,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createMeeting } from "../services/meetingService";
 import {
   FiHome,
   FiCalendar,
@@ -34,7 +35,7 @@ const emptyForm = {
   startTime: "10:00",
   endTime: "10:30",
   description: "",
-  meetingLink: "",
+  attendeeEmails: "",
 };
 
 function toDateKey(date) {
@@ -210,7 +211,24 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
 
     const title = form.title.trim();
     const description = form.description.trim();
-    const meetingLink = form.meetingLink.trim();
+    
+    const attendeeEmails = [
+      ...new Set(
+        form.attendeeEmails
+          .split(",")
+          .map((email) => email.trim().toLowerCase())
+          .filter(Boolean)
+      ),
+    ];
+    
+    const invalidEmail = attendeeEmails.find(
+      (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    );
+    
+    if (invalidEmail) {
+      setFormError(`Please enter a valid email: ${invalidEmail}`);
+      return;
+    }
 
     if (!title) {
       setFormError("Please enter an event title.");
@@ -249,25 +267,10 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
       return;
     }
 
-    if (meetingLink.length > MAX_LINK) {
-      setFormError(`Meeting link must be ${MAX_LINK} characters or fewer.`);
+    if (!Array.isArray(attendeeEmails)) {
+      setFormError("Please enter valid attendee emails.");
       return;
     }
-
-    if (meetingLink) {
-      try {
-        const url = new URL(meetingLink);
-        if (!["http:", "https:"].includes(url.protocol)) {
-          throw new Error("Invalid protocol");
-        }
-      } catch {
-        setFormError(
-          "Enter a valid link beginning with https:// or http://."
-        );
-        return;
-      }
-    }
-
     const startDate = new Date(`${form.date}T${form.startTime}:00`);
     const endDate = new Date(`${form.date}T${form.endTime}:00`);
 
@@ -275,17 +278,23 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
     setFormError("");
 
     try {
-      await createCalendarEvent({
-        title,
-        description,
-        eventType: "MEETING",
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        isAllDay: false,
-        ...(meetingLink ? { meetingLink } : {}),
-        hasReminder: true,
-        reminderMinutes: 15,
-      });
+const meeting = await createMeeting();
+
+if (!meeting?.code || !meeting?.link) {
+  throw new Error("Meeting API did not return a valid meeting link.");
+}
+await createCalendarEvent({
+  title,
+  description,
+  eventType: "MEETING",
+  startDate: startDate.toISOString(),
+  endDate: endDate.toISOString(),
+  isAllDay: false,
+  meetingLink: meeting.link,
+  attendeeEmails,
+  hasReminder: true,
+  reminderMinutes: 15,
+});
 
       setSelectedDate(form.date);
 
@@ -301,6 +310,7 @@ await Promise.all([
     } catch (error) {
       setFormError(
         error.response?.data?.message ||
+          error.message ||
           "Event save nahi hua. Please try again."
       );
     } finally {
@@ -811,25 +821,27 @@ await Promise.all([
               </div>
 
               <div>
-                <label
-                  htmlFor="event-link"
-                  className="mb-1.5 block text-sm font-medium text-[#334155]"
-                >
-                  Meeting link <span className="text-xs text-[#94A3B8]">(optional)</span>
-                </label>
-                <input
-                  id="event-link"
-                  type="url"
-                  maxLength={MAX_LINK}
-                  value={form.meetingLink}
-                  onChange={(e) => updateField("meetingLink", e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
-                />
-                <p className="mt-1 text-xs text-[#94A3B8]">
-                  Use an http:// or https:// link.
-                </p>
-              </div>
+  <label
+    htmlFor="attendee-emails"
+    className="mb-1.5 block text-sm font-medium text-[#334155]"
+  >
+    Invite attendees
+    <span className="text-xs text-[#94A3B8]"> (optional)</span>
+  </label>
+
+  <textarea
+    id="attendee-emails"
+    rows={2}
+    value={form.attendeeEmails}
+    onChange={(e) => updateField("attendeeEmails", e.target.value)}
+    placeholder="person1@example.com, person2@example.com"
+    className="w-full resize-y rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+  />
+
+  <p className="mt-1 text-xs text-[#94A3B8]">
+    Enter email addresses separated by commas.
+  </p>
+</div>
 
               {formError && (
                 <p

@@ -12,6 +12,7 @@ import OnboardingStep1 from "./pages/onboarding/OnboardingStep1";
 import { useEffect } from "react";
 import api from "./services/api";
 import VideoCall from "./pages/VideoCall";
+<Route path="/meet/:code" element={<MeetRedirect />} />
 import Organization from "./pages/Organization";
 import CreateOrganization from "./pages/organization/CreateOrganization";
 import Chat from "./pages/Chat";
@@ -25,6 +26,17 @@ import InvitePreview from "./pages/organization/InvitePreview";
 import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
 import Calendar from "./pages/Calendar";
 import SavedItems from "./pages/SavedItems";
+import { useParams } from "react-router-dom";
+function MeetRedirect() {
+  const { code } = useParams();
+
+  return (
+    <Navigate
+      to={`/video-call?code=${encodeURIComponent(code)}&host=0`}
+      replace
+    />
+  );
+}
 
 function App() {
   useEffect(() => {
