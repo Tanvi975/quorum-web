@@ -18,6 +18,7 @@ import {
 } from "react-icons/fi";
 import {
   getCalendarMonth,
+  getUpcomingEvents,
   createCalendarEvent,
   deleteCalendarEvent,
 } from "../services/calendarService";
@@ -86,6 +87,8 @@ function Calendar() {
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [ upcomingEvents , setUpcomingEvents] = useState([]);
+const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [calendarError, setCalendarError] = useState("");
   const [deletingEventId, setDeletingEventId] = useState(null);
 
@@ -116,10 +119,28 @@ function Calendar() {
       setLoadingEvents(false);
     }
   }
-
+  async function loadUpcomingEvents() {
+    setLoadingUpcoming(true);
+  
+    try {
+      const result = await getUpcomingEvents(5);
+      setUpcomingEvents(Array.isArray(result) ? result.map(mapApiEvent) : []);
+    } catch (error) {
+      console.error(
+        "Upcoming events load failed:",
+        error.response?.data || error.message
+      );
+    } finally {
+      setLoadingUpcoming(false);
+    }
+  }
   useEffect(() => {
     loadCalendarEvents(year, month);
   }, [year, month]);
+  
+  useEffect(() => {
+    loadUpcomingEvents();
+  }, []);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
@@ -148,19 +169,6 @@ function Calendar() {
         .filter((event) => event.date === selectedDate)
         .sort((a, b) => a.startTime.localeCompare(b.startTime)),
     [events, selectedDate]
-  );
-
-  const upcomingEvents = useMemo(
-    () =>
-      events
-        .filter((event) => event.date >= todayKey)
-        .sort((a, b) =>
-          `${a.date} ${a.startTime}`.localeCompare(
-            `${b.date} ${b.startTime}`
-          )
-        )
-        .slice(0, 5),
-    [events, todayKey]
   );
 
   function changeMonth(offset) {
@@ -285,7 +293,11 @@ function Calendar() {
       setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
 
       setShowModal(false);
-      await loadCalendarEvents(eventYear, eventMonth);
+
+await Promise.all([
+  loadCalendarEvents(eventYear, eventMonth),
+  loadUpcomingEvents(),
+]);
     } catch (error) {
       setFormError(
         error.response?.data?.message ||
@@ -304,6 +316,7 @@ function Calendar() {
 
     try {
       await deleteCalendarEvent(eventId);
+      await loadUpcomingEvents();
       setEvents((previous) =>
         previous.filter(
           (event) => String(event.id) !== String(eventId)
@@ -611,7 +624,11 @@ function Calendar() {
                   Your next scheduled events in this month.
                 </p>
 
-                {upcomingEvents.length === 0 ? (
+                {loadingUpcoming ? (
+  <div className="mt-5 py-8 text-center text-sm text-[#64748B]">
+    Loading upcoming events...
+  </div>
+) : upcomingEvents.length === 0 ? (
                   <div className="mt-5 rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center">
                     <FiCalendar className="mx-auto h-7 w-7 text-[#94A3B8]" />
                     <p className="mt-3 text-sm font-medium text-[#475569]">
@@ -782,7 +799,7 @@ function Calendar() {
                 <textarea
                   id="event-description"
                   rows={3}
-                  maxLength={20000}
+                  maxLength={MAX_DESCRIPTION}
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Add an agenda or a short note..."
