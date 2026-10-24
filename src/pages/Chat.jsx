@@ -26,6 +26,7 @@ import {
 import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
+import { getChatUploadSignature } from "../services/chatService";
 
 function getUser(participant) {
   return participant?.user || participant || {};
@@ -130,6 +131,9 @@ export default function Chat() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedMentionUserIds, setSelectedMentionUserIds] = useState([]);
+const [mentionQuery, setMentionQuery] = useState(null);
+const [mentionStart, setMentionStart] = useState(-1);
   const [showInfo, setShowInfo] = useState(true);
   const [showMobileContacts, setShowMobileContacts] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
@@ -157,6 +161,8 @@ const [showRenameGroup, setShowRenameGroup] = useState(false);
 const [renamedGroup, setRenamedGroup] = useState("");
 const [renamedAvatar, setRenamedAvatar] = useState("");
 const [groupAvatar, setGroupAvatar] = useState("");
+const fileInputRef = useRef(null);
+const [uploadingFile, setUploadingFile] = useState(false);
 
   const messageEndRef = useRef(null);
   const searchRequestRef = useRef(0);
@@ -183,11 +189,15 @@ const [groupAvatar, setGroupAvatar] = useState("");
 
     try {
       const response = await getConversations();
-      const list = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response)
-          ? response
-          : [];
+      const list = Array.isArray(response?.conversations)
+      ? response.conversations
+      : Array.isArray(response?.data?.conversations)
+        ? response.data.conversations
+        : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : [];
 
           setConversations(
             list.map((item) =>
@@ -396,7 +406,10 @@ const handleMessageRead = (data) => {
       return;
     }
   
-    const currentUserId = user?.id;
+    const loggedInUserId = currentUserId;
+    if (String(data.userId) === String(currentUserId)) {
+      return;
+    }
   
     if (String(data.userId) === String(currentUserId)) {
       return;
@@ -444,7 +457,7 @@ const handleMessageRead = (data) => {
 
       try {
         const response = await getMessages(activeConversation.id);
-        const result = response?.data;
+        const result = response?.data?.data ?? response?.data;
 
         const list = Array.isArray(result?.messages)
           ? result.messages
@@ -614,6 +627,75 @@ setMessages(normalizedList);
       }
     );
   }
+
+  async function handleFileSelected(event) {
+    const file = event.target.files?.[0];
+
+    // Same file ko dobara select karne ki permission
+    event.target.value = "";
+
+    if (!file || !activeConversation?.id) return;
+
+    const getFileType = (file) => {
+        if (file.type.startsWith("image/")) return "image";
+        if (file.type.startsWith("video/")) return "video";
+        if (file.type.startsWith("audio/")) return "audio";
+        return "file";
+    };
+
+    setUploadingFile(true);
+
+    try {
+        const signature = await getChatUploadSignature();
+
+        const { uploadUrl, timestamp, signature: signedValue, apiKey, folder } =
+            signature;
+
+        if (!uploadUrl || !timestamp || !signedValue || !apiKey || !folder) {
+            throw new Error("Upload signature response is incomplete");
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", String(timestamp));
+        formData.append("signature", signedValue);
+        formData.append("folder", folder);
+
+        const uploadResponse = await fetch(uploadUrl, {
+            method: "POST",
+            body: formData,
+        });
+
+        const uploadedFile = await uploadResponse.json();
+
+        if (!uploadResponse.ok || !uploadedFile.secure_url) {
+            throw new Error(
+                uploadedFile.error?.message || "Cloudinary upload failed"
+            );
+        }
+
+        const payload = {
+            conversationId: activeConversation.id,
+            clientMessageId: crypto.randomUUID(),
+            content: "",
+            fileUrl: uploadedFile.secure_url,
+            fileType: getFileType(file),
+        };
+
+        socket.emit("message:send", payload, (ack) => {
+            if (!ack?.success) {
+                console.error("Attachment message failed:", ack);
+                alert("File upload ho gayi, lekin message send nahi hua.");
+            }
+        });
+    } catch (error) {
+        console.error("Attachment upload failed:", error);
+        alert(error.message || "File upload nahi ho payi.");
+    } finally {
+        setUploadingFile(false);
+    }
+}
 
   const visibleConversations = conversations.filter((conversation) =>
   getConversationName(conversation, currentUserId)
@@ -835,11 +917,15 @@ const handleAddMembers = async (event) => {
 const refreshActiveGroup = async () => {
   const response = await getConversations();
 
-  const list = Array.isArray(response?.data)
-    ? response.data
-    : Array.isArray(response)
-      ? response
-      : [];
+  const list = Array.isArray(response?.data?.conversations)
+  ? response.data.conversations
+  : Array.isArray(response?.data?.data?.conversations)
+    ? response.data.data.conversations
+    : Array.isArray(response?.data)
+      ? response.data
+      : Array.isArray(response)
+        ? response
+        : [];
 
   setConversations(list);
 
@@ -1369,6 +1455,38 @@ const handleSaveConversation = async () => {
                         >
                           <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">
                             {item.text}
+                            {item.fileUrl && item.fileType === "image" && (
+    <a href={item.fileUrl} target="_blank" rel="noreferrer">
+        <img
+            src={item.fileUrl}
+            alt="Chat attachment"
+            style={{
+                maxWidth: "240px",
+                maxHeight: "240px",
+                borderRadius: "12px",
+                objectFit: "contain",
+            }}
+        />
+    </a>
+)}
+
+{item.fileUrl && item.fileType === "video" && (
+    <video
+        src={item.fileUrl}
+        controls
+        style={{ maxWidth: "260px" }}
+    />
+)}
+
+{item.fileUrl && item.fileType === "audio" && (
+    <audio src={item.fileUrl} controls />
+)}
+
+{item.fileUrl && item.fileType === "file" && (
+    <a href={item.fileUrl} target="_blank" rel="noreferrer">
+        Open attachment
+    </a>
+)}
                           </p>
                           <div
                              className={`mt-1.5 flex items-center justify-between gap-2 text-[9px] ${
@@ -1396,9 +1514,20 @@ const handleSaveConversation = async () => {
                   className="shrink-0 border-t border-[#35516E] bg-[#20364F] p-3 sm:px-4 sm:py-3.5"
                 >
                   <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-[#46617C] bg-[#263F59] px-2.5 focus-within:border-[#38BDF8]">
-                    <IconButton label="Attach file">
-                      <FiPaperclip size={15} />
-                    </IconButton>
+                  <IconButton
+  label="Attach file"
+  onClick={() => fileInputRef.current?.click()}
+  disabled={uploadingFile || !activeConversation}
+>
+  <FiPaperclip size={15} />
+</IconButton>
+<input
+  ref={fileInputRef}
+  type="file"
+  hidden
+  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
+  onChange={handleFileSelected}
+/>
                     <input
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}

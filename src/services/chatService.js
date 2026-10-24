@@ -97,9 +97,9 @@ export async function removeGroupParticipant(conversationId, userId) {
     return res.data;
 }
 
-export async function leaveGroupConversation(conversationId, userId) {
+export async function leaveGroupConversation(conversationId) {
     const res = await api.delete(
-        `/api/conversations/${conversationId}/participants/${userId}`
+        `/api/conversations/${conversationId}/participants/me`
     );
 
     return res.data;
@@ -116,4 +116,12 @@ export async function updateGroupConversation(
     );
 
     return res.data;
+}
+
+export async function getChatUploadSignature() {
+    const response = await api.post("/api/uploads/sign", {
+        folder: "chat",
+    });
+
+    return response.data ?.data ?? response.data;
 }
