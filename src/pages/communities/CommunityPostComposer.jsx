@@ -26,8 +26,8 @@ export default function CommunityPostComposer({
             return;
         }
 
-        if (text.length > 10000) {
-            setError("Your post must be 10,000 characters or fewer.");
+        if (text.length > 20000) {
+            setError("Your post must be 20,000 characters or fewer.");
             return;
         }
 
@@ -105,11 +105,17 @@ export default function CommunityPostComposer({
                     className="w-full resize-y max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#06172E]/80 px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-blue-100/35 focus:border-blue-300/60 disabled:opacity-50"
                 />
 
-                <div className="flex justify-end">
-                    <span className={`text-xs ${content.length > 9500 ? "text-amber-200" : "text-blue-100/45"}`}>
-                        {content.length.toLocaleString()} / 10,000
-                    </span>
-                </div>
+<div className="flex justify-end">
+    <span
+        className={`text-xs ${
+            content.length > 19000
+                ? "text-amber-200"
+                : "text-blue-100/45"
+        }`}
+    >
+        {content.length.toLocaleString()} / 20,000
+    </span>
+</div>
 
                 <CommunityAttachments
                     value={attachment}
@@ -145,3 +151,5 @@ export default function CommunityPostComposer({
         </section>
     );
 }
+
+

@@ -27,51 +27,86 @@ export default function CommunityInvitations({
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
 
+
     const searchUsers = useCallback(async () => {
-        if (!communityId || !query.trim()) {
+        const trimmedQuery = query.trim();
+    
+        if (!trimmedQuery) {
             setUsers([]);
+            setError("");
+            setLoadingUsers(false);
             return;
         }
-
+    
         setLoadingUsers(true);
         setError("");
-
+    
         try {
             let result;
-
+    
             try {
-                result = unwrap(
-                    await getInvitableCommunityUsers(communityId, query.trim())
+                result = await getInvitableCommunityUsers(
+                    communityId,
+                    trimmedQuery
                 );
             } catch (err) {
-                if (err.response?.status !== 404) throw err;
-                result = unwrap(
-                    await searchCommunityUsers(communityId, query.trim())
+                if (err.response?.status !== 404) {
+                    throw err;
+                }
+    
+                result = await searchCommunityUsers(
+                    communityId,
+                    trimmedQuery
                 );
             }
-
+    
             const list = Array.isArray(result)
                 ? result
-                : result?.users ?? [];
-
+                : Array.isArray(result?.users)
+                    ? result.users
+                    : Array.isArray(result?.data)
+                        ? result.data
+                        : [];
+    
             setUsers(list);
         } catch (err) {
-            setError(err.response?.data?.message || "Could not search users.");
+            console.error("Community user search failed:", {
+                status: err.response?.status,
+                response: err.response?.data,
+                message: err.message,
+            });
+    
+            setUsers([]);
+            setError(
+                err.response?.data?.message ||
+                "Could not search users. Please try again."
+            );
         } finally {
             setLoadingUsers(false);
         }
-    }, [communityId, query]);
+    }, [query, communityId]);
+    
+
+  
 
     useEffect(() => {
-        if (!query.trim()) {
+        const trimmedQuery = query.trim();
+    
+        if (!trimmedQuery) {
             setUsers([]);
             setError("");
+            setLoadingUsers(false);
             return;
         }
-
-        const id = setTimeout(() => searchUsers(), 350);
+    
+        const id = setTimeout(() => {
+            searchUsers();
+        }, 350);
+    
         return () => clearTimeout(id);
     }, [query, searchUsers]);
+    
+
 
     async function handleCreateLink() {
         setCreatingLink(true);

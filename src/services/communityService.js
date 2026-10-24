@@ -29,7 +29,7 @@ export function getFileCategory(file) {
         return "document";
     }
 
-    return "file";
+    return "document";
 }
 
 export async function uploadAttachment(file) {
@@ -283,20 +283,13 @@ export async function createPostComment(postId, content) {
     return response.data;
 }
 
-export async function updatePostComment(commentId, content) {
-    const response = await api.patch(
-        `/api/community-comments/${commentId}`, { content }
-    );
-    return response.data;
-}
-
 export async function deletePostComment(commentId) {
     const response = await api.delete(`/api/v1/comments/${commentId}`);
     return response.data;
 }
 
 export async function createCommunityInvite(communityId, inviteData = {}) {
-    const payload = { expiresInHours: 48, ...inviteData };
+    const payload = {...inviteData };
 
     if (payload.userId && !payload.invitedUserId) {
         payload.invitedUserId = payload.userId;
@@ -304,10 +297,15 @@ export async function createCommunityInvite(communityId, inviteData = {}) {
 
     delete payload.userId;
 
+    if (!payload.invitedUserId && payload.expiresInHours == null) {
+        payload.expiresInHours = 48;
+    }
+
     const response = await api.post(
         `/api/v1/communities/${communityId}/invites`,
         payload
     );
+
     return response.data;
 }
 
@@ -399,5 +397,12 @@ export async function createUploadSignature(uploadData) {
 
 export async function uploadFileToS3(uploadData) {
     const response = await api.post("/api/uploads/s3", uploadData);
+    return response.data;
+}
+export async function updatePostComment(communityId, postId, commentId, content) {
+    const response = await api.put(
+        `/api/communities/${communityId}/posts/${postId}/comments/${commentId}`, { content }
+    );
+
     return response.data;
 }

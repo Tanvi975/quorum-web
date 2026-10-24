@@ -598,20 +598,29 @@ function OrganizationWorkspace() {
       </div>
     );
   }
+ 
+
+  const normalizedSearch = search.trim().toLowerCase();
+
   const filteredTeams = teams.filter((team) => {
-    const teamDetails =
-      `${team.name || ""} ${team.description || ""}`.toLowerCase();
-
-    return teamDetails.includes(search.toLowerCase());
+    const teamDetails = `${team.name || ""} ${team.description || ""}`
+      .toLowerCase();
+  
+    return teamDetails.includes(normalizedSearch);
   });
-
+  
   const filteredMembers = members.filter((member) => {
-    const memberDetails =
-      `${member.name || member.user?.name || ""} ${
-        member.email || member.user?.email || ""
-      }`.toLowerCase();
-
-    return memberDetails.includes(search.toLowerCase());
+    const memberDetails = [
+      member.name,
+      member.user?.name,
+      member.email,
+      member.user?.email,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  
+    return memberDetails.includes(normalizedSearch);
   });
   if (loading) {
     return (
