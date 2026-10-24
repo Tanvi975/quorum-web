@@ -125,3 +125,36 @@ export async function getChatUploadSignature() {
 
     return response.data ?.data ?? response.data;
 }
+
+export async function getTeamMessages(orgId, teamId) {
+    const response = await api.get(
+        `/api/organizations/${orgId}/teams/${teamId}/messages`
+    );
+
+    return response.data ?.data ?? response.data;
+}
+
+export async function sendTeamMessage(orgId, teamId, messageData) {
+    const response = await api.post(
+        `/api/organizations/${orgId}/teams/${teamId}/messages`,
+        messageData
+    );
+
+    return response.data ?.data ?? response.data;
+}
+
+export async function deleteTeamMessage(orgId, teamId, messageId) {
+    const response = await api.delete(
+        `/api/organizations/${orgId}/teams/${teamId}/messages/${messageId}`
+    );
+
+    return response.data;
+}
+
+export async function pinTeamMessage(orgId, teamId, messageId) {
+    const response = await api.post(
+        `/api/organizations/${orgId}/teams/${teamId}/messages/${messageId}/pin`
+    );
+
+    return response.data ?.data ?? response.data;
+}
