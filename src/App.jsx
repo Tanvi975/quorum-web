@@ -31,12 +31,11 @@ function MeetRedirect() {
 
   return (
     <Navigate
-      to={`/video-call?code=${encodeURIComponent(code)}&host=0`}
+      to={`/video-call?code=${encodeURIComponent(code)}&host=1`}
       replace
     />
   );
 }
-
 function App() {
   useEffect(() => {
     api.get("/api/csrf-token")
