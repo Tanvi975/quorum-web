@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiHome,
@@ -16,6 +16,11 @@ import {
   FiTrash2,
   FiExternalLink,
 } from "react-icons/fi";
+import {
+  getCalendarMonth,
+  createCalendarEvent,
+  deleteCalendarEvent,
+} from "../services/calendarService";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX_TITLE = 80;
@@ -35,7 +40,6 @@ function toDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 
@@ -48,7 +52,6 @@ function formatMonth(date) {
 
 function formatEventDate(dateKey) {
   const [year, month, day] = dateKey.split("-").map(Number);
-
   return new Date(year, month - 1, day).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -56,32 +59,72 @@ function formatEventDate(dateKey) {
   });
 }
 
+function mapApiEvent(event) {
+  const start = new Date(event.startDate);
+  const end = new Date(event.endDate || event.startDate);
+
+  return {
+    ...event,
+    id: event.id || event._id,
+    date: toDateKey(start),
+    startTime: start.toTimeString().slice(0, 5),
+    endTime: end.toTimeString().slice(0, 5),
+    description: event.description || "",
+    meetingLink: event.meetingLink || "",
+  };
+}
+
 function Calendar() {
   const navigate = useNavigate();
 
-  const today = new Date();
-  const todayKey = toDateKey(today);
+  const todayKey = toDateKey(new Date());
 
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
-  );
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [calendarError, setCalendarError] = useState("");
+  const [deletingEventId, setDeletingEventId] = useState(null);
+
   const [showModal, setShowModal] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
   const [form, setForm] = useState({
     ...emptyForm,
     date: todayKey,
   });
   const [formError, setFormError] = useState("");
 
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth() + 1;
+
+  async function loadCalendarEvents(targetYear, targetMonth) {
+    setLoadingEvents(true);
+    setCalendarError("");
+
+    try {
+      const result = await getCalendarMonth(targetYear, targetMonth);
+      setEvents(Array.isArray(result) ? result.map(mapApiEvent) : []);
+    } catch (error) {
+      setCalendarError(
+        error.response?.data?.message ||
+          "Calendar events load nahi ho paaye. Please try again."
+      );
+    } finally {
+      setLoadingEvents(false);
+    }
+  }
+
+  useEffect(() => {
+    loadCalendarEvents(year, month);
+  }, [year, month]);
+
   const calendarDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-
-    const firstDay = new Date(year, month, 1);
+    const firstDay = new Date(year, month - 1, 1);
     const mondayOffset = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
+    const daysInMonth = new Date(year, month, 0).getDate();
     const cells = [];
 
     for (let i = 0; i < mondayOffset; i++) {
@@ -89,7 +132,7 @@ function Calendar() {
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      cells.push(toDateKey(new Date(year, month, day)));
+      cells.push(toDateKey(new Date(year, month - 1, day)));
     }
 
     while (cells.length % 7 !== 0) {
@@ -97,7 +140,7 @@ function Calendar() {
     }
 
     return cells;
-  }, [currentMonth]);
+  }, [year, month]);
 
   const selectedEvents = useMemo(
     () =>
@@ -122,14 +165,19 @@ function Calendar() {
 
   function changeMonth(offset) {
     setCurrentMonth(
-      (month) =>
-        new Date(month.getFullYear(), month.getMonth() + offset, 1)
+      (previous) =>
+        new Date(
+          previous.getFullYear(),
+          previous.getMonth() + offset,
+          1
+        )
     );
   }
 
   function goToToday() {
+    const today = new Date();
     setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDate(todayKey);
+    setSelectedDate(toDateKey(today));
   }
 
   function openCreateModal(date = selectedDate) {
@@ -139,6 +187,7 @@ function Calendar() {
   }
 
   function closeModal() {
+    if (savingEvent) return;
     setShowModal(false);
     setFormError("");
   }
@@ -148,7 +197,7 @@ function Calendar() {
     setFormError("");
   }
 
-  function handleCreateEvent(e) {
+  async function handleCreateEvent(e) {
     e.preventDefault();
 
     const title = form.title.trim();
@@ -200,39 +249,74 @@ function Calendar() {
     if (meetingLink) {
       try {
         const url = new URL(meetingLink);
-
         if (!["http:", "https:"].includes(url.protocol)) {
           throw new Error("Invalid protocol");
         }
       } catch {
-        setFormError("Enter a valid link beginning with https:// or http://.");
+        setFormError(
+          "Enter a valid link beginning with https:// or http://."
+        );
         return;
       }
     }
 
-    const newEvent = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title,
-      date: form.date,
-      startTime: form.startTime,
-      endTime: form.endTime,
-      description,
-      meetingLink,
-    };
+    const startDate = new Date(`${form.date}T${form.startTime}:00`);
+    const endDate = new Date(`${form.date}T${form.endTime}:00`);
 
-    setEvents((previous) => [...previous, newEvent]);
-    setSelectedDate(form.date);
-    setCurrentMonth(() => {
-      const [year, month] = form.date.split("-").map(Number);
-      return new Date(year, month - 1, 1);
-    });
-    closeModal();
+    setSavingEvent(true);
+    setFormError("");
+
+    try {
+      await createCalendarEvent({
+        title,
+        description,
+        eventType: "MEETING",
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        isAllDay: false,
+        ...(meetingLink ? { meetingLink } : {}),
+        hasReminder: true,
+        reminderMinutes: 15,
+      });
+
+      setSelectedDate(form.date);
+
+      const [eventYear, eventMonth] = form.date.split("-").map(Number);
+      setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
+
+      setShowModal(false);
+      await loadCalendarEvents(eventYear, eventMonth);
+    } catch (error) {
+      setFormError(
+        error.response?.data?.message ||
+          "Event save nahi hua. Please try again."
+      );
+    } finally {
+      setSavingEvent(false);
+    }
   }
 
-  function deleteEvent(eventId) {
-    setEvents((previous) =>
-      previous.filter((event) => event.id !== eventId)
-    );
+  async function deleteEvent(eventId) {
+    if (!eventId) return;
+
+    setDeletingEventId(eventId);
+    setCalendarError("");
+
+    try {
+      await deleteCalendarEvent(eventId);
+      setEvents((previous) =>
+        previous.filter(
+          (event) => String(event.id) !== String(eventId)
+        )
+      );
+    } catch (error) {
+      setCalendarError(
+        error.response?.data?.message ||
+          "Event delete nahi ho paaya. Please try again."
+      );
+    } finally {
+      setDeletingEventId(null);
+    }
   }
 
   return (
@@ -268,25 +352,21 @@ function Calendar() {
               { label: "Organizations", icon: FiUsers, path: "/organization" },
               { label: "Chat", icon: FiMessageCircle, path: "/chat" },
               { label: "Communities", icon: FiGlobe, path: "/communities" },
-            ].map(({ label, icon: Icon, path }) => {
-              const active = label === "Calendar";
-
-              return (
-                <button
-                  key={label}
-                  title={label}
-                  onClick={() => navigate(path)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 transition lg:flex-row lg:justify-start lg:gap-3 lg:px-3 ${
-                    active
-                      ? "bg-white/15 text-white"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="text-[11px] lg:text-sm">{label}</span>
-                </button>
-              );
-            })}
+            ].map(({ label, icon: Icon, path }) => (
+              <button
+                key={label}
+                title={label}
+                onClick={() => navigate(path)}
+                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 transition lg:flex-row lg:justify-start lg:gap-3 lg:px-3 ${
+                  label === "Calendar"
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="text-[11px] lg:text-sm">{label}</span>
+              </button>
+            ))}
           </nav>
         </aside>
 
@@ -313,6 +393,21 @@ function Calendar() {
                 Create event
               </button>
             </div>
+
+            {calendarError && (
+              <div
+                role="alert"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                <span>{calendarError}</span>
+                <button
+                  onClick={() => loadCalendarEvents(year, month)}
+                  className="font-semibold underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
               <section className="min-w-0 rounded-xl border border-white/20 bg-white/95 p-4 shadow-[0_12px_35px_rgba(0,0,0,0.15)] sm:p-6">
@@ -349,6 +444,12 @@ function Calendar() {
                     </button>
                   </div>
                 </div>
+
+                {loadingEvents && (
+                  <p className="mb-3 text-sm text-[#64748B]" role="status">
+                    Loading calendar events...
+                  </p>
+                )}
 
                 <div className="grid grid-cols-7 border-b border-[#E2E8F0] pb-2">
                   {WEEKDAYS.map((day) => (
@@ -440,7 +541,7 @@ function Calendar() {
                 {selectedEvents.length === 0 ? (
                   <div className="mt-3 flex min-h-24 flex-col items-center justify-center rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 text-center">
                     <p className="text-sm font-medium text-[#475569]">
-                      No events scheduled
+                      {loadingEvents ? "Loading events..." : "No events scheduled"}
                     </p>
                     <p className="mt-1 text-xs text-[#94A3B8]">
                       Create an event to add it to this date.
@@ -480,10 +581,15 @@ function Calendar() {
 
                         <button
                           onClick={() => deleteEvent(event.id)}
+                          disabled={deletingEventId === event.id}
                           aria-label={`Delete ${event.title}`}
-                          className="shrink-0 rounded-lg p-2 text-[#94A3B8] hover:bg-red-50 hover:text-red-600"
+                          className="shrink-0 rounded-lg p-2 text-[#94A3B8] hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <FiTrash2 className="h-4 w-4" />
+                          {deletingEventId === event.id ? (
+                            <span className="text-xs">...</span>
+                          ) : (
+                            <FiTrash2 className="h-4 w-4" />
+                          )}
                         </button>
                       </article>
                     ))}
@@ -502,14 +608,14 @@ function Calendar() {
                 </div>
 
                 <p className="mt-1 text-xs text-[#64748B]">
-                  Your next scheduled events.
+                  Your next scheduled events in this month.
                 </p>
 
                 {upcomingEvents.length === 0 ? (
                   <div className="mt-5 rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center">
                     <FiCalendar className="mx-auto h-7 w-7 text-[#94A3B8]" />
                     <p className="mt-3 text-sm font-medium text-[#475569]">
-                      Your calendar is empty
+                      {loadingEvents ? "Loading events..." : "Your calendar is empty"}
                     </p>
                     <p className="mt-1 text-xs leading-5 text-[#94A3B8]">
                       Create your first event to see it here.
@@ -522,10 +628,12 @@ function Calendar() {
                         key={event.id}
                         onClick={() => {
                           setSelectedDate(event.date);
-                          const [year, month] = event.date
+                          const [eventYear, eventMonth] = event.date
                             .split("-")
                             .map(Number);
-                          setCurrentMonth(new Date(year, month - 1, 1));
+                          setCurrentMonth(
+                            new Date(eventYear, eventMonth - 1, 1)
+                          );
                         }}
                         className="block w-full rounded-lg border border-[#E2E8F0] bg-white p-3 text-left transition hover:border-blue-300 hover:bg-[#F8FBFF]"
                       >
@@ -544,8 +652,7 @@ function Calendar() {
                   </div>
                 )}
                 <p className="mt-4 text-[11px] leading-5 text-[#94A3B8]">
-                  Events currently exist only in this page session. Backend
-                  saving will be added later.
+                  Events are loaded from your calendar backend.
                 </p>
               </aside>
             </div>
@@ -580,8 +687,9 @@ function Calendar() {
               </div>
               <button
                 onClick={closeModal}
+                disabled={savingEvent}
                 aria-label="Close create event"
-                className="rounded-lg p-2 text-[#64748B] hover:bg-slate-100"
+                className="rounded-lg p-2 text-[#64748B] hover:bg-slate-100 disabled:opacity-50"
               >
                 <FiX />
               </button>
@@ -678,7 +786,7 @@ function Calendar() {
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Add an agenda or a short note..."
-                  className="w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                  className="w-full max-h-40 resize-y overflow-y-auto rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
                 />
                 <p className="mt-1 text-right text-xs text-[#94A3B8]">
                   {form.description.length}/{MAX_DESCRIPTION}
@@ -719,15 +827,17 @@ function Calendar() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-[#CBD5E1] px-4 py-2.5 text-sm font-medium text-[#475569] hover:bg-slate-50"
+                  disabled={savingEvent}
+                  className="rounded-lg border border-[#CBD5E1] px-4 py-2.5 text-sm font-medium text-[#475569] hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#005BE0] focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  disabled={savingEvent}
+                  className="rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#005BE0] focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Create event
+                  {savingEvent ? "Saving..." : "Create event"}
                 </button>
               </div>
             </form>

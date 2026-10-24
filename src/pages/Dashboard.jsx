@@ -5,8 +5,33 @@ import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "../components/NotificationBell";
+import { getUpcomingEvents } from "../services/calendarService";
 
 function Dashboard() {
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+const [upcomingLoading, setUpcomingLoading] = useState(true);
+const [upcomingError, setUpcomingError] = useState("");
+
+useEffect(() => {
+  async function loadUpcomingEvents() {
+    try {
+      setUpcomingLoading(true);
+      setUpcomingError("");
+
+      const events = await getUpcomingEvents(5);
+      setUpcomingEvents(events);
+    } catch (error) {
+      setUpcomingError(
+        error.response?.data?.message ||
+          "Upcoming meetings load nahi ho paayi."
+      );
+    } finally {
+      setUpcomingLoading(false);
+    }
+  }
+
+  loadUpcomingEvents();
+}, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -47,26 +72,6 @@ function handleLogout() {
 const [meetingError, setMeetingError] = useState("");
 const [meetingCode, setMeetingCode] = useState("");
 
-async function handleNewMeeting() {
-  try {
-    setCreatingMeeting(true);
-    setMeetingError("");
-
-    const meeting = await createMeeting();
-
-    if (!meeting?.code) {
-      throw new Error("Meeting code was not returned by the server.");
-    }
-
-    navigate(`/video-call?code=${encodeURIComponent(meeting.code)}&host=1`);
-  } catch (error) {
-    setMeetingError(
-      error.response?.data?.message || error.message || "Could not create meeting."
-    );
-  } finally {
-    setCreatingMeeting(false);
-  }
-}
 
 function handleJoinMeeting() {
   const code = meetingCode.trim();
@@ -349,11 +354,61 @@ async function handleNewMeeting() {
                     </button>
 
                   </div>
-                  <div className="h-[275px] rounded-lg border border-[#EEF2F7] flex items-center justify-center">
-                    <p className="text-[#94A3B8] text-sm">
-                      No upcoming meetings
-                    </p>
-                  </div>
+                  {upcomingLoading ? (
+  <p className="py-6 text-sm text-slate-400">
+    Loading upcoming meetings...
+  </p>
+) : upcomingError ? (
+  <p className="py-6 text-sm text-red-300">
+    {upcomingError}
+  </p>
+) : upcomingEvents.length === 0 ? (
+  <div className="py-6 text-center">
+    <p className="text-sm text-slate-400">
+      No upcoming meetings
+    </p>
+
+    <button
+      type="button"
+      onClick={() => navigate("/calendar")}
+      className="mt-3 text-sm font-medium text-blue-300 hover:text-blue-200"
+    >
+      Open Calendar
+    </button>
+  </div>
+) : (
+  <div className="space-y-3">
+    {upcomingEvents.map((event) => (
+      <div
+        key={event.id}
+        className="rounded-xl border border-white/10 bg-white/[0.04] p-3"
+      >
+        <p className="font-medium text-white">
+          {event.title}
+        </p>
+
+        <p className="mt-1 text-sm text-slate-400">
+          {new Date(event.startDate).toLocaleString("en-IN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+            timeZone: "Asia/Kolkata",
+          })}
+        </p>
+
+        {event.meetingLink && (
+          <a
+            href={event.meetingLink}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-sm text-blue-300 hover:text-blue-200"
+          >
+            Join Meeting
+          </a>
+        )}
+      </div>
+    ))}
+  </div>
+)}
                 </div>
                 <div
                   className="
