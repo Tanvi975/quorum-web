@@ -6,6 +6,7 @@ import { createMeeting } from "../services/meetingService";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "../components/NotificationBell";
 import { getUpcomingEvents } from "../services/calendarService";
+import DashboardOverview from "../components/DashboardOverview";
 
 function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -111,13 +112,15 @@ async function handleNewMeeting() {
   const userName = user?.name || "Karan";
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#062C5F]">
+    <div className="min-h-screen relative overflow-hidden bg-[#EAF4FF]">
       <DashboardBackground />
 
-      <div className="relative z-10 min-h-screen">
-        <header className="h-[64px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-6 lg:px-10">
-          <div className="text-[#062C5F] font-bold text-[18px] tracking-wide">
-            QUORUM
+      <div className="relative z-10 min-h-screen pt-[64px]">
+      <header className="fixed top-0 left-0 right-0 z-50 h-[64px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-6 lg:px-10 shadow-sm">
+          <div className="text-white font-bold text-[18px] tracking-wide">
+          <h1 className="text-[#062C5F] font-bold">
+  QUORUM
+</h1>
           </div>
           <div className="hidden md:flex items-center w-[280px] lg:w-[360px] h-[38px] bg-[#F7F9FC] border border-[#E5E7EB] rounded-lg px-4">
             <svg
@@ -331,111 +334,11 @@ async function handleNewMeeting() {
 
 </div>
    </section>
-   <section className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-5 mt-5">
-                <div
-                  className="
-                    min-h-[360px]
-                    bg-white/90
-                    backdrop-blur-sm
-                    rounded-[8px]
-                    border border-white/60
-                    shadow-[0_10px_35px_rgba(0,0,0,0.08)]
-                    p-6
-                  "
-                >
-                  <div className="flex items-center justify-between mb-5">
-
-                    <h2 className="text-[#062C5F] font-semibold text-[16px]">
-                      Upcoming Meetings
-                    </h2>
-
-                    <button className="text-[#0068FF] text-xs font-medium">
-                      View all
-                    </button>
-
-                  </div>
-                  {upcomingLoading ? (
-  <p className="py-6 text-sm text-slate-400">
-    Loading upcoming meetings...
-  </p>
-) : upcomingError ? (
-  <p className="py-6 text-sm text-red-300">
-    {upcomingError}
-  </p>
-) : upcomingEvents.length === 0 ? (
-  <div className="py-6 text-center">
-    <p className="text-sm text-slate-400">
-      No upcoming meetings
-    </p>
-
-    <button
-      type="button"
-      onClick={() => navigate("/calendar")}
-      className="mt-3 text-sm font-medium text-blue-300 hover:text-blue-200"
-    >
-      Open Calendar
-    </button>
-  </div>
-) : (
-  <div className="space-y-3">
-    {upcomingEvents.map((event) => (
-      <div
-        key={event.id}
-        className="rounded-xl border border-white/10 bg-white/[0.04] p-3"
-      >
-        <p className="font-medium text-white">
-          {event.title}
-        </p>
-
-        <p className="mt-1 text-sm text-slate-400">
-          {new Date(event.startDate).toLocaleString("en-IN", {
-            dateStyle: "medium",
-            timeStyle: "short",
-            timeZone: "Asia/Kolkata",
-          })}
-        </p>
-
-        {event.meetingLink && (
-          <a
-            href={event.meetingLink}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-block text-sm text-blue-300 hover:text-blue-200"
-          >
-            Join Meeting
-          </a>
-        )}
-      </div>
-    ))}
-  </div>
-)}
-                </div>
-                <div
-                  className="
-                    min-h-[360px]
-                    bg-white/90
-                    backdrop-blur-sm
-                    rounded-[8px]
-                    border border-white/60
-                    shadow-[0_10px_35px_rgba(0,0,0,0.08)]
-                    p-6
-                  "
-                >
-                  <div className="flex items-center justify-between mb-5">
-
-                    <h2 className="text-[#062C5F] font-semibold text-[16px]">
-                      AI Meeting Summaries
-                    </h2>
-
-                  </div>
-
-                  <div className="h-[275px] rounded-lg border border-[#EEF2F7] flex items-center justify-center">
-                    <p className="text-[#94A3B8] text-sm text-center">
-                      No summaries available
-                    </p>
-                  </div>
-                </div>             
-              </section>
+   <DashboardOverview
+  upcomingEvents={upcomingEvents}
+  upcomingLoading={upcomingLoading}
+  upcomingError={upcomingError}
+/>
 
             </div>
           </main>
