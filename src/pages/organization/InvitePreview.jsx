@@ -112,12 +112,27 @@ function InvitePreview() {
           />
         )}
 
-        <h1>You're invited to join</h1>
-        <h2>{organization?.name}</h2>
+<h1>You're invited to join</h1>
+<h2>{organization?.name}</h2>
 
-        <p>
-          {organization?.membersCount ?? 0} members
-        </p>
+{inviteDetails?.teamName && (
+  <p>
+    Team: {inviteDetails.teamName}
+  </p>
+)}
+
+{inviteDetails?.teamRole && (
+  <p>
+    Team Role:{" "}
+    {inviteDetails.teamRole === "LEAD"
+      ? "Team Lead"
+      : "Team Member"}
+  </p>
+)}
+
+<p>
+  {organization?.membersCount ?? 0} members
+</p>
 
         {inviteDetails?.inviterName && (
           <p>

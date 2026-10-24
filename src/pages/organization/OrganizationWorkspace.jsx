@@ -126,6 +126,8 @@ function OrganizationWorkspace() {
   const [inviteForm, setInviteForm] = useState({
     email: "",
     role: "MEMBER",
+    teamId: "",
+    teamRole: "MEMBER",
   });
   const [orgForm, setOrgForm] = useState({
     name: "",
@@ -266,27 +268,45 @@ function OrganizationWorkspace() {
   }
   async function inviteMember(event) {
     event.preventDefault();
-
+  
+    if (!inviteForm.email.trim()) {
+      setNotice("Please enter an email address.");
+      return;
+    }
+  
     setSaving(true);
-
+  
     try {
+      const payload = {
+        email: inviteForm.email.trim().toLowerCase(),
+        expiresInDays: 7,
+        maxUses: 1,
+        ...(inviteForm.teamId
+          ? {
+              teamId: inviteForm.teamId,
+              teamRole: inviteForm.teamRole,
+            }
+          : {
+              role: inviteForm.role,
+            }),
+      };
+  
       await api.post(
         `/api/organizations/${organizationId}/invites`,
-        {
-          email: inviteForm.email.trim().toLowerCase(),
-          role: inviteForm.role,
-        }
+        payload
       );
-
+  
       closeModal();
-
+  
       setInviteForm({
         email: "",
         role: "MEMBER",
+        teamId: "",
+        teamRole: "MEMBER",
       });
-
+  
       setNotice("Invitation sent successfully.");
-
+  
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -641,13 +661,6 @@ function OrganizationWorkspace() {
           >
             <FaArrowLeft />
             Organizations
-          </button>
-          <button
-            type="button"
-            onClick={() => loadWorkspace(false)}
-            className="text-sm text-slate-300 hover:text-white"
-          >
-            Refresh
           </button>
         </div>
         {notice && (
@@ -1040,9 +1053,74 @@ function OrganizationWorkspace() {
                   });
                 }}
                 placeholder="name@example.com"
-                className={input}
+                className="w-full rounded-lg border border-slate-500 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
               />
             </div>
+            <div>
+  <label className="mb-2 block text-sm text-slate-300">
+    Team (Optional)
+  </label>
+
+  <select
+    value={inviteForm.teamId}
+    onChange={(e) =>
+      setInviteForm((prev) => ({
+        ...prev,
+        teamId: e.target.value,
+      }))
+    }
+    className={input}
+  >
+    <option value="">Organization-wide invite</option>
+
+    {teams.map((team) => (
+      <option key={team.id || team._id} value={team.id || team._id}>
+        {team.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+{inviteForm.teamId ? (
+  <div>
+    <label className="mb-2 block text-sm text-slate-300">
+      Team Role
+    </label>
+
+    <select
+      value={inviteForm.teamRole}
+      onChange={(e) =>
+        setInviteForm((prev) => ({
+          ...prev,
+          teamRole: e.target.value,
+        }))
+      }
+      className={input}
+    >
+      <option value="MEMBER">Team Member</option>
+      <option value="LEAD">Team Lead</option>
+    </select>
+  </div>
+) : (
+  <div>
+    <label className="mb-2 block text-sm text-slate-300">
+      Organization Role
+    </label>
+
+    <select
+      value={inviteForm.role}
+      onChange={(e) =>
+        setInviteForm((prev) => ({
+          ...prev,
+          role: e.target.value,
+        }))
+      }
+      className={input}
+    >
+      <option value="MEMBER">Member</option>
+    </select>
+  </div>
+)}
             <div>
               <label className="mb-2 block text-sm text-slate-300">
                 Role

@@ -117,7 +117,7 @@ async function handleNewMeeting() {
 
       <div className="relative z-10 min-h-screen pt-[64px]">
       <header className="fixed top-0 left-0 right-0 z-50 h-[64px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-6 lg:px-10 shadow-sm">
-          <div className="text-white font-bold text-[18px] tracking-wide">
+      <div className="relative z-10 min-h-screen pt-[64px]">
           <h1 className="text-[#062C5F] font-bold">
   QUORUM
 </h1>
@@ -199,7 +199,7 @@ async function handleNewMeeting() {
           </div>
         </header>
 
-        <div className="flex">
+        <div className="flex items-start">
           <aside
             className="
             hidden md:block
