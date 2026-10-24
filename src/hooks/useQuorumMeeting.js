@@ -11,6 +11,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const publisherRef = useRef(null);
     const subscribersRef = useRef(new Map());
     const pendingIceRef = useRef(new Map());
+    const remoteMediaRef = useRef(new Map());
     const startedRef = useRef(false);
 
     const [status, setStatus] = useState("Connecting");
@@ -59,7 +60,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         subscribersRef.current.clear();
 
         pendingIceRef.current.clear();
-
+        remoteMediaRef.current.forEach((stream) => {
+            stream.getTracks().forEach((track) => track.stop());
+        });
+        remoteMediaRef.current.clear();
         localStreamRef.current ?.getTracks().forEach((track) => {
             track.stop();
         });
@@ -172,7 +176,6 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         pc.addTransceiver(kind, { direction: "recvonly" });
 
-
         pc.ontrack = (event) => {
             console.log("REMOTE TRACK RECEIVED:", {
                 trackId,
@@ -181,8 +184,20 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 readyState: event.track.readyState,
             });
 
-            const stream =
-                event.streams[0] || new MediaStream([event.track]);
+            let stream = remoteMediaRef.current.get(peerId);
+
+            if (!stream) {
+                stream = new MediaStream();
+                remoteMediaRef.current.set(peerId, stream);
+            }
+
+            const alreadyAdded = stream
+                .getTracks()
+                .some((track) => track.id === event.track.id);
+
+            if (!alreadyAdded) {
+                stream.addTrack(event.track);
+            }
 
             setRemoteStreams((previous) => ({
                 ...previous,
@@ -296,6 +311,13 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         socket.on("meeting:participant-left", ({ userId, participants: list }) => {
             setParticipants(list || []);
+
+            const stream = remoteMediaRef.current.get(userId);
+            if (stream) {
+                stream.getTracks().forEach((track) => track.stop());
+                remoteMediaRef.current.delete(userId);
+            }
+
             setRemoteStreams((previous) => {
                 const next = {...previous };
                 delete next[userId];

@@ -12,19 +12,14 @@ import {
   FiMessageCircle,
   FiPhoneOff,
 } from "react-icons/fi";
-
 function RemoteVideo({ stream }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video || !localStream) return;
-
-    if (!screenSharing) {
-        video.srcObject = localStream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream || null;
     }
-}, [localStream, screenSharing]);
+  }, [stream]);
 
   return (
     <video
@@ -35,7 +30,6 @@ function RemoteVideo({ stream }) {
     />
   );
 }
-
 
 function VideoCall() {
   const { user } = useAuth();
@@ -81,29 +75,6 @@ useEffect(() => {
       videoRef.current.srcObject = localStream;
     }
   }, [localStream]);
-
-  async function startCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error("Camera/microphone permission denied:", error);
-    }
-  }
-
-  function stopStream() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
-  }
 
   const screenStreamRef = useRef(null);
   const screenTrackRef = useRef(null);
