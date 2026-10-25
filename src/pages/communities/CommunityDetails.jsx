@@ -106,43 +106,52 @@ function CommunityDetails() {
     const isAdmin = currentUserRole === "ADMIN";
     const canManageMembers = isOwner || isAdmin;
 
-    const loadPosts = useCallback(async () => {
-        if (!communityId) return;
+  
+const loadPosts = useCallback(async ({ silent = false } = {}) => {
+    if (!communityId) return;
+
+    if (!silent) {
         setPostsLoading(true);
+    }
 
-        try {
-            let response;
+    try {
+        let response;
 
-            if (selectedChannelId) {
-                response = await getCommunityChannelPosts(
-                    communityId,
-                    selectedChannelId,
-                    {
-                        limit: 50,
-                        search: feedSearch || undefined,
-                    }
-                );
-            } else {
-                response = await getCommunityPosts(communityId, {
+        if (selectedChannelId) {
+            response = await getCommunityChannelPosts(
+                communityId,
+                selectedChannelId,
+                {
                     limit: 50,
                     search: feedSearch || undefined,
-                });
-            }
-            const result = response?.data?.data ?? response?.data ?? response;
-            const items = Array.isArray(result?.posts)
-                ? result.posts
-                : Array.isArray(result)
-                ? result
-                : [];
+                }
+            );
+        } else {
+            response = await getCommunityPosts(communityId, {
+                limit: 50,
+                search: feedSearch || undefined,
+            });
+        }
 
-            setPosts(items);
-        } catch (err) {
+        const result = response?.data?.data ?? response?.data ?? response;
+        const items = Array.isArray(result?.posts)
+            ? result.posts
+            : Array.isArray(result)
+            ? result
+            : [];
+
+        setPosts(items);
+    } catch (err) {
+        if (!silent) {
             console.error("Failed to load posts:", err);
-  
-        } finally {
+        }
+    } finally {
+        if (!silent) {
             setPostsLoading(false);
         }
-    }, [communityId, selectedChannelId, feedSearch]);
+    }
+}, [communityId, selectedChannelId, feedSearch]);
+
 
     const loadCommunityData = useCallback(async () => {
         if (!communityId) {
@@ -192,15 +201,12 @@ function CommunityDetails() {
 
     useEffect(() => {
         loadPosts();
-
-        // Automatically refresh community posts every 5 seconds.
-        const intervalId = window.setInterval(() => {
-            if (document.visibilityState === "visible") {
-                loadPosts();
-            }
+    
+        const refreshInterval = setInterval(() => {
+            loadPosts({ silent: true });
         }, 5000);
-
-        return () => window.clearInterval(intervalId);
+    
+        return () => clearInterval(refreshInterval);
     }, [loadPosts]);
 
 
