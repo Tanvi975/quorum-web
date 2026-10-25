@@ -192,6 +192,15 @@ function CommunityDetails() {
 
     useEffect(() => {
         loadPosts();
+
+        // Automatically refresh community posts every 5 seconds.
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState === "visible") {
+                loadPosts();
+            }
+        }, 5000);
+
+        return () => window.clearInterval(intervalId);
     }, [loadPosts]);
 
 
