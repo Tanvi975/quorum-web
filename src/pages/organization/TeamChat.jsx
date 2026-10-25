@@ -70,40 +70,73 @@ function TeamChat({ organizationId, team, onClose }) {
   const bottomRef = useRef(null);
   const loadedConversationRef = useRef("");
 
-  const loadMessages = useCallback(async () => {
+
+  const loadMessages = useCallback(async ({ silent = false } = {}) => {
     if (!organizationId || !teamId) return;
-
-    setLoading(true);
-    setError("");
-
+  
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
+  
     try {
       const result = await getTeamMessages(organizationId, teamId);
       const loadedMessages = normalizeMessages(result);
-
+  
       const nextConversationId =
         result?.conversationId ||
         result?.data?.conversationId ||
         loadedMessages[0]?.conversationId ||
         "";
-
-      setMessages(loadedMessages);
-      setConversationId(nextConversationId);
+  
+      setMessages((previous) => {
+        const unchanged =
+          previous.length === loadedMessages.length &&
+          previous.every((message, index) => {
+            const next = loadedMessages[index];
+  
+            return (
+              String(getMessageId(message)) === String(getMessageId(next)) &&
+              message.content === next.content &&
+              message.updatedAt === next.updatedAt &&
+              message.isPinned === next.isPinned
+            );
+          });
+  
+        return unchanged ? previous : loadedMessages;
+      });
+  
+      if (nextConversationId) {
+        setConversationId(nextConversationId);
+      }
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Team messages load nahi ho paaye."
-      );
+      if (!silent) {
+        setError(
+          err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            "Team messages load nahi ho paaye."
+        );
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [organizationId, teamId]);
+  
 
   useEffect(() => {
     loadedConversationRef.current = "";
     setMessages([]);
     setConversationId("");
     loadMessages();
+  }, [loadMessages]);
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      loadMessages({ silent: true });
+    }, 5000);
+  
+    return () => clearInterval(refreshInterval);
   }, [loadMessages]);
 
   useEffect(() => {
