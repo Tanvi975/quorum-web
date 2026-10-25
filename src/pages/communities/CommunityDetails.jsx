@@ -140,7 +140,24 @@ const loadPosts = useCallback(async ({ silent = false } = {}) => {
             ? result
             : [];
 
-        setPosts(items);
+            setPosts((prev) => {
+                const getId = (post) => String(post.id || post._id);
+            
+                const unchanged =
+                    prev.length === items.length &&
+                    prev.every((post, index) => {
+                        const next = items[index];
+            
+                        return (
+                            getId(post) === getId(next) &&
+                            post.content === next.content &&
+                            post.updatedAt === next.updatedAt &&
+                            post.fileUrl === next.fileUrl
+                        );
+                    });
+            
+                return unchanged ? prev : items;
+            });
     } catch (err) {
         if (!silent) {
             console.error("Failed to load posts:", err);
