@@ -114,9 +114,9 @@ function DashboardOverview({
   return (
     <section className="mt-5 space-y-5">
       
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-[1.55fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.55fr_1fr]">
         
-        <div className={`${cardStyle} min-w-0 p-4 sm:p-5 lg:p-6`}>
+        <div className={`${cardStyle} min-w-0 p-5 sm:p-6`}>
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ function DashboardOverview({
               {upcomingEvents.slice(0, 4).map((event, index) => (
                 <div
                   key={event.id || event._id || `${event.title}-${index}`}
-                  className="group flex min-w-0 flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-300 hover:bg-blue-50 sm:flex-nowrap sm:gap-4"
+                  className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-300 hover:bg-blue-50 sm:gap-4"
                 >
                   <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50">
                     <span className="text-lg font-bold leading-5 text-slate-900">
@@ -332,7 +332,7 @@ function DashboardOverview({
                   type="button"
                   title={hasMeeting ? "Meeting scheduled" : dateKey}
                   onClick={() => navigate("/calendar")}
-                  className={`relative flex h-8 items-center justify-center rounded-lg text-xs transition sm:h-9 ${
+                  className={`relative flex h-9 items-center justify-center rounded-lg text-xs transition ${
                     isToday
                       ? "bg-[#0068FF] font-bold text-white shadow-md shadow-blue-950/30"
                       : hasMeeting
@@ -378,7 +378,7 @@ function DashboardOverview({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           
           <button
             type="button"

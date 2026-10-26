@@ -32,6 +32,7 @@ import InvitePreview from "./pages/organization/InvitePreview";
 import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
 import Calendar from "./pages/Calendar";
 import SavedItems from "./pages/SavedItems";
+import MobileBottomNav from "./components/MobileBottomNav";
 
 import api from "./services/api";
 
@@ -71,60 +72,13 @@ function App() {
 
           <Route path="/join/:token" element={<InvitePreview />} />
           <Route path="/invites/organization" element={<InvitePreview />} />
-          <Route
-            path="/communities/invites/:token"
-            element={<CommunityInvite />}
-          />
-
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/video-call"
-            element={
-              <ProtectedRoute>
-                <VideoCall />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/meet/:code"
-            element={
-              <ProtectedRoute>
-                <MeetRedirect />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/organizations"
-            element={
-              <ProtectedRoute>
-                <OrganizationsList />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/organizations/:organizationId"
-            element={
-              <ProtectedRoute>
+          <Route path="/communities/invites/:token" element={<CommunityInvite />} /> <Route
+            path="/dashboard" element={ <ProtectedRoute> <Dashboard /> </ProtectedRoute> }/>
+           <Route path="/video-call" element={ <ProtectedRoute><VideoCall /></ProtectedRoute> } />
+           <Route path="/meet/:code"element={ <ProtectedRoute><MeetRedirect /> </ProtectedRoute>  } />
+           <Route path="/chat" element={<ProtectedRoute><Chat /> </ProtectedRoute> }/>
+          <Route path="/organizations" element={ <ProtectedRoute><OrganizationsList /></ProtectedRoute> }/>
+           <Route path="/organizations/:organizationId" element={ <ProtectedRoute>
                 <OrganizationWorkspace />
               </ProtectedRoute>
             }

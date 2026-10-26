@@ -15,11 +15,21 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  function login(userData, accessToken) {
+
+  function login(userData, accessToken, rememberMe = false) {
     setUser(userData);
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("user", JSON.stringify(userData));
+  
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("user");
+  
+    const storage = rememberMe ? localStorage : sessionStorage;
+  
+    storage.setItem("accessToken", accessToken);
+    storage.setItem("user", JSON.stringify(userData));
   }
+  
   
   function logout() {
     setUser(null);

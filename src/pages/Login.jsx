@@ -10,6 +10,7 @@ import illustration1 from "../assets/team-illustration-1.svg";
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -38,7 +39,7 @@ function Login() {
     setLoading(true);
     try {
       const res = await loginUser(email, password);
-      login(res.data.user, res.data.accessToken);
+      login(res.data.user, res.data.accessToken, rememberMe);
       if (res.data.user.isOnboarded) {
       navigate("/dashboard");
       } else {
@@ -123,6 +124,19 @@ function Login() {
             </Link>
           }
         />
+
+<div className="mt-3 mb-2 flex items-center">
+  <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+    <input
+      type="checkbox"
+      checked={rememberMe}
+      onChange={(e) => setRememberMe(e.target.checked)}
+      className="h-4 w-4 rounded border-gray-300 accent-[#2563EB]"
+    />
+    Remember me
+  </label>
+</div>
+
         <div className="min-h-5 mt-2 mb-4 flex items-center justify-center">
           {errors.form && (
            <p className="w-full max-w-full break-words text-xs text-red-500 text-center">

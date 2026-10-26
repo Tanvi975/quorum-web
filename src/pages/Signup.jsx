@@ -11,6 +11,7 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
 
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ function Signup() {
       await registerUser(fullName, email, password);
 
       navigate("/verify-code", {
-        state: { email, from: "signup" },
+        state: { email, from: "signup", rememberMe },
       });
     } catch (err) {
       const status = err.response && err.response.status;
@@ -136,7 +137,17 @@ function Signup() {
           placeholder="Re-enter your password"
           error={errors.confirmPassword}
         />
-
+<div className="mt-3 mb-2 flex items-center">
+  <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+    <input
+      type="checkbox"
+      checked={rememberMe}
+      onChange={(e) => setRememberMe(e.target.checked)}
+      className="h-4 w-4 rounded border-gray-300 accent-[#2563EB]"
+    />
+    Remember me
+  </label>
+</div>
         <div className="h-5 mb-2">
           {errors.form && (
            <p className="w-full max-w-full break-words text-xs text-red-500 text-center">
