@@ -152,10 +152,10 @@ useEffect(() => {
 }
 
   return (
-    <div className="min-h-screen bg-[#06182F] text-white flex flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[#06182F] text-white">
 
       {/* Top Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-white/10 bg-[#071D38]">
+      <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#071D38] px-3 sm:px-6">
 
         <div>
           <h1 className="text-base font-semibold">
@@ -235,15 +235,15 @@ useEffect(() => {
 
 
       {/* Main Meeting Area */}
-      <main className="flex-1 p-4 md:p-6 relative">
-  <div className="flex gap-3 h-full min-h-[520px]">
-
+      <main className="relative min-h-0 flex-1 overflow-hidden p-2 sm:p-4 md:p-6">
+      <div className="relative flex h-full min-h-0 min-w-0 gap-3 overflow-hidden">
   <div
-  className={`grid grid-cols-2 gap-3 h-full min-h-[520px] ${
-    showChat ? "flex-1 min-w-0" : "w-full"
-  }`}
+  className="grid h-full min-h-0 min-w-0 flex-1 gap-2 overflow-hidden sm:gap-3"
+  style={{
+    gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(Object.keys(remoteStreams).length + 1))}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${Math.ceil((Object.keys(remoteStreams).length + 1) / Math.ceil(Math.sqrt(Object.keys(remoteStreams).length + 1)))}, minmax(0, 1fr))`,
+  }}
 >
-
           {/* My Video */}
           <div className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/50">
 
@@ -257,9 +257,10 @@ useEffect(() => {
 
             {isVideoOff && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
-                <div className="w-16 h-16 rounded-full bg-[#1C4D7C] flex items-center justify-center text-xl font-semibold">
-                  T
-                </div>
+               {(user?.name || user?.username || "You")
+               .trim()
+               .charAt(0)
+               .toUpperCase()}
               </div>
             )}
 
@@ -269,10 +270,7 @@ useEffect(() => {
             </div>
 
           </div>
-        
-
-       
- 
+   
 {/* Actual Remote Participants */}
 {Object.entries(remoteStreams).map(([peerId, remoteStream]) => {
   const participant = participants.find(
@@ -287,7 +285,13 @@ useEffect(() => {
       className="relative rounded-xl overflow-hidden bg-[#0B2344] border border-[#0B8FD8]/40 flex items-center justify-center min-h-[200px]"
     >
       <RemoteVideo stream={remoteStream} />
-
+{(participant?.isVideoOff || participant?.cameraOff) && (
+  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
+    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C4D7C] text-2xl font-semibold">
+      {(participant?.name || "Guest").trim().charAt(0).toUpperCase()}
+    </div>
+  </div>
+)}
       <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-md bg-black/60 text-xs">
       {participant?.name ||
   participants.find(
@@ -315,7 +319,7 @@ useEffect(() => {
            {/* Chat Panel */}
          
 {showChat && (
-  <div className="w-72 shrink-0 h-full rounded-xl bg-[#0B2344] border border-white/10 shadow-xl p-4 flex flex-col">
+  <div className="flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0B2344] p-4">
     <h3 className="font-semibold text-sm mb-4">
       Meeting Chat
     </h3>
@@ -418,14 +422,14 @@ useEffect(() => {
       </main>
 
       {/* Bottom partt */}
-      <footer className="h-20 border-t border-white/10 bg-[#071D38] flex items-center justify-center gap-3">
+      <footer className="flex h-20 shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 sm:gap-3">
 
         <button
           onClick={toggleMic}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
             !isMuted
               ? "bg-white/10 hover:bg-white/20"
-              : "bg-red-500/80"
+              : "bg-white/10 hover:bg-white/20"
           }`}
           title={!isMuted ? "Mute microphone" : "Unmute microphone"}
         >
@@ -437,7 +441,7 @@ useEffect(() => {
           className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
             isVideoOff
               ? "bg-white/10 hover:bg-white/20"
-              : "bg-red-500/80"
+              : "bg-white/10 hover:bg-white/20"
           }`}
           title={isVideoOff ? "Turn camera off" : "Turn camera on"}
         >
@@ -448,7 +452,7 @@ useEffect(() => {
           onClick={toggleScreenShare}
           className={`w-11 h-11 rounded-full flex items-center justify-center transition ${
             screenSharing
-              ? "bg-[#087FBF]"
+              ? "bg-white/10 hover:bg-white/20"
               : "bg-white/10 hover:bg-white/20"
           }`}
           title="Share screen"
@@ -456,19 +460,29 @@ useEffect(() => {
           <FiMonitor size={18} />
         </button>
 
-        <button
-          onClick={() => setShowParticipants(!showParticipants)}
-          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
-          title="Participants"
-        >
+      
+<button
+  onClick={() => {
+    setShowParticipants((open) => !open);
+    setShowChat(false);
+  }}
+  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+  title="Participants"
+>
+
           <FiUsers size={18} />
         </button>
 
-        <button
-          onClick={() => setShowChat(!showChat)}
-          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
-          title="Chat"
-        >
+     
+<button
+  onClick={() => {
+    setShowChat((open) => !open);
+    setShowParticipants(false);
+  }}
+  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+  title="Chat"
+>
+
           <FiMessageCircle size={18} />
         </button>
 

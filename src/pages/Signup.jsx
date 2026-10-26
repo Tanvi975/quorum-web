@@ -94,7 +94,7 @@ function Signup() {
       leftSubtitle="Integrated whiteboards and live agendas to keep projects moving forward."
       leftImage={illustration2}
     >
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} noValidate className="w-full min-w-0">
         <AuthInput
           label="Full Name"
           value={fullName}
@@ -139,14 +139,16 @@ function Signup() {
 
         <div className="h-5 mb-2">
           {errors.form && (
-            <p className="text-xs text-red-500 text-center">{errors.form}</p>
+           <p className="w-full max-w-full break-words text-xs text-red-500 text-center">
+           {errors.form}
+         </p>
           )}
         </div>
 
         <AuthButton>Create Account</AuthButton>
       </form>
 
-      <p className="text-center text-sm text-gray-600 mt-4">
+      <p className="mt-4 w-full min-w-0 text-center text-sm text-gray-600 break-words">
         Already have an account?{" "}
         <Link to="/login" className="text-[#2563EB] text-sm font-medium underline">
           Sign In

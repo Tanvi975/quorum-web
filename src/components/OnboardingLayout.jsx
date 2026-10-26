@@ -2,13 +2,13 @@ import DashboardBackground from "./DashboardBackground";
 
 function OnboardingLayout({ stepLabel, children }) {
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ backgroundColor: "#062C5F" }}>
+    <div className="relative isolate min-h-screen overflow-x-hidden" style={{ backgroundColor: "#062C5F" }}>
       <DashboardBackground />
-      <div className="relative z-10 min-h-screen flex items-start justify-center pt-24 px-4">
+      <div className="relative z-10 flex min-h-screen items-start justify-center px-3 py-8 sm:px-5 sm:py-12 md:py-16 lg:py-20">
       <div
-        className="w-full max-w-[900px] rounded-xl p-5 sm:p-6 md:px-10 md:py-5"
+       className="w-full max-w-[900px] min-w-0 rounded-xl p-4 sm:p-6 md:px-10 md:py-6"
         style={{
-        backgroundColor: "rgba(215, 215, 215, 0.25)",
+        backgroundColor: "rgba(247, 246, 242, 0.18)",
         border: "1px solid rgba(255, 255, 255, 0.14)",
         boxShadow: "0 24px 48px rgba(0, 0, 0, 0.5)",
         }}

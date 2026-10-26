@@ -144,7 +144,7 @@ function VerifyCode() {
   leftImage={illustration1}
 >
       <form onSubmit={handleSubmit}>
-        <div className="flex justify-center gap-2 mb-1">
+      <div className="mb-1 flex w-full min-w-0 justify-center gap-1.5 sm:gap-2">
           {code.map((digit, index) => (
             <input
               key={index}
@@ -156,21 +156,21 @@ function VerifyCode() {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-11 h-12 text-center rounded-xl bg-gray-100 border border-gray-300 outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-12 w-10 min-w-0 shrink rounded-xl border border-gray-300 bg-gray-100 text-center text-base outline-none focus:ring-2 focus:ring-blue-500 sm:w-11 sm:shrink-0"
             />
           ))}
         </div>
 
         {error && (
-          <p className="text-xs text-red-500 text-center mb-2">
-            {error}
-          </p>
+         <p className="mb-2 w-full break-words text-center text-xs text-red-500">
+         {error}
+       </p>
         )}
 
         {info && (
-          <p className="text-xs text-green-700 text-center mb-2">
-            {info}
-          </p>
+          <p className="mb-2 w-full break-words text-center text-xs text-green-700">
+          {info}
+        </p>
         )}
 
         <div className="text-right mb-6">

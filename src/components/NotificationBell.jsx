@@ -290,8 +290,7 @@ function NotificationBell() {
       {isOpen && (
         <section
           aria-label="Notifications"
-          className="absolute right-0 top-12 z-50 w-[min(92vw,390px)] overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-xl"
-        >
+className="fixed left-3 right-3 top-[76px] z-[60] mx-auto max-w-[390px] overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:mx-0 sm:w-[390px] sm:max-w-[min(92vw,390px)]">
           <div className="flex items-center justify-between border-b border-[#E2E8F0] px-4 py-3">
             <div>
               <h2 className="text-sm font-semibold text-[#062C5F]">

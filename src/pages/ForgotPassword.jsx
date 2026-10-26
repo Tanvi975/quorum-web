@@ -48,7 +48,7 @@ function ForgotPassword() {
     leftSubtitle="Connected video spaces designed to bridge teams everywhere."
     leftImage={illustration3}
   >
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} noValidate className="w-full min-w-0">
         <AuthInput
           label="Email"
           type="email"
@@ -60,7 +60,7 @@ function ForgotPassword() {
         <AuthButton>Send Code</AuthButton>
       </form>
 
-      <p className="text-center text-sm text-gray-600 mt-4">
+      <p className="mt-4 w-full min-w-0 text-center text-sm text-gray-600 break-words">
         Already have an account?{" "}
         <Link to="/login" className="text-[#2563EB] font-medium underline">
         Sign In

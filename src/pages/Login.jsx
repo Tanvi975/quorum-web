@@ -117,7 +117,7 @@ function Login() {
           belowRight={
             <Link
               to="/forgot-password"
-              className="text-[#2563EB] text-xs font-medium underline whitespace-nowrap"
+              className="text-[#2563EB] text-xs font-medium underline whitespace-nowrap shrink-0"
             >
               Forgot password?
             </Link>
@@ -125,7 +125,9 @@ function Login() {
         />
         <div className="min-h-5 mt-2 mb-4 flex items-center justify-center">
           {errors.form && (
-            <p className="text-xs text-red-500 text-center">{errors.form}</p>
+           <p className="w-full max-w-full break-words text-xs text-red-500 text-center">
+           {errors.form}
+         </p>
           )}
         </div>
         <AuthButton disabled={loading}>

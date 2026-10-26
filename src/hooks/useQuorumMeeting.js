@@ -25,7 +25,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [isVideoOff, setIsVideoOff] = useState(false);
 
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc ?.remoteDescription) return;
+        if (!pc?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
