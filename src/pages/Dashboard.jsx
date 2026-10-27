@@ -118,10 +118,10 @@ async function handleNewMeeting() {
       <div className="relative z-10 flex h-dvh min-h-0 flex-col">
       
      
-<header className="sticky top-0 z-50 flex h-16 min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-3 shadow-sm sm:px-5 lg:px-8">
+      <header className="sticky top-0 z-50 flex h-16 min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#062C5F] px-3 shadow-sm sm:px-5 lg:px-8">
 
      
-          <h1 className="text-[#062C5F] font-bold">
+      <h1 className="font-bold text-white">
   QUORUM
 </h1>
           
@@ -201,76 +201,8 @@ async function handleNewMeeting() {
 
           </div>
         </header>
-
         <div className="flex min-h-0 min-w-0 flex-1">
-          <aside
-            className="hidden h-full w-[76px] shrink-0 overflow-y-auto md:block lg:w-[220px] bg-[#062C5F]/90 border-r border-white/10">
-           <div className="flex flex-col items-stretch pt-6 px-2 lg:px-3 gap-2">
-  <button
-    title="Home"
-    onClick={() => navigate("/dashboard")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl bg-white/15 text-white px-2 py-3 lg:px-3"
-  >
-    <FiHome className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Home</span>
-  </button>
-
-  <button
-    title="Meetings"
-    onClick={() => navigate("/calendar")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
-  >
-    <FiCalendar className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Meetings</span>
-  </button>
-
-  <button
-    title="Saved Items"
-    onClick={() => navigate("/saved-items")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
-  >
-    <FiBookmark className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Saved Items</span>
-  </button>
- 
-<button
-  title="AI Assistant"
-  onClick={() => navigate("/ai-assistant")}
-  className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
->
-  <FiCpu className="w-5 h-5 shrink-0" />
-  <span className="text-[11px] lg:text-sm">AI Assistant</span>
-</button>
-
-  <button
-    title="Organizations"
-    onClick={() => navigate("/organization")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
-  >
-    <FiUsers className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Organizations</span>
-  </button>
-
-  <button
-    title="Chat"
-    onClick={() => navigate("/chat")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
-  >
-    <FiMessageCircle className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Chat</span>
-  </button>
-
-  <button
-    title="Communities"
-    onClick={() => navigate("/communities")}
-    className="flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1 lg:gap-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white px-2 py-3 lg:px-3 transition"
-  >
-    <FiGlobe className="w-5 h-5 shrink-0" />
-    <span className="text-[11px] lg:text-sm">Communities</span>
-  </button>
-</div>
-          </aside>
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">
+  <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">
 
             <div className="max-w-[1180px] mx-auto">
               <section

@@ -35,6 +35,7 @@ import QuorumAIAssistant from "./pages/ai/QuorumAIAssistant";
 import Calendar from "./pages/Calendar";
 import SavedItems from "./pages/SavedItems";
 import MobileBottomNav from "./components/MobileBottomNav";
+import CreateCommunity from "./pages/communities/CreateCommunity";
 
 import api from "./services/api";
 
@@ -99,107 +100,20 @@ function App() {
            <Route path="/video-call" element={ <ProtectedRoute><VideoCall /></ProtectedRoute> } />
            <Route path="/meet/:code"element={ <ProtectedRoute><MeetRedirect /> </ProtectedRoute>  } />
            <Route path="/chat" element={<ProtectedRoute><Chat /> </ProtectedRoute> }/>
-          <Route path="/organizations" element={ <ProtectedRoute><OrganizationsList /></ProtectedRoute> }/>
-           <Route path="/organizations/:organizationId" element={ <ProtectedRoute>
-                <OrganizationWorkspace />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/organization"
-            element={
-              <ProtectedRoute>
-                <Organization />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/organization/create"
-            element={
-              <ProtectedRoute>
-                <CreateOrganization />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/organization/join"
-            element={
-              <ProtectedRoute>
-                <JoinOrganization />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/communities"
-            element={
-              <ProtectedRoute>
-                <Communities />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/communities/:communityId"
-            element={
-              <ProtectedRoute>
-                <CommunityDetails />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/communities/:communityId/posts/:postId"
-            element={
-              <ProtectedRoute>
-                <CommunityDetails />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/onboarding/step-1"
-            element={
-              <ProtectedRoute>
-                <OnboardingStep1 />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/ai-assistant"
-            element={
-              <ProtectedRoute>
-                <QuorumAIAssistant />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/calendar"
-            element={
-              <ProtectedRoute>
-                <Calendar />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/saved-items"
-            element={
-              <ProtectedRoute>
-                <SavedItems />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="*"
-            element={<Navigate to="/dashboard" replace />}
-          />
+           <Route path="/organizations" element={ <ProtectedRoute><OrganizationsList /></ProtectedRoute> }/>
+          <Route path="/organizations/:organizationId" element={ <ProtectedRoute> <OrganizationWorkspace /> </ProtectedRoute> } />
+          <Route path="/organization" element={<ProtectedRoute><Organization /></ProtectedRoute>} />
+          <Route path="/organization/create" element={<ProtectedRoute><CreateOrganization /></ProtectedRoute>} />
+          <Route path="/organization/join" element={<ProtectedRoute><JoinOrganization /></ProtectedRoute>} />
+          <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
+          <Route path="/communities/create" element={<ProtectedRoute><CreateCommunity /></ProtectedRoute>} />
+          <Route path="/communities/:communityId" element={<ProtectedRoute><CommunityDetails /></ProtectedRoute>} />
+          <Route path="/communities/:communityId/posts/:postId" element={<ProtectedRoute><CommunityDetails /></ProtectedRoute>} />
+          <Route path="/onboarding/step-1" element={<ProtectedRoute><OnboardingStep1 /></ProtectedRoute>} />
+          <Route path="/ai-assistant" element={<ProtectedRoute><QuorumAIAssistant /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+          <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -108,8 +108,8 @@ function CommunityInvite() {
 
     return (
         <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#061B38] via-[#062C5F] to-[#04152D] p-6 text-white">
-            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] shadow-2xl backdrop-blur-xl">
-                <div className="border-b border-white/10 bg-white/[0.02] p-6 text-center">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#8BB9E8]/25 bg-[#123B6A]/50 shadow-2xl backdrop-blur-xl">
+                <div className="border-b border-[#8BB9E8]/15 bg-[#315A83]/20 p-6 text-center">
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-200">
                         <FiUsers size={32} />
                     </div>

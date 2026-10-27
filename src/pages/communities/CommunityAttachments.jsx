@@ -1,6 +1,7 @@
+
 import { useEffect, useState } from "react";
 
-const MAX_SIZE = 26214400; 
+const MAX_SIZE = 26214400;
 
 export function formatSize(bytes = 0) {
     if (!bytes || isNaN(bytes)) return "";
@@ -28,16 +29,16 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
     const isDoc = fileType === "document" || /\.(pdf|docx?|xlsx?|pptx?|txt)$/i.test(fileUrl || "");
 
     return (
-        <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+        <div className="mt-3 overflow-hidden rounded-xl border border-white/30 bg-[#DCEBFA]/25 backdrop-blur-sm">
             {isImage ? (
-                <div className="group relative max-h-96 overflow-hidden bg-black/20">
+                <div className="group relative max-h-96 overflow-hidden bg-white/10">
                     <img
                         src={fileUrl}
                         alt={fileName || "Post attachment"}
                         loading="lazy"
                         className="max-h-96 w-full object-contain transition group-hover:scale-[1.01]"
                     />
-                    <div className="flex items-center justify-between border-t border-white/10 bg-[#071B35]/90 p-2.5 text-xs text-blue-100">
+                    <div className="flex items-center justify-between border-t border-white/20 bg-[#DCEBFA]/30 p-2.5 text-xs text-blue-950">
                         <span className="truncate">{fileName || "Image"}</span>
                         <div className="flex items-center gap-3">
                             {fileSize && <span>{formatSize(fileSize)}</span>}
@@ -46,7 +47,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 download={fileName || true}
-                                className="font-semibold text-blue-300 hover:text-white"
+                                className="font-semibold text-blue-700 hover:text-blue-950"
                             >
                                 Open ↗
                             </a>
@@ -54,7 +55,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                                 <button
                                     type="button"
                                     onClick={onRemove}
-                                    className="text-red-300 hover:text-red-200"
+                                    className="text-red-600 hover:text-red-700"
                                 >
                                     Remove
                                 </button>
@@ -63,14 +64,14 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                     </div>
                 </div>
             ) : (
-                <div className="flex items-center justify-between gap-3 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3 p-3 text-sm text-blue-950">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-xl text-blue-200">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/35 text-xl text-blue-800">
                             {isDoc ? "📄" : "📁"}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-white">{fileName || "Attached file"}</p>
-                            <p className="mt-0.5 text-xs text-blue-100/60">
+                            <p className="truncate font-medium text-blue-950">{fileName || "Attached file"}</p>
+                            <p className="mt-0.5 text-xs text-blue-900/70">
                                 {fileType || (isDoc ? "document" : "file")}
                                 {fileSize ? ` · ${formatSize(fileSize)}` : ""}
                             </p>
@@ -83,7 +84,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                             target="_blank"
                             rel="noopener noreferrer"
                             download={fileName || true}
-                            className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-200 transition hover:bg-blue-500/30 hover:text-white"
+                            className="rounded-lg border border-white/30 bg-white/35 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-white/60"
                         >
                             Download ↓
                         </a>
@@ -91,7 +92,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                             <button
                                 type="button"
                                 onClick={onRemove}
-                                className="rounded-lg px-2 py-1.5 text-xs text-red-300 hover:bg-red-500/10"
+                                className="rounded-lg px-2 py-1.5 text-xs text-red-600 hover:bg-red-500/10"
                             >
                                 Remove
                             </button>
@@ -157,7 +158,7 @@ export default function CommunityAttachments({
     return (
         <div className="space-y-3">
             {value ? (
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex items-center gap-3 rounded-xl border border-white/30 bg-[#DCEBFA]/25 p-3 shadow-sm backdrop-blur-sm">
                     {value.fileType === "image" && previewUrl ? (
                         <img
                             src={previewUrl}
@@ -165,16 +166,16 @@ export default function CommunityAttachments({
                             className="h-16 w-16 rounded-lg object-cover"
                         />
                     ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-400/10 text-xl text-blue-200">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/35 text-xl text-blue-800">
                             {value.fileType === "document" ? "▤" : "↗"}
                         </div>
                     )}
 
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-sm font-semibold text-blue-950">
                             {value.fileName}
                         </p>
-                        <p className="mt-1 text-xs text-blue-100/60">
+                        <p className="mt-1 text-xs text-blue-900/70">
                             {value.fileType} · {formatSize(value.fileSize)}
                         </p>
                     </div>
@@ -183,21 +184,23 @@ export default function CommunityAttachments({
                         type="button"
                         disabled={disabled}
                         onClick={removeAttachment}
-                        className="rounded-lg px-3 py-2 text-sm text-red-200 hover:bg-red-500/10 disabled:opacity-50"
+                        className="rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-500/10 disabled:opacity-50"
                     >
                         Remove
                     </button>
                 </div>
             ) : (
-                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/[0.025] p-4 transition hover:border-blue-300/50 hover:bg-blue-400/[0.05] ${disabled ? "pointer-events-none opacity-50" : ""}`}>
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-400/10 text-xl text-blue-200">
+                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/50 bg-[#DCEBFA]/25 p-4 shadow-sm backdrop-blur-sm transition hover:border-blue-300 hover:bg-white/35 ${
+                    disabled ? "pointer-events-none opacity-50" : ""
+                }`}>
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/40 bg-white/35 text-xl text-blue-800">
                         ↥
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-white">
+                        <span className="block text-sm font-semibold text-blue-950">
                             Attach a file
                         </span>
-                        <span className="mt-1 block text-xs text-blue-100/55">
+                        <span className="mt-1 block text-xs text-blue-900/70">
                             Images, documents or files · Max 25 MiB
                         </span>
                     </span>
@@ -211,7 +214,7 @@ export default function CommunityAttachments({
             )}
 
             {error && (
-                <p role="alert" className="text-sm text-red-200">{error}</p>
+                <p role="alert" className="text-sm text-red-700">{error}</p>
             )}
         </div>
     );

@@ -1,14 +1,9 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
 import {
-  FiHome,
+  FiArrowLeft,
   FiCalendar,
-  FiBookmark,
-  FiUsers,
-  FiMessageCircle,
-  FiGlobe,
   FiChevronLeft,
   FiChevronRight,
   FiPlus,
@@ -16,6 +11,7 @@ import {
   FiClock,
   FiTrash2,
   FiExternalLink,
+  FiVideo,
 } from "react-icons/fi";
 import {
   getCalendarMonth,
@@ -24,10 +20,13 @@ import {
   deleteCalendarEvent,
 } from "../services/calendarService";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/* ------------------------------------------------------------------ */
+/* Constants                                                           */
+/* ------------------------------------------------------------------ */
+
+const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 300;
-const MAX_LINK = 500;
 
 const emptyForm = {
   title: "",
@@ -37,6 +36,26 @@ const emptyForm = {
   description: "",
   attendeeEmails: "",
 };
+
+// Figma: Card & Sidebar #212F44 + glass border/blur
+const GLASS = {
+  background: "rgba(33, 47, 68, 0.88)",
+  border: "1px solid rgba(255, 255, 255, 0.14)",
+  boxShadow: "0 18px 45px rgba(2, 16, 38, 0.35)",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+};
+
+const PRIMARY_GRADIENT = { background: "linear-gradient(135deg, #0066FF, #0148B3)" };
+
+const inputClass =
+  "w-full rounded-xl border border-white/30 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/50 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/20";
+
+const labelClass = "mb-1.5 block text-sm font-medium text-white/90";
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
 
 function toDateKey(date) {
   const year = date.getFullYear();
@@ -54,6 +73,7 @@ function formatMonth(date) {
 
 function formatEventDate(dateKey) {
   const [year, month, day] = dateKey.split("-").map(Number);
+
   return new Date(year, month - 1, day).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -76,33 +96,47 @@ function mapApiEvent(event) {
   };
 }
 
+function GlassPanel({ children, className = "" }) {
+  return (
+    <section
+      className={`min-w-0 rounded-2xl p-4 sm:p-5 ${className}`}
+      style={GLASS}
+    >
+      {children}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Component                                                           */
+/* ------------------------------------------------------------------ */
+
 function Calendar() {
   const navigate = useNavigate();
-
   const todayKey = toDateKey(new Date());
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
+
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [events, setEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [ upcomingEvents , setUpcomingEvents] = useState([]);
-const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [calendarError, setCalendarError] = useState("");
   const [deletingEventId, setDeletingEventId] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
-  const [form, setForm] = useState({
-    ...emptyForm,
-    date: todayKey,
-  });
   const [formError, setFormError] = useState("");
+  const [form, setForm] = useState({ ...emptyForm, date: todayKey });
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
+
+  /* ----------------------------- data ----------------------------- */
 
   async function loadCalendarEvents(targetYear, targetMonth) {
     setLoadingEvents(true);
@@ -120,9 +154,10 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
       setLoadingEvents(false);
     }
   }
+
   async function loadUpcomingEvents() {
     setLoadingUpcoming(true);
-  
+
     try {
       const result = await getUpcomingEvents(5);
       setUpcomingEvents(Array.isArray(result) ? result.map(mapApiEvent) : []);
@@ -135,34 +170,54 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
       setLoadingUpcoming(false);
     }
   }
+
   useEffect(() => {
     loadCalendarEvents(year, month);
   }, [year, month]);
-  
+
   useEffect(() => {
     loadUpcomingEvents();
   }, []);
 
+  /* ---------------------------- derived --------------------------- */
+
+  // Previous / next month ke dates dimmed dikhte hain (Figma)
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
     const mondayOffset = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(year, month, 0).getDate();
+    const prevMonthDays = new Date(year, month - 1, 0).getDate();
     const cells = [];
 
     for (let i = 0; i < mondayOffset; i++) {
-      cells.push(null);
+      cells.push({
+        key: `prev-${i}`,
+        dateKey: null,
+        day: prevMonthDays - mondayOffset + 1 + i,
+      });
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      cells.push(toDateKey(new Date(year, month - 1, day)));
+      const dateKey = toDateKey(new Date(year, month - 1, day));
+      cells.push({ key: dateKey, dateKey, day });
     }
 
+    let nextDay = 1;
     while (cells.length % 7 !== 0) {
-      cells.push(null);
+      cells.push({ key: `next-${nextDay}`, dateKey: null, day: nextDay });
+      nextDay++;
     }
 
     return cells;
   }, [year, month]);
+
+  const todayEvents = useMemo(
+    () =>
+      events
+        .filter((event) => event.date === todayKey)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [events, todayKey]
+  );
 
   const selectedEvents = useMemo(
     () =>
@@ -172,14 +227,21 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
     [events, selectedDate]
   );
 
+  const selectedDateLabel = useMemo(() => {
+    const [y, m, d] = selectedDate.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }, [selectedDate]);
+
+  /* ---------------------------- actions --------------------------- */
+
   function changeMonth(offset) {
     setCurrentMonth(
       (previous) =>
-        new Date(
-          previous.getFullYear(),
-          previous.getMonth() + offset,
-          1
-        )
+        new Date(previous.getFullYear(), previous.getMonth() + offset, 1)
     );
   }
 
@@ -211,7 +273,7 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
 
     const title = form.title.trim();
     const description = form.description.trim();
-    
+
     const attendeeEmails = [
       ...new Set(
         form.attendeeEmails
@@ -220,11 +282,11 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
           .filter(Boolean)
       ),
     ];
-    
+
     const invalidEmail = attendeeEmails.find(
       (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     );
-    
+
     if (invalidEmail) {
       setFormError(`Please enter a valid email: ${invalidEmail}`);
       return;
@@ -267,10 +329,6 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
       return;
     }
 
-    if (!Array.isArray(attendeeEmails)) {
-      setFormError("Please enter valid attendee emails.");
-      return;
-    }
     const startDate = new Date(`${form.date}T${form.startTime}:00`);
     const endDate = new Date(`${form.date}T${form.endTime}:00`);
 
@@ -278,35 +336,36 @@ const [loadingUpcoming, setLoadingUpcoming] = useState(false);
     setFormError("");
 
     try {
-const meeting = await createMeeting();
+      const meeting = await createMeeting();
 
-if (!meeting?.code || !meeting?.link) {
-  throw new Error("Meeting API did not return a valid meeting link.");
-}
-await createCalendarEvent({
-  title,
-  description,
-  eventType: "MEETING",
-  startDate: startDate.toISOString(),
-  endDate: endDate.toISOString(),
-  isAllDay: false,
-  meetingLink: meeting.link,
-  attendeeEmails,
-  hasReminder: true,
-  reminderMinutes: 15,
-});
+      if (!meeting?.code || !meeting?.link) {
+        throw new Error("Meeting API did not return a valid meeting link.");
+      }
+
+      await createCalendarEvent({
+        title,
+        description,
+        eventType: "MEETING",
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        isAllDay: false,
+        meetingLink: meeting.link,
+        attendeeEmails,
+        hasReminder: true,
+        reminderMinutes: 15,
+      });
 
       setSelectedDate(form.date);
 
       const [eventYear, eventMonth] = form.date.split("-").map(Number);
-      setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
 
+      setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
       setShowModal(false);
 
-await Promise.all([
-  loadCalendarEvents(eventYear, eventMonth),
-  loadUpcomingEvents(),
-]);
+      await Promise.all([
+        loadCalendarEvents(eventYear, eventMonth),
+        loadUpcomingEvents(),
+      ]);
     } catch (error) {
       setFormError(
         error.response?.data?.message ||
@@ -326,12 +385,15 @@ await Promise.all([
 
     try {
       await deleteCalendarEvent(eventId);
-      await loadUpcomingEvents();
+
       setEvents((previous) =>
-        previous.filter(
-          (event) => String(event.id) !== String(eventId)
-        )
+        previous.filter((event) => String(event.id) !== String(eventId))
       );
+
+      await Promise.all([
+        loadUpcomingEvents(),
+        loadCalendarEvents(year, month),
+      ]);
     } catch (error) {
       setCalendarError(
         error.response?.data?.message ||
@@ -342,354 +404,395 @@ await Promise.all([
     }
   }
 
+  function selectEventDate(event) {
+    setSelectedDate(event.date);
+
+    const [eventYear, eventMonth] = event.date.split("-").map(Number);
+
+    setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
+  }
+
+  function openMeeting(event) {
+    if (!event.meetingLink) {
+      selectEventDate(event);
+      return;
+    }
+
+    if (/^https?:\/\//i.test(event.meetingLink)) {
+      window.open(event.meetingLink, "_blank", "noopener,noreferrer");
+    } else {
+      navigate(event.meetingLink);
+    }
+  }
   return (
-    <div className="min-h-screen bg-[#062C5F] text-[#1E293B]">
-      <header className="flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-5 sm:px-8">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="text-lg font-bold tracking-wide text-[#062C5F]"
-        >
-          QUORUM
-        </button>
+    <div className="flex h-screen min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#062C5F]">
 
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[#64748B] sm:inline">
-            Calendar
-          </span>
+      <header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-white/15 bg-[#062C5F]/85 px-4 shadow-sm sm:px-6 lg:px-8">
+  <button
+    type="button"
+    onClick={() => navigate("/dashboard")}
+    aria-label="Back to dashboard"
+    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+  >
+    <FiArrowLeft size={18} />
+  </button>
+
+  <button
+    type="button"
+    onClick={() => navigate("/dashboard")}
+    className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl"
+  >
+    QUORUM
+  </button>
+</header>
+
+
+      {/*
+        Body: sirf bacha hua area. Sidebar tumhare layout se pehle se aata hai,
+        isliye yahan add nahi kiya.
+      */}
+      <main
+        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-8"
+        style={{
+          backgroundImage: `linear-gradient(
+            to bottom,
+            #062C5F 0%,
+            #315A8A 50%,
+            #7698C5 100%
+          )`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+          backgroundAttachment: "local",
+        }}
+      >
+        <div className="mx-auto w-full max-w-[1400px]">
+          {/* Intro strip */}
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0068FF] text-sm font-semibold text-white"
-            aria-label="User profile"
+            className="mb-4 flex flex-col gap-3 rounded-2xl p-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between"
+            style={GLASS}
           >
-            Q
-          </div>
-        </div>
-      </header>
-
-      <div className="flex min-h-[calc(100vh-64px)]">
-        <aside className="hidden w-[76px] shrink-0 border-r border-white/10 bg-[#062C5F] py-6 md:block lg:w-[220px]">
-          <nav className="flex flex-col gap-2 px-2 lg:px-3">
-            {[
-              { label: "Home", icon: FiHome, path: "/dashboard" },
-              { label: "Calendar", icon: FiCalendar, path: "/calendar" },
-              { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
-              { label: "Organizations", icon: FiUsers, path: "/organization" },
-              { label: "Chat", icon: FiMessageCircle, path: "/chat" },
-              { label: "Communities", icon: FiGlobe, path: "/communities" },
-            ].map(({ label, icon: Icon, path }) => (
-              <button
-                key={label}
-                title={label}
-                onClick={() => navigate(path)}
-                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 transition lg:flex-row lg:justify-start lg:gap-3 lg:px-3 ${
-                  label === "Calendar"
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="text-[11px] lg:text-sm">{label}</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-[1400px]">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
-                  Workspace
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold text-white">
-                  Calendar
-                </h1>
-                <p className="mt-1 text-sm text-blue-100/70">
-                  Plan meetings and keep track of your schedule.
-                </p>
-              </div>
-
-              <button
-                onClick={() => openCreateModal()}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#005BE0] focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <FiPlus className="h-4 w-4" />
-                Create event
-              </button>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white sm:text-lg">
+                Calendar
+              </h1>
+              <p className="mt-0.5 text-xs text-[#B6C6D9] sm:text-sm">
+                Plan meetings and keep track of your team&apos;s schedule.
+              </p>
+              <p className="mt-1 text-[11px] text-[#9EB0BC]">
+                Today: {todayEvents.length}{" "}
+                {todayEvents.length === 1 ? "meeting" : "meetings"}
+              </p>
             </div>
 
-            {calendarError && (
-              <div
-                role="alert"
-                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            <button
+              type="button"
+              onClick={() => openCreateModal()}
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-950/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-white/70 sm:w-auto"
+              style={PRIMARY_GRADIENT}
+            >
+              <FiPlus className="h-4 w-4" />
+              Create event
+            </button>
+          </div>
+
+          {calendarError && (
+            <div
+              role="alert"
+              className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200/50 bg-red-500/20 px-4 py-3 text-sm text-white backdrop-blur-md sm:mb-5"
+            >
+              <span>{calendarError}</span>
+
+              <button
+                type="button"
+                onClick={() => loadCalendarEvents(year, month)}
+                className="font-semibold underline underline-offset-2"
               >
-                <span>{calendarError}</span>
-                <button
-                  onClick={() => loadCalendarEvents(year, month)}
-                  className="font-semibold underline"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
+                Retry
+              </button>
+            </div>
+          )}
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-              <section className="min-w-0 rounded-xl border border-white/20 bg-white/95 p-4 shadow-[0_12px_35px_rgba(0,0,0,0.15)] sm:p-6">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[#062C5F]">
-                      {formatMonth(currentMonth)}
-                    </h2>
-                    <p className="mt-1 text-xs text-[#64748B]">
-                      Select a date to view its events.
-                    </p>
-                  </div>
+          <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            {/* ---------------- Main calendar ---------------- */}
+            <GlassPanel className="sm:p-5 lg:p-6">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-white sm:text-base">
+                  {formatMonth(currentMonth)}
+                </h2>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={goToToday}
-                      className="rounded-lg border border-[#D9E2EF] px-3 py-2 text-xs font-medium text-[#334155] hover:bg-[#F1F5F9]"
-                    >
-                      Today
-                    </button>
-                    <button
-                      onClick={() => changeMonth(-1)}
-                      aria-label="Previous month"
-                      className="rounded-lg border border-[#D9E2EF] p-2 text-[#334155] hover:bg-[#F1F5F9]"
-                    >
-                      <FiChevronLeft />
-                    </button>
-                    <button
-                      onClick={() => changeMonth(1)}
-                      aria-label="Next month"
-                      className="rounded-lg border border-[#D9E2EF] p-2 text-[#334155] hover:bg-[#F1F5F9]"
-                    >
-                      <FiChevronRight />
-                    </button>
-                  </div>
-                </div>
-
-                {loadingEvents && (
-                  <p className="mb-3 text-sm text-[#64748B]" role="status">
-                    Loading calendar events...
-                  </p>
-                )}
-
-                <div className="grid grid-cols-7 border-b border-[#E2E8F0] pb-2">
-                  {WEEKDAYS.map((day) => (
-                    <div
-                      key={day}
-                      className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[#64748B] sm:text-xs"
-                    >
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1.5 pt-2 sm:gap-2">
-                  {calendarDays.map((dateKey, index) => {
-                    if (!dateKey) {
-                      return (
-                        <div
-                          key={`empty-${index}`}
-                          className="min-h-[64px] rounded-lg bg-[#F8FAFC] sm:min-h-[94px]"
-                        />
-                      );
-                    }
-
-                    const dayNumber = Number(dateKey.slice(-2));
-                    const dayEvents = events.filter(
-                      (event) => event.date === dateKey
-                    );
-                    const isSelected = dateKey === selectedDate;
-                    const isToday = dateKey === todayKey;
-
-                    return (
-                      <button
-                        key={dateKey}
-                        onClick={() => setSelectedDate(dateKey)}
-                        aria-label={`${dateKey}, ${dayEvents.length} events`}
-                        aria-pressed={isSelected}
-                        className={`relative min-h-[64px] min-w-0 overflow-hidden rounded-lg border p-1.5 text-left transition sm:min-h-[94px] sm:p-2 ${
-                          isSelected
-                            ? "border-[#0068FF] bg-blue-50 ring-1 ring-[#0068FF]"
-                            : "border-[#E2E8F0] bg-white hover:border-blue-300 hover:bg-[#F8FBFF]"
-                        }`}
-                      >
-                        <span
-                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                            isToday
-                              ? "bg-[#0068FF] text-white"
-                              : isSelected
-                                ? "text-[#0068FF]"
-                                : "text-[#334155]"
-                          }`}
-                        >
-                          {dayNumber}
-                        </span>
-
-                        <div className="mt-1 space-y-1">
-                          {dayEvents.slice(0, 2).map((event) => (
-                            <div
-                              key={event.id}
-                              title={event.title}
-                              className="truncate rounded bg-[#DCEAFE] px-1 py-0.5 text-[9px] font-medium text-[#164A8A] sm:text-[10px]"
-                            >
-                              {event.title}
-                            </div>
-                          ))}
-                          {dayEvents.length > 2 && (
-                            <p className="text-[9px] text-[#64748B]">
-                              +{dayEvents.length - 2} more
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E8F0] pt-4">
-                  <p className="text-sm font-medium text-[#334155]">
-                    Events on {formatEventDate(selectedDate)}
-                  </p>
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => openCreateModal(selectedDate)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0068FF] hover:text-[#0051C8]"
+                    type="button"
+                    onClick={goToToday}
+                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
                   >
-                    <FiPlus className="h-4 w-4" />
-                    Add event
+                    Today
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => changeMonth(-1)}
+                    aria-label="Previous month"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <FiChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => changeMonth(1)}
+                    aria-label="Next month"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <FiChevronRight className="h-4 w-4" />
                   </button>
                 </div>
+              </div>
 
-                {selectedEvents.length === 0 ? (
-                  <div className="mt-3 flex min-h-24 flex-col items-center justify-center rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 text-center">
-                    <p className="text-sm font-medium text-[#475569]">
-                      {loadingEvents ? "Loading events..." : "No events scheduled"}
-                    </p>
-                    <p className="mt-1 text-xs text-[#94A3B8]">
-                      Create an event to add it to this date.
-                    </p>
+              {loadingEvents && (
+                <p className="mb-3 text-xs text-[#9EB0BC]" role="status">
+                  Loading calendar events...
+                </p>
+              )}
+
+              {/* Weekday header */}
+              <div className="grid grid-cols-7 gap-1 border-b border-white/15 pb-2 sm:gap-2">
+                {WEEKDAYS.map((day) => (
+                  <div
+                    key={day}
+                    className="py-1 text-center text-[9px] font-bold tracking-wide text-[#EDEFF7] sm:text-[11px]"
+                  >
+                    <span className="sm:hidden">{day.charAt(0)}</span>
+                    <span className="hidden sm:inline">{day}</span>
                   </div>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    {selectedEvents.map((event) => (
-                      <article
-                        key={event.id}
-                        className="flex min-w-0 items-start justify-between gap-3 rounded-lg border border-[#E2E8F0] bg-white p-3"
+                ))}
+              </div>
+
+              {/* Date cards */}
+              <div className="grid grid-cols-7 gap-1 pt-3 sm:gap-2">
+                {calendarDays.map((cell) => {
+                  if (!cell.dateKey) {
+                    return (
+                      <div
+                        key={cell.key}
+                        aria-hidden="true"
+                        className="min-h-[50px] rounded-lg border border-white/10 bg-[#7698C5]/35 p-1 text-[10px] font-semibold text-[#223044]/45 sm:min-h-[84px] sm:p-2 sm:text-xs lg:min-h-[96px]"
                       >
-                        <div className="min-w-0">
-                          <h3 className="break-words text-sm font-semibold text-[#062C5F]">
-                            {event.title}
-                          </h3>
-                          <p className="mt-1 flex items-center gap-1.5 text-xs text-[#64748B]">
-                            <FiClock className="shrink-0" />
-                            {event.startTime} – {event.endTime}
-                          </p>
-                          {event.description && (
-                            <p className="mt-2 whitespace-pre-wrap break-words text-xs text-[#475569]">
-                              {event.description}
-                            </p>
-                          )}
-                          {event.meetingLink && (
-                            <a
-                              href={event.meetingLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#0068FF] hover:underline"
-                            >
-                              Open meeting link <FiExternalLink />
-                            </a>
+                        {cell.day}
+                      </div>
+                    );
+                  }
+
+                  const dateKey = cell.dateKey;
+
+                  const dayEvents = events
+                    .filter((event) => event.date === dateKey)
+                    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+                  const isSelected = dateKey === selectedDate;
+                  const isToday = dateKey === todayKey;
+
+                  return (
+                    <button
+                      key={cell.key}
+                      type="button"
+                      onClick={() => setSelectedDate(dateKey)}
+                      aria-label={`${dateKey}, ${dayEvents.length} events`}
+                      aria-pressed={isSelected}
+                      className={`relative min-h-[50px] min-w-0 overflow-hidden rounded-lg border pt-0 pb-1 px-0 text-left sm:pt-0 sm:pb-2 sm:px-0 text-[#000000] shadow-sm transition duration-150 sm:min-h-[84px] 1 lg:min-h-[96px] ${
+                        isSelected
+                          ? "border-[#0066FF] bg-[#B6C6D9] ring-2 ring-[#0066FF]/50"
+                          : "border-white/60 bg-[#E2E8F0] hover:border-[#38BDF8] hover:bg-white"
+                      }`}
+                    >
+     
+<span
+  className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-black sm:h-8 sm:w-8 sm:text-base ${
+    isToday ? "bg-[#0066FF] text-white" : ""
+  }`}
+>
+  {cell.day}
+</span>
+
+
+                      {/* Mobile: sirf dots */}
+                      {dayEvents.length > 0 && (
+                        <div className="mt-1.5 flex items-center gap-0.5 sm:hidden">
+                          {dayEvents.slice(0, 3).map((event) => (
+                            <span
+                              key={event.id}
+                              className="h-1.5 w-1.5 rounded-full bg-[#039464]"
+                            />
+                          ))}
+                          {dayEvents.length > 3 && (
+                            <span className="text-[8px] font-bold text-[#334155]">
+                              +
+                            </span>
                           )}
                         </div>
+                      )}
 
-                        <button
-                          onClick={() => deleteEvent(event.id)}
-                          disabled={deletingEventId === event.id}
-                          aria-label={`Delete ${event.title}`}
-                          className="shrink-0 rounded-lg p-2 text-[#94A3B8] hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {deletingEventId === event.id ? (
-                            <span className="text-xs">...</span>
-                          ) : (
-                            <FiTrash2 className="h-4 w-4" />
-                          )}
-                        </button>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
+                      {/* Tablet / desktop: event chips */}
+                      <div className="mt-1 hidden space-y-1 sm:block">
+                        {dayEvents.slice(0, 2).map((event) => (
+                          <div
+                            key={event.id}
+                            title={`${event.title} (${event.startTime})`}
+                            className="truncate rounded border border-[#039464]/25 bg-[#039464]/15 px-1.5 py-1 text-[9px] font-semibold leading-tight text-[#039464]"
+                          >
+                            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-[#039464]" />
+                            {event.title}
+                          </div>
+                        ))}
 
-              <aside className="rounded-xl border border-white/20 bg-white/95 p-5 shadow-[0_12px_35px_rgba(0,0,0,0.15)]">
+                        {dayEvents.length > 2 && (
+                          <p className="truncate text-[9px] font-semibold text-[#334155]">
+                            +{dayEvents.length - 2} more
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </GlassPanel>
+
+            {/* ---------------- Right side ---------------- */}
+            <aside className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-1">
+              {/* Selected date */}
+              <GlassPanel>
+                <h2 className="text-sm font-bold text-white">
+                  {selectedDateLabel}
+                </h2>
+                <p className="mt-1 text-[11px] text-[#9EB0BC]">
+                  Your schedule at a glance
+                </p>
+
+                <div className="mt-4 space-y-2.5">
+                  {selectedEvents.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-6 text-center">
+                      <FiCalendar className="mx-auto h-5 w-5 text-[#9EB0BC]" />
+                      <p className="mt-2 text-xs font-semibold text-white">
+                        No events scheduled
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#9EB0BC]">
+                        Make room for what matters.
+                      </p>
+                    </div>
+                  ) : (
+                    selectedEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="rounded-xl border border-white/15 bg-white/10 p-3"
+                      >
+                        <p className="flex items-center gap-1.5 text-[10px] text-[#B6C6D9]">
+                          <FiClock className="shrink-0" />
+                          {event.startTime} – {event.endTime}
+                        </p>
+
+                        <p className="mt-1 break-words text-sm font-semibold text-white">
+                          {event.title}
+                        </p>
+
+                        {event.description && (
+                          <p className="mt-1 line-clamp-2 break-words text-[11px] text-[#9EB0BC]">
+                            {event.description}
+                          </p>
+                        )}
+
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openMeeting(event)}
+                            className="inline-flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition hover:brightness-110"
+                            style={PRIMARY_GRADIENT}
+                          >
+                            View event
+                            {event.meetingLink && (
+                              <FiExternalLink className="h-3 w-3" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteEvent(event.id)}
+                            disabled={
+                              String(deletingEventId) === String(event.id)
+                            }
+                            aria-label={`Delete ${event.title}`}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-red-200 transition hover:bg-red-500/25 disabled:opacity-50"
+                          >
+                            <FiTrash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openCreateModal(selectedDate)}
+                  className="mt-4 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110"
+                  style={PRIMARY_GRADIENT}
+                >
+                  <FiPlus className="h-3.5 w-3.5" />
+                  Add event
+                </button>
+              </GlassPanel>
+
+              {/* Upcoming */}
+              <GlassPanel>
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="font-semibold text-[#062C5F]">
-                    Upcoming events
-                  </h2>
-                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#0068FF]">
+                  <h2 className="text-sm font-bold text-white">Upcoming</h2>
+                  <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-bold text-[#B6C6D9]">
                     {upcomingEvents.length}
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs text-[#64748B]">
-                  Your next scheduled events in this month.
-                </p>
-
                 {loadingUpcoming ? (
-  <div className="mt-5 py-8 text-center text-sm text-[#64748B]">
-    Loading upcoming events...
-  </div>
-) : upcomingEvents.length === 0 ? (
-                  <div className="mt-5 rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-8 text-center">
-                    <FiCalendar className="mx-auto h-7 w-7 text-[#94A3B8]" />
-                    <p className="mt-3 text-sm font-medium text-[#475569]">
-                      {loadingEvents ? "Loading events..." : "Your calendar is empty"}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[#94A3B8]">
-                      Create your first event to see it here.
-                    </p>
-                  </div>
+                  <p className="mt-3 text-xs text-[#9EB0BC]" role="status">
+                    Loading upcoming events...
+                  </p>
+                ) : upcomingEvents.length === 0 ? (
+                  <p className="mt-3 text-xs leading-5 text-[#9EB0BC]">
+                    No upcoming events. Create your first event to see it here.
+                  </p>
                 ) : (
-                  <div className="mt-4 space-y-3">
+                  <ul className="mt-3 space-y-1.5">
                     {upcomingEvents.map((event) => (
-                      <button
-                        key={event.id}
-                        onClick={() => {
-                          setSelectedDate(event.date);
-                          const [eventYear, eventMonth] = event.date
-                            .split("-")
-                            .map(Number);
-                          setCurrentMonth(
-                            new Date(eventYear, eventMonth - 1, 1)
-                          );
-                        }}
-                        className="block w-full rounded-lg border border-[#E2E8F0] bg-white p-3 text-left transition hover:border-blue-300 hover:bg-[#F8FBFF]"
-                      >
-                        <p className="break-words text-sm font-semibold text-[#164A8A]">
-                          {event.title}
-                        </p>
-                        <p className="mt-1 text-xs text-[#64748B]">
-                          {formatEventDate(event.date)}
-                        </p>
-                        <p className="mt-1 flex items-center gap-1.5 text-xs text-[#64748B]">
-                          <FiClock />
-                          {event.startTime} – {event.endTime}
-                        </p>
-                      </button>
+                      <li key={event.id}>
+                        <button
+                          type="button"
+                          onClick={() => selectEventDate(event)}
+                          className={`block w-full rounded-lg border px-3 py-2 text-left transition ${
+                            event.date === selectedDate
+                              ? "border-[#0066FF]/60 bg-[#0066FF]/20"
+                              : "border-transparent hover:border-white/15 hover:bg-white/10"
+                          }`}
+                        >
+                          <p className="break-words text-xs font-semibold text-white">
+                            {event.title}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-[#9EB0BC]">
+                            {formatEventDate(event.date)} · {event.startTime} –{" "}
+                            {event.endTime}
+                          </p>
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
-                <p className="mt-4 text-[11px] leading-5 text-[#94A3B8]">
-                  Events are loaded from your calendar backend.
-                </p>
-              </aside>
-            </div>
+              </GlassPanel>
+            </aside>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
 
+      {/* Create event modal */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#06152B]/65 p-3 backdrop-blur-md sm:p-5"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeModal();
           }}
@@ -698,25 +801,33 @@ await Promise.all([
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-event-title"
-            className="my-auto w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-6"
+            className="my-auto w-full max-w-lg rounded-2xl border border-white/20 p-5 shadow-2xl sm:p-6"
+            style={{
+              background: "rgba(20, 48, 82, 0.96)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+            }}
           >
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h2
                   id="create-event-title"
-                  className="text-lg font-semibold text-[#062C5F]"
+                  className="text-lg font-semibold text-white"
                 >
                   Create event
                 </h2>
-                <p className="mt-1 text-sm text-[#64748B]">
+
+                <p className="mt-1 text-sm text-white/65">
                   Add the details for your event.
                 </p>
               </div>
+
               <button
+                type="button"
                 onClick={closeModal}
                 disabled={savingEvent}
                 aria-label="Close create event"
-                className="rounded-lg p-2 text-[#64748B] hover:bg-slate-100 disabled:opacity-50"
+                className="rounded-lg border border-white/15 bg-white/10 p-2 text-white/80 transition hover:bg-white/20 disabled:opacity-50"
               >
                 <FiX />
               </button>
@@ -724,12 +835,10 @@ await Promise.all([
 
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <div>
-                <label
-                  htmlFor="event-title"
-                  className="mb-1.5 block text-sm font-medium text-[#334155]"
-                >
-                  Event title <span className="text-red-500">*</span>
+                <label htmlFor="event-title" className={labelClass}>
+                  Event title <span className="text-red-300">*</span>
                 </label>
+
                 <input
                   id="event-title"
                   autoFocus
@@ -738,20 +847,19 @@ await Promise.all([
                   value={form.title}
                   onChange={(e) => updateField("title", e.target.value)}
                   placeholder="e.g. Weekly team meeting"
-                  className="w-full rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm text-[#1E293B] outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
-                <p className="mt-1 text-right text-xs text-[#94A3B8]">
+
+                <p className="mt-1 text-right text-xs text-white/50">
                   {form.title.length}/{MAX_TITLE}
                 </p>
               </div>
 
               <div>
-                <label
-                  htmlFor="event-date"
-                  className="mb-1.5 block text-sm font-medium text-[#334155]"
-                >
-                  Date <span className="text-red-500">*</span>
+                <label htmlFor="event-date" className={labelClass}>
+                  Date <span className="text-red-300">*</span>
                 </label>
+
                 <input
                   id="event-date"
                   type="date"
@@ -759,53 +867,48 @@ await Promise.all([
                   min={todayKey}
                   value={form.date}
                   onChange={(e) => updateField("date", e.target.value)}
-                  className="w-full rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                  className={`${inputClass} [color-scheme:dark]`}
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label
-                    htmlFor="event-start"
-                    className="mb-1.5 block text-sm font-medium text-[#334155]"
-                  >
-                    Start time <span className="text-red-500">*</span>
+                  <label htmlFor="event-start" className={labelClass}>
+                    Start time <span className="text-red-300">*</span>
                   </label>
+
                   <input
                     id="event-start"
                     type="time"
                     required
                     value={form.startTime}
                     onChange={(e) => updateField("startTime", e.target.value)}
-                    className="w-full rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                    className={`${inputClass} [color-scheme:dark]`}
                   />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="event-end"
-                    className="mb-1.5 block text-sm font-medium text-[#334155]"
-                  >
-                    End time <span className="text-red-500">*</span>
+                  <label htmlFor="event-end" className={labelClass}>
+                    End time <span className="text-red-300">*</span>
                   </label>
+
                   <input
                     id="event-end"
                     type="time"
                     required
                     value={form.endTime}
                     onChange={(e) => updateField("endTime", e.target.value)}
-                    className="w-full rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                    className={`${inputClass} [color-scheme:dark]`}
                   />
                 </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="event-description"
-                  className="mb-1.5 block text-sm font-medium text-[#334155]"
-                >
-                  Description <span className="text-xs text-[#94A3B8]">(optional)</span>
+                <label htmlFor="event-description" className={labelClass}>
+                  Description{" "}
+                  <span className="text-xs text-white/50">(optional)</span>
                 </label>
+
                 <textarea
                   id="event-description"
                   rows={3}
@@ -813,40 +916,40 @@ await Promise.all([
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   placeholder="Add an agenda or a short note..."
-                  className="w-full max-h-40 resize-y overflow-y-auto rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
+                  className={`${inputClass} max-h-40 resize-y`}
                 />
-                <p className="mt-1 text-right text-xs text-[#94A3B8]">
+
+                <p className="mt-1 text-right text-xs text-white/50">
                   {form.description.length}/{MAX_DESCRIPTION}
                 </p>
               </div>
 
               <div>
-  <label
-    htmlFor="attendee-emails"
-    className="mb-1.5 block text-sm font-medium text-[#334155]"
-  >
-    Invite attendees
-    <span className="text-xs text-[#94A3B8]"> (optional)</span>
-  </label>
+                <label htmlFor="attendee-emails" className={labelClass}>
+                  Invite attendees{" "}
+                  <span className="text-xs text-white/50">(optional)</span>
+                </label>
 
-  <textarea
-    id="attendee-emails"
-    rows={2}
-    value={form.attendeeEmails}
-    onChange={(e) => updateField("attendeeEmails", e.target.value)}
-    placeholder="person1@example.com, person2@example.com"
-    className="w-full resize-y rounded-lg border border-[#CBD5E1] px-3 py-2.5 text-sm outline-none placeholder:text-[#94A3B8] focus:border-[#0068FF] focus:ring-2 focus:ring-blue-100"
-  />
+                <textarea
+                  id="attendee-emails"
+                  rows={2}
+                  value={form.attendeeEmails}
+                  onChange={(e) =>
+                    updateField("attendeeEmails", e.target.value)
+                  }
+                  placeholder="person1@example.com, person2@example.com"
+                  className={`${inputClass} resize-y`}
+                />
 
-  <p className="mt-1 text-xs text-[#94A3B8]">
-    Enter email addresses separated by commas.
-  </p>
-</div>
+                <p className="mt-1 text-xs text-white/50">
+                  Enter email addresses separated by commas.
+                </p>
+              </div>
 
               {formError && (
                 <p
                   role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                  className="rounded-lg border border-red-200/30 bg-red-500/15 px-3 py-2 text-sm text-red-100"
                 >
                   {formError}
                 </p>
@@ -857,15 +960,17 @@ await Promise.all([
                   type="button"
                   onClick={closeModal}
                   disabled={savingEvent}
-                  className="rounded-lg border border-[#CBD5E1] px-4 py-2.5 text-sm font-medium text-[#475569] hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={savingEvent}
-                  className="rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#005BE0] focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#005BE0] disabled:cursor-not-allowed disabled:opacity-60"
                 >
+                  <FiVideo className="h-4 w-4" />
                   {savingEvent ? "Saving..." : "Create event"}
                 </button>
               </div>

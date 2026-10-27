@@ -1,13 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FiHome,
-  FiCalendar,
   FiBookmark,
-  FiUsers,
   FiMessageCircle,
-  FiGlobe,
-  FiCpu,
   FiPlus,
   FiX,
   FiTrash2,
@@ -356,38 +351,7 @@ export default function SavedItems() {
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-64px)]">
-        <aside className="hidden w-[76px] shrink-0 border-r border-white/10 bg-[#062C5F] py-6 md:block lg:w-[220px]">
-          <nav className="flex flex-col gap-2 px-2 lg:px-3">
-            {[
-              { label: "Home", icon: FiHome, path: "/dashboard" },
-              { label: "Meetings", icon: FiCalendar, path: "/calendar" },
-              { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
-              { label: "Organizations", icon: FiUsers, path: "/organization" },
-              { label: "Chat", icon: FiMessageCircle, path: "/chat" },
-              { label: "Communities", icon: FiGlobe, path: "/communities" },
-              { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
-            ].map(({ label, icon: Icon, path }) => {
-              const active = label === "Saved Items";
-
-              return (
-                <button
-                  key={label}
-                  title={label}
-                  onClick={() => navigate(path)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 transition lg:flex-row lg:justify-start lg:gap-3 lg:px-3 ${
-                    active
-                      ? "bg-white/15 text-white"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="text-[11px] lg:text-sm">{label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+      <div className="min-h-[calc(100vh-64px)]">
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-[1400px]">

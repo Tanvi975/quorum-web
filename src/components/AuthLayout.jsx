@@ -21,7 +21,6 @@ function AuthLayout({
       className="relative min-h-screen min-h-[100dvh] overflow-x-hidden"
       style={{ backgroundColor: "#0B2A5B" }}
     >
-      {/* Background decorations */}
       <img
         src={authBg1}
         className="cloud-frame cloud-frame-1 pointer-events-none"
@@ -41,11 +40,9 @@ function AuthLayout({
         aria-hidden="true"
       />
 
-      {/* Main responsive wrapper */}
       <div className="relative z-10 flex min-h-screen min-h-[100dvh] w-full items-center justify-center p-3 py-6 sm:p-5 md:p-6 lg:p-8">
         <div className="flex w-full max-w-5xl min-w-0 flex-col items-center gap-6 rounded-2xl border border-white/30 bg-white/25 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.15)] backdrop-blur-xl sm:p-6 md:min-h-[80vh] md:flex-row md:gap-8 md:p-8 lg:gap-10 lg:p-10">
 
-          {/* Left illustration: tablet and desktop */}
           <div className="hidden min-w-0 flex-1 flex-col items-center justify-center text-center text-white md:flex">
             <h1 className="mb-5 text-xl font-bold leading-snug lg:mb-6 lg:text-3xl">
               {leftTitle}
@@ -62,7 +59,6 @@ function AuthLayout({
             </p>
           </div>
 
-          {/* Form card */}
           <div className="relative w-full min-w-0 max-w-sm rounded-xl border border-[#D7D7D7]/25 bg-[#F7F6F2] p-5 shadow-[0_8px_24px_-4px_rgba(37,99,235,0.15)] sm:p-7 md:flex-none md:p-8">
 
             {showBack && (
