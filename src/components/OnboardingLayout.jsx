@@ -1,18 +1,23 @@
 
-import DashboardBackground from "./DashboardBackground";
-
 function OnboardingLayout({ stepLabel, children }) {
   return (
     <div
       className="relative isolate min-h-screen overflow-x-hidden"
-      style={{ backgroundColor: "#062C5F" }}
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage: `
+          linear-gradient(
+            to bottom,
+            #213F70 0%,
+            #315A8A 35%,
+            #506D9A 65%,
+            #7698C5 100%
+          )
+        `,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+      }}
     >
-      {/* Existing cloud background */}
-      <div className="pointer-events-none absolute inset-0 z-0">
-        <DashboardBackground />
-      </div>
-
-      {/* Responsive page content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-3 py-6 sm:px-5 sm:py-10">
         <div
           className="w-full min-w-0 max-w-[900px] rounded-2xl p-4 sm:p-6 md:px-8 md:py-7 lg:px-10"
@@ -24,10 +29,6 @@ function OnboardingLayout({ stepLabel, children }) {
             WebkitBackdropFilter: "blur(5px)",
           }}
         >
-          <div
-      
-          />
-
           {children}
 
           {stepLabel && (
