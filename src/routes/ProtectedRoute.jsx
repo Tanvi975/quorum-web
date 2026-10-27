@@ -18,7 +18,9 @@ function ProtectedRoute({ children }) {
 
   const hideNavigation =
     location.pathname.startsWith("/video-call") ||
-    location.pathname.startsWith("/meet/");
+    location.pathname.startsWith("/meet/")||
+    location.pathname.startsWith("/chat") ||
+    location.pathname.startsWith("/onboarding");
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#062C5F]">
