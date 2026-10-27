@@ -1,29 +1,56 @@
+
 import cloud1 from "../assets/dashboard-cloud-1.svg";
 import cloud2 from "../assets/dashboard-cloud-2.svg";
 
 function DashboardBackground() {
   return (
     <div
-    className="absolute top-0 left-0 w-full overflow-hidden pointer-events-none"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
       style={{
-        position: "absolute",
-        inset: 0,
-        backgroundImage:
-          "linear-gradient(to bottom, #062C5F 0%, #7698C5 29%, #868686 54%, #FFFFFF 85%)",
+        background:
+          "linear-gradient(to bottom, #082F61 0px, #174778 420px, #527DA8 650px, #FFFFFF 1050px)",
       }}
     >
-      <img
-        src={cloud1}
-        alt=""
-        className="absolute left-1/2 -translate-x-1/2 w-[1986px] max-w-none opacity-80"
-        style={{ top: "300px", filter: "blur(60px)" }}
-      />
-      <img
-        src={cloud2}
-        alt=""
-        className="absolute left-1/2 -translate-x-1/2 w-[1440px] max-w-none opacity-60"
-        style={{ top: "900px", filter: "blur(10px)" }}
-      />
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: "420px",
+          height: "430px",
+        }}
+      >
+      
+{/* First cloud layer — UPPER */}
+<img
+  src={cloud1}
+  alt=""
+  className="absolute left-1/2 max-w-none"
+  style={{
+    width: "min(150%, 1500px)",
+    height: "auto",
+    top: "0",
+    transform: "translateX(-50%)",
+    opacity: 0.8,
+    filter: "blur(18px)",
+    zIndex: 1,
+  }}
+/>
+
+<img
+  src={cloud2}
+  alt=""
+  className="absolute left-1/2 max-w-none"
+  style={{
+    width: "min(125%, 1250px)",
+    height: "auto",
+    top: "100px",
+    transform: "translateX(-50%)",
+    opacity: 0.72,
+    filter: "blur(12px)",
+    zIndex: 2,
+  }}
+/>
+      </div>
     </div>
   );
 }

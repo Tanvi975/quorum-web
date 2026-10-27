@@ -15,7 +15,6 @@ import {
 import {
   FiSearch,
   FiPlus,
-  FiMoreHorizontal,
   FiPaperclip,
   FiSend,
   FiInfo,
@@ -163,6 +162,7 @@ const [renamedAvatar, setRenamedAvatar] = useState("");
 const [groupAvatar, setGroupAvatar] = useState("");
 const fileInputRef = useRef(null);
 const [uploadingFile, setUploadingFile] = useState(false);
+const [saveMessage, setSaveMessage] = useState("");
 
   const messageEndRef = useRef(null);
   const searchRequestRef = useRef(0);
@@ -1118,20 +1118,48 @@ const handleSaveMessage = async (item) => {
   }
 };
 
+const [isChatSaved, setIsChatSaved] = useState(false);
+
+
 const handleSaveConversation = async () => {
-  if (!activeConversation?.id) return;
+  if (!activeConversation?.id) {
+    setSaveMessage("Please select a chat first.");
+    return;
+  }
+
   try {
     await saveItem({
       itemType: "CHAT",
       itemId: activeConversation.id,
     });
+
+    setSaveMessage("Chat saved successfully!");
     setError("");
   } catch (err) {
-    setError(err.response?.data?.message || "Could not save conversation.");
+    setSaveMessage(
+      err.response?.data?.message || "Could not save chat."
+    );
   }
 };
+
+
   return (
     <div className="h-screen overflow-hidden bg-[#121419] p-3 text-[#E8EDF5] sm:p-5">
+        {saveMessage && (
+      <div
+        role="status"
+        className="fixed right-5 top-5 z-[100] rounded-lg border border-[#3B8068] bg-[#193D35] px-4 py-3 text-sm font-medium text-white shadow-lg"
+      >
+        {saveMessage}
+        <button
+          onClick={() => setSaveMessage("")}
+          className="ml-3 text-[#A7DCC8]"
+          aria-label="Dismiss message"
+        >
+          ✕
+        </button>
+      </div>
+    )}
       <div className="mx-auto flex h-[calc(100vh-24px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#0D1F33] sm:h-[calc(100vh-40px)]">
         <header className="flex h-11 shrink-0 items-center justify-between border-b border-[#253D57] bg-[#0D1F33] px-4">
           <div className="flex items-center gap-2">
@@ -1354,7 +1382,11 @@ const handleSaveConversation = async () => {
             </aside>
           )}
 
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#263F5B]">
+<main
+  className={`${
+    showMobileContacts ? "hidden md:flex" : "flex"
+  } min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#263F5B]`}
+>
             {activeConversation ? (
               <>
                <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-[#35516E] bg-[#20364F] px-3 sm:px-4">
@@ -1400,21 +1432,22 @@ const handleSaveConversation = async () => {
                <FiPlus size={16} />
             </IconButton>
               )}
-                    <IconButton
-                      label="Contact information"
-                      onClick={() => setShowInfo(!showInfo)}
-                    >
-                      <FiInfo size={16} />
-                    </IconButton>
-                    <IconButton
-                      label="Save chat"
-                      onClick={handleSaveConversation}
-                    >
-                      <FiBookmark size={16} />
-                    </IconButton>
-                    <IconButton label="More options">
-                      <FiMoreHorizontal size={18} />
-                    </IconButton>
+                   <IconButton
+                   label="Contact information"
+                   onClick={() => setShowInfo(true)}
+                 >
+                   <FiInfo size={16} />
+                 </IconButton>
+                                     
+                <IconButton
+                label={isChatSaved ? "Chat saved" : "Save chat"}
+                onClick={handleSaveConversation}
+                 >
+                <FiBookmark
+                size={16}
+                fill={isChatSaved ? "currentColor" : "none"}
+                 />
+                </IconButton>
                   </div>
                 </div>
 
@@ -1572,7 +1605,8 @@ const handleSaveConversation = async () => {
 
          
           {showInfo && activeConversation && (
-  <aside className="hidden w-[240px] shrink-0 flex-col rounded-lg border border-[#253D57] bg-[#192D43] p-3 lg:flex xl:w-[260px]">
+ 
+<aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto rounded-none border border-[#253D57] bg-[#192D43] p-4 sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:p-3 xl:w-[260px]">
     <div className="mb-5 flex items-center justify-between">
       <h2 className="text-xs font-semibold text-white">
         {activeIsGroup ? "Group info" : "Contact info"}
@@ -1722,9 +1756,6 @@ const handleSaveConversation = async () => {
           <h3 className="mt-3 text-sm font-semibold text-white">
             {getUserName(activeContact)}
           </h3>
-          <p className="mt-1 break-all text-[10px] text-[#94A9BE]">
-            {activeContact.email || "No email available"}
-          </p>
         </div>
 
         <div className="border-b border-[#304A64] py-4">
@@ -1734,10 +1765,6 @@ const handleSaveConversation = async () => {
           <p className="mb-1 text-[10px] text-[#7F95AB]">Name</p>
           <p className="break-words text-xs text-[#E6EDF5]">
             {getUserName(activeContact)}
-          </p>
-          <p className="mb-1 mt-4 text-[10px] text-[#7F95AB]">Email</p>
-          <p className="break-all text-xs text-[#E6EDF5]">
-            {activeContact.email || "Not provided"}
           </p>
         </div>
 

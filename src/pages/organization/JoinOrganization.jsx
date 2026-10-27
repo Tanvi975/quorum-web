@@ -62,7 +62,7 @@ function JoinOrganization() {
         className="flex items-center gap-2 text-sm text-white/70 hover:text-white mb-5"
       >
         <FiArrowLeft size={16} />
-        Back
+        
       </button>
 
       <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-blue-500/15 text-blue-300 mb-4">

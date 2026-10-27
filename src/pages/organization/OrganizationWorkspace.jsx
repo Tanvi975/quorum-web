@@ -21,17 +21,34 @@ import api from "../../services/api";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
 import TeamChat from "./TeamChat";
+import OrganizationOverview from "./OrganizationOverview";
+
 const btn =
-  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition";
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-50";
 
 const primary =
-  `${btn} bg-blue-500 text-white hover:bg-blue-400 disabled:opacity-50`;
+  `${btn} border border-[#60A5FA]/40 bg-gradient-to-r from-[#1680FF] to-[#0057D9] text-white shadow-md shadow-blue-900/10 hover:brightness-105`;
 
 const secondary =
-  `${btn} border border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700`;
+  `${btn} border border-white/30 bg-white/15 text-white hover:bg-white/25`;
 
 const input =
-  "w-full rounded-lg border border-white/10 bg-[#0a172b] px-3.5 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-blue-400";
+  "w-full min-w-0 rounded-xl border border-white/30 bg-white/15 px-3.5 py-3 text-sm text-white outline-none placeholder:text-white/65 transition focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-300/25";
+
+const card =
+  "rounded-2xl border border-white/25 bg-white/[0.13] shadow-lg shadow-blue-950/10 backdrop-blur-xl";
+const ROLE_LABELS = {
+  ORG_ADMIN: "Organization admin",
+  ADMIN: "Admin",
+  TEAM_HEAD: "Team head",
+  MEMBER: "Member",
+};
+
+function roleLabel(value) {
+  const key = String(value || "MEMBER").toUpperCase();
+  return ROLE_LABELS[key] || key.replaceAll("_", " ");
+}
+
 function items(data, key) {
   if (Array.isArray(data)) {
     return data;
@@ -68,22 +85,21 @@ function initials(name = "") {
 function Modal({ title, description, close, children }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           close();
         }
       }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b1930] p-5 shadow-2xl sm:p-6">
-
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#38BDF8]/25 bg-[#212F44] p-5 shadow-2xl shadow-black/40 sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-white">
               {title}
             </h2>
             {description && (
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-[#B6C6D9]">
                 {description}
               </p>
             )}
@@ -92,7 +108,7 @@ function Modal({ title, description, close, children }) {
             type="button"
             onClick={close}
             aria-label="Close"
-            className="rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-2 text-[#B6C6D9] hover:bg-white/10 hover:text-white"
           >
             <FaTimes />
           </button>
@@ -107,7 +123,7 @@ function OrganizationWorkspace() {
   const { organizationId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-const requestedTeamId = searchParams.get("teamId");
+  const requestedTeamId = searchParams.get("teamId");
   const [organization, setOrganization] = useState(null);
   const [teams, setTeams] = useState([]);
   const [members, setMembers] = useState([]);
@@ -118,7 +134,7 @@ const requestedTeamId = searchParams.get("teamId");
   const [activeTab, setActiveTab] = useState("Overview");
   const [search, setSearch] = useState("");
   const [openMenu, setOpenMenu] = useState("");
-  const [modal, setModal] = useState("")
+  const [modal, setModal] = useState("");
   const [showAddTeamMember, setShowAddTeamMember] = useState(false);
   const [selectedChatTeam, setSelectedChatTeam] = useState(null);
   const [teamForm, setTeamForm] = useState({
@@ -141,20 +157,20 @@ const requestedTeamId = searchParams.get("teamId");
   const currentUser = JSON.parse(
     localStorage.getItem("user") || "null"
   );
-  
+
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId;
-  
+
   const isOrganizationOwner =
     Boolean(currentUserId) &&
     String(organization?.ownerId) === String(currentUserId);
-  
+
   const role = String(
     organization?.role ||
       organization?.userRole ||
       (isOrganizationOwner ? "ORG_ADMIN" : "MEMBER")
   ).toUpperCase();
-  
+
   const canCreateTeam =
     role === "ORG_ADMIN" || role === "TEAM_HEAD";
   async function loadWorkspace(showLoader = true) {
@@ -175,7 +191,7 @@ const requestedTeamId = searchParams.get("teamId");
         throw orgResult.reason;
       }
       const data = orgResult.value.data;
-  
+
       setOrganization(
         data?.organization ||
         data?.data?.organization ||
@@ -206,12 +222,12 @@ const requestedTeamId = searchParams.get("teamId");
   }, [organizationId]);
   useEffect(() => {
     if (loading || !requestedTeamId || !teams.length) return;
-  
+
     const matchedTeam = teams.find(
       (team) =>
         String(team._id || team.id) === String(requestedTeamId)
     );
-  
+
     if (matchedTeam) {
       setActiveTab("Teams");
       setSelectedChatTeam(matchedTeam);
@@ -292,14 +308,14 @@ const requestedTeamId = searchParams.get("teamId");
   }
   async function inviteMember(event) {
     event.preventDefault();
-  
+
     if (!inviteForm.email.trim()) {
       setNotice("Please enter an email address.");
       return;
     }
-  
+
     setSaving(true);
-  
+
     try {
       const payload = {
         email: inviteForm.email.trim().toLowerCase(),
@@ -314,23 +330,23 @@ const requestedTeamId = searchParams.get("teamId");
               role: inviteForm.role,
             }),
       };
-  
+
       await api.post(
         `/api/organizations/${organizationId}/invites`,
         payload
       );
-  
+
       closeModal();
-  
+
       setInviteForm({
         email: "",
         role: "MEMBER",
         teamId: "",
         teamRole: "MEMBER",
       });
-  
+
       setNotice("Invitation sent successfully.");
-  
+
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -386,7 +402,7 @@ const requestedTeamId = searchParams.get("teamId");
         }
       );
 
-      closeModal()
+      closeModal();
       setNotice("Member updated successfully.");
       await loadWorkspace(false);
     } catch (err) {
@@ -424,7 +440,7 @@ const requestedTeamId = searchParams.get("teamId");
     try {
       await api.delete(
         `/api/organizations/${organizationId}/members/${id}`
-      )
+      );
       setNotice("Member removed successfully.");
       await loadWorkspace(false);
     } catch (err) {
@@ -440,7 +456,7 @@ const requestedTeamId = searchParams.get("teamId");
           onClick={() => {
             setOpenMenu(openMenu === id ? "" : id);
           }}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#B6C6D9] transition hover:bg-white/10 hover:text-white"
         >
           <FaEllipsisH />
         </button>
@@ -452,7 +468,7 @@ const requestedTeamId = searchParams.get("teamId");
               className="fixed inset-0 z-20 cursor-default"
               onClick={() => setOpenMenu("")}
             />
-            <div className="absolute right-0 top-10 z-30 w-52 rounded-xl border border-slate-600/70 bg-[#101f38] p-2 shadow-2xl shadow-black/40">
+            <div className="absolute right-0 top-10 z-30 w-52 rounded-xl border border-[#B6C6D9]/20 bg-[#212F44] p-2 shadow-2xl shadow-black/40">
               {options.map((option) => (
                 <button
                   key={option.label}
@@ -461,18 +477,16 @@ const requestedTeamId = searchParams.get("teamId");
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium transition ${
                     option.danger
                       ? "text-red-300 hover:bg-red-500/15"
-                      : "text-slate-100 hover:bg-blue-500/15 hover:text-blue-200"
+                      : "text-[#E2E8F0] hover:bg-[#38BDF8]/15 hover:text-white"
                   }`}
                 >
                   {option.icon}
                   {option.label}
                 </button>
               ))}
-
             </div>
           </>
         )}
-
       </div>
     );
   }
@@ -480,12 +494,11 @@ const requestedTeamId = searchParams.get("teamId");
     const id = team._id || team.id || team.name;
     return (
       <div
-        key={id}
-        className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition hover:bg-white/[0.04] sm:px-4"
+        key={id} 
+className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-4 transition hover:border-[#8BB9E8]/45 hover:bg-[#315A83]/50 sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
-        <div className="flex min-w-0 items-center gap-3">
-
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
+        <div className="flex min-w-0 flex-1 basis-48 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-[#C6EAFF]">
             <FaLayerGroup />
           </div>
 
@@ -494,45 +507,46 @@ const requestedTeamId = searchParams.get("teamId");
               {team.name || "Unnamed team"}
             </p>
 
-            <p className="mt-1 truncate text-xs text-slate-400">
+            <p className="mt-1 truncate text-xs text-[#D0E1F3]">
               {team.description || "No description"}
             </p>
           </div>
-
         </div>
-        <button
-  type="button"
-  onClick={() => setSelectedChatTeam(team)}
-  className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-500/15 px-3 py-2 text-xs font-medium text-blue-200 hover:bg-blue-500/25 sm:text-sm"
->
-  Open Team Chat
-</button>
-        {menu(`team-${id}`, [
-          {
-            label: "Edit team",
-            icon: <FaEdit />,
-            onClick: () => {
-              setOpenMenu("");
 
-              setNotice(
-                "Edit team UI is ready; connect the backend endpoint to save changes."
-              );
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedChatTeam(team)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-2 text-xs font-medium text-[#C6EAFF] transition hover:bg-[#38BDF8]/20 sm:text-sm"
+          >
+            Open Team Chat
+          </button>
+          {menu(`team-${id}`, [
+            {
+              label: "Edit team",
+              icon: <FaEdit />,
+              onClick: () => {
+                setOpenMenu("");
+
+                setNotice(
+                  "Edit team UI is ready; connect the backend endpoint to save changes."
+                );
+              },
             },
-          },
-          {
-            label: "Delete team",
-            icon: <FaTrash />,
-            danger: true,
-            onClick: () => {
-              setOpenMenu("");
+            {
+              label: "Delete team",
+              icon: <FaTrash />,
+              danger: true,
+              onClick: () => {
+                setOpenMenu("");
 
-              setNotice(
-                "Delete team option is visible; connect the backend endpoint to delete this team."
-              );
+                setNotice(
+                  "Delete team option is visible; connect the backend endpoint to delete this team."
+                );
+              },
             },
-          },
-        ])}
-
+          ])}
+        </div>
       </div>
     );
   }
@@ -565,17 +579,17 @@ const requestedTeamId = searchParams.get("teamId");
     return (
       <div
         key={id}
-        className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition hover:bg-white/[0.04] sm:px-4"
+        className="flex flex-col gap-3 rounded-xl border border-white/20 bg-white/[0.12] px-3 py-4 transition hover:bg-white/[0.20] sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
         <div className="flex min-w-0 items-center gap-3">
           {avatar ? (
             <img
               src={avatar}
               alt={name}
-              className="h-10 w-10 shrink-0 rounded-full object-cover"
+              className="h-10 w-10 shrink-0 rounded-full border border-[#B6C6D9]/30 object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-sm font-semibold text-blue-300">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-sm font-semibold text-[#C6EAFF]">
               {initials(name)}
             </div>
           )}
@@ -585,17 +599,19 @@ const requestedTeamId = searchParams.get("teamId");
               {name}
             </p>
 
-            <p className="mt-1 truncate text-xs text-slate-400">
+            <p className="mt-1 truncate text-xs text-[#A4A5AF]">
               {email}
             </p>
-          </div>
 
+            <p className="mt-0.5 text-xs text-[#C6EAFF] sm:hidden">
+              {roleLabel(currentMemberRole)}
+            </p>
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-
-          <span className="hidden rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-slate-300 sm:inline-flex">
-            {currentMemberRole.replaceAll("_", " ")}
+          <span className="hidden rounded-lg border border-[#B6C6D9]/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-[#EDEFF7] sm:inline-flex">
+            {roleLabel(currentMemberRole)}
           </span>
 
           {menu(`member-${id}`, [
@@ -616,23 +632,20 @@ const requestedTeamId = searchParams.get("teamId");
               onClick: () => removeMember(member),
             },
           ])}
-
         </div>
-
       </div>
     );
   }
- 
 
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredTeams = teams.filter((team) => {
     const teamDetails = `${team.name || ""} ${team.description || ""}`
       .toLowerCase();
-  
+
     return teamDetails.includes(normalizedSearch);
   });
-  
+
   const filteredMembers = members.filter((member) => {
     const memberDetails = [
       member.name,
@@ -643,14 +656,14 @@ const requestedTeamId = searchParams.get("teamId");
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
-  
+
     return memberDetails.includes(normalizedSearch);
   });
   if (loading) {
     return (
       <OnboardingLayout>
-        <div className="flex min-h-64 items-center justify-center gap-3 text-slate-300">
-          <FaSpinner className="animate-spin text-blue-400" />
+        <div className="flex min-h-64 items-center justify-center gap-3 text-[#B6C6D9]">
+          <FaSpinner className="animate-spin text-[#38BDF8]" />
           Loading workspace...
         </div>
       </OnboardingLayout>
@@ -660,14 +673,13 @@ const requestedTeamId = searchParams.get("teamId");
     return (
       <OnboardingLayout>
         <div className="py-12 text-center">
-
-          <FaBuilding className="mx-auto mb-4 text-3xl text-slate-400" />
+          <FaBuilding className="mx-auto mb-4 text-3xl text-[#B6C6D9]" />
 
           <h2 className="text-lg font-semibold text-white">
             Unable to load workspace
           </h2>
 
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[#B6C6D9]">
             {error}
           </p>
 
@@ -678,26 +690,24 @@ const requestedTeamId = searchParams.get("teamId");
           >
             Try again
           </button>
-
         </div>
       </OnboardingLayout>
     );
   }
   return (
     <OnboardingLayout>
-      <div className="w-full text-white">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate("/organization")}
-            className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"
-          >
-            <FaArrowLeft />
-            Organizations
-          </button>
+     <div className="mx-auto w-full max-w-none min-w-0 p-3 text-[#EDEFF7] sm:p-5 lg:p-6">
+        <div className="mb-5 flex items-center justify-between gap-3">
+        <button
+  type="button"
+  onClick={() => navigate("/organizations", { replace: true })}
+  className="mb-4 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+>
+  ← 
+</button>
         </div>
         {notice && (
-          <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-blue-400/20 bg-blue-400/10 px-4 py-3 text-sm text-blue-100">
+          <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-4 py-3 text-sm text-[#C6EAFF]">
             <p>{notice}</p>
             <button
               type="button"
@@ -708,9 +718,11 @@ const requestedTeamId = searchParams.get("teamId");
             </button>
           </div>
         )}
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+        <div
+          className="flex flex-col justify-between gap-5 rounded-2xl border border-white/10 bg-white/[0.07] p-4 shadow-xl shadow-black/10 backdrop-blur-xl sm:flex-row sm:items-center sm:p-6"
+        >
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-blue-500/15 text-xl text-blue-300">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#B6C6D9]/20 bg-[#212F44] text-xl text-[#C6EAFF]">
               {organization?.logo || organization?.logoUrl ? (
                 <img
                   src={organization.logo || organization.logoUrl}
@@ -721,20 +733,20 @@ const requestedTeamId = searchParams.get("teamId");
                 <FaBuilding />
               )}
             </div>
-            <div className="min-w-0 pt-1">
-              <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <div className="min-w-0">
+              <h1 className="break-words text-xl font-semibold tracking-tight text-[#EDEFF7] sm:text-2xl">
                 {organization?.name || "Organization"}
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+              <p className="mt-1.5 max-w-xl text-sm leading-6 text-[#B6C6D9]">
                 {organization?.description ||
                   "Your team's shared workspace."}
               </p>
-              <span className="mt-3 inline-flex rounded-full bg-blue-400/10 px-2.5 py-1 text-xs font-medium text-blue-200">
-                {role.replaceAll("_", " ") || "Member"}
+              <span className="mt-3 inline-flex rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/[0.08] px-2.5 py-1 text-xs font-medium text-[#C6EAFF]">
+                {roleLabel(role)}
               </span>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
@@ -743,8 +755,8 @@ const requestedTeamId = searchParams.get("teamId");
               }}
               className={primary}
             >
-              <FaUserPlus />
-              Invite
+              <FaPlus />
+              Invite members
             </button>
 
             {menu("organization", [
@@ -768,7 +780,7 @@ const requestedTeamId = searchParams.get("teamId");
             ])}
           </div>
         </div>
-        <div className="mt-7 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {["Overview", "Teams", "Members"].map((tab) => (
             <button
               key={tab}
@@ -779,8 +791,8 @@ const requestedTeamId = searchParams.get("teamId");
               }}
               className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                 activeTab === tab
-                  ? "bg-blue-500 text-white"
-                  : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
+                  ? "border border-[#38BDF8]/30 bg-[linear-gradient(90deg,#0066FF,#0148B3)] text-white shadow-md shadow-blue-950/30"
+                  : "border border-[#B6C6D9]/15 bg-white/[0.06] text-[#B6C6D9] hover:bg-white/10 hover:text-white"
               }`}
             >
               {tab}
@@ -788,147 +800,103 @@ const requestedTeamId = searchParams.get("teamId");
           ))}
         </div>
         {activeTab === "Overview" && (
-          <div className="mt-7 space-y-7">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {[
-                {
-                  label: "Members",
-                  value: members.length,
-                  icon: <FaUsers />,
-                },
-                {
-                  label: "Teams",
-                  value: teams.length,
-                  icon: <FaLayerGroup />,
-                },
-                {
-                  label: "Your role",
-                  value: role.replaceAll("_", " ") || "Member",
-                  icon: <FaBuilding />,
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-xl bg-slate-950/30 p-4"
-                >
-                  <div className="flex items-center gap-3">
+          <div className="mt-6 space-y-5">
+            <OrganizationOverview
+              organization={organization}
+              members={members}
+              invitations={[]}
+              loading={loading}
+              currentRole={role}
+              currentUserId={currentUserId}
+              onEditMember={(member) => {
+                setSelectedMember(member);
+                setMemberRole(
+                  member.role || member.user?.role || "MEMBER"
+                );
+                setOpenMenu("");
+                setModal("edit-member");
+              }}
+              onRemoveMember={removeMember}
+              onViewAllMembers={() => {
+                setActiveTab("Members");
+                setSearch("");
+              }}
+            />
 
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
-                      {stat.icon}
-                    </div>
-
-                    <div>
-                      <p className="text-xs text-slate-400">
-                        {stat.label}
-                      </p>
-
-                      <p className="mt-1 text-lg font-semibold text-white">
-                        {stat.value}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-white">
-                  Teams
-                </h2>
+            <section className={`${card} p-4 sm:p-6`}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-white">Teams</h2>
                 <button
                   type="button"
                   onClick={() => setActiveTab("Teams")}
-                  className="text-sm text-blue-300 hover:text-blue-200"
+                  className="text-sm font-medium text-[#C6EAFF] transition hover:text-white"
                 >
                   View all
                 </button>
               </div>
-              {teams.length ? (
-                <div className="space-y-1">
+
+              {teams.length > 0 ? (
+                <div className="space-y-1.5">
                   {teams.slice(0, 3).map(teamRow)}
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-950/25 px-4 py-8 text-center">
-                  <FaLayerGroup className="mx-auto mb-3 text-xl text-slate-500" />
-                  <p className="text-sm text-slate-300">
-                    No teams yet
-                  </p>
+                <div className="rounded-xl border border-white/20 bg-white/[0.10] py-6 text-center text-sm text-white/80">
+                  No teams yet.
                   {canCreateTeam && (
-                    <button
-                      type="button"
-                      onClick={() => setModal("create-team")}
-                      className={`${primary} mt-4`}
-                    >
-                      <FaPlus />
-                      Create team
-                    </button>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setModal("create-team")}
+                        className={`${primary} mt-3`}
+                      >
+                        <FaPlus />
+                        Create team
+                      </button>
+                    </div>
                   )}
-
                 </div>
               )}
-            </div>
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-white">
-                  Members
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("Members")}
-                  className="text-sm text-blue-300 hover:text-blue-200"
-                >
-                  View all
-                </button>
-              </div>
-              {members.length ? (
-                <div className="space-y-1">
-                  {members.slice(0, 4).map(memberRow)}
-                </div>
-              ) : (
-                <p className="rounded-xl bg-slate-950/25 px-4 py-8 text-center text-sm text-slate-400">
-                  No members found.
-                </p>
-              )}
-            </div>
+            </section>
           </div>
         )}
+
         {activeTab === "Teams" && (
-          <div className="mt-7">
+          <div className={`${card} mt-6 p-4 sm:p-6`}>
             <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-lg font-semibold">
+                <h2 className="text-lg font-semibold text-white">
                   Teams
                 </h2>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-[#B6C6D9]">
                   Organize people around shared work.
                 </p>
               </div>
-             
-             {canCreateTeam && (
-             <div className="flex flex-wrap gap-2">
-           <button
-            type="button"
-           onClick={() => setModal("create-team")}
-           className={primary}
-            >
-            <FaPlus />
-           Create team
-         </button>
-   
-         <button
-         type="button"
-         onClick={() => setShowAddTeamMember(true)}
-        className={primary}
-       >
-      <FaUserPlus />
-      Add Team Member
-     </button>
-     </div>
-      )}
-       </div>
-        <div className="relative mb-4">
-           <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
+
+              {canCreateTeam && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setModal("create-team")}
+                    className={primary}
+                  >
+                    <FaPlus />
+                    Create team
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddTeamMember(true)}
+                    className={primary}
+                  >
+                    <FaUserPlus />
+                    Add Team Member
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="relative mb-4">
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A4A5AF]" />
+              <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search teams..."
@@ -936,13 +904,13 @@ const requestedTeamId = searchParams.get("teamId");
               />
             </div>
             {filteredTeams.length ? (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {filteredTeams.map(teamRow)}
               </div>
             ) : (
-              <div className="rounded-xl bg-slate-950/25 px-4 py-10 text-center">
-                <FaLayerGroup className="mx-auto mb-3 text-2xl text-slate-500" />
-                <p className="text-sm text-slate-300">
+              <div className="rounded-xl bg-white/[0.04] px-4 py-10 text-center">
+                <FaLayerGroup className="mx-auto mb-3 text-2xl text-[#A4A5AF]" />
+                <p className="text-sm text-[#B6C6D9]">
                   {search ? "No matching teams" : "No teams yet"}
                 </p>
                 {!search && canCreateTeam && (
@@ -960,17 +928,17 @@ const requestedTeamId = searchParams.get("teamId");
           </div>
         )}
         {activeTab === "Members" && (
-          <div className="mt-7">
+          <div className={`${card} mt-6 p-4 sm:p-6`}>
             <div className="mb-5">
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-semibold text-white">
                 Members
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-[#B6C6D9]">
                 People who belong to this organization.
               </p>
             </div>
             <div className="relative mb-4">
-              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A4A5AF]" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -979,11 +947,11 @@ const requestedTeamId = searchParams.get("teamId");
               />
             </div>
             {filteredMembers.length ? (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {filteredMembers.map(memberRow)}
               </div>
             ) : (
-              <p className="rounded-xl bg-slate-950/25 px-4 py-10 text-center text-sm text-slate-400">
+              <p className="rounded-xl bg-white/[0.04] px-4 py-10 text-center text-sm text-[#B6C6D9]">
                 {search ? "No matching members" : "No members found."}
               </p>
             )}
@@ -1001,7 +969,7 @@ const requestedTeamId = searchParams.get("teamId");
             className="space-y-4"
           >
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Team name
               </label>
               <input
@@ -1019,7 +987,7 @@ const requestedTeamId = searchParams.get("teamId");
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Description
               </label>
               <textarea
@@ -1055,9 +1023,7 @@ const requestedTeamId = searchParams.get("teamId");
                 )}
                 Create team
               </button>
-
             </div>
-
           </form>
         </Modal>
       )}
@@ -1072,7 +1038,7 @@ const requestedTeamId = searchParams.get("teamId");
             className="space-y-4"
           >
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Email address
               </label>
               <input
@@ -1086,92 +1052,75 @@ const requestedTeamId = searchParams.get("teamId");
                   });
                 }}
                 placeholder="name@example.com"
-                className="w-full rounded-lg border border-slate-500 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+                className={input}
               />
             </div>
             <div>
-  <label className="mb-2 block text-sm text-slate-300">
-    Team (Optional)
-  </label>
-
-  <select
-    value={inviteForm.teamId}
-    onChange={(e) =>
-      setInviteForm((prev) => ({
-        ...prev,
-        teamId: e.target.value,
-      }))
-    }
-    className={input}
-  >
-    <option value="">Organization-wide invite</option>
-
-    {teams.map((team) => (
-      <option key={team.id || team._id} value={team.id || team._id}>
-        {team.name}
-      </option>
-    ))}
-  </select>
-</div>
-
-{inviteForm.teamId ? (
-  <div>
-    <label className="mb-2 block text-sm text-slate-300">
-      Team Role
-    </label>
-
-    <select
-      value={inviteForm.teamRole}
-      onChange={(e) =>
-        setInviteForm((prev) => ({
-          ...prev,
-          teamRole: e.target.value,
-        }))
-      }
-      className={input}
-    >
-      <option value="MEMBER">Team Member</option>
-      <option value="LEAD">Team Lead</option>
-    </select>
-  </div>
-) : (
-  <div>
-    <label className="mb-2 block text-sm text-slate-300">
-      Organization Role
-    </label>
-
-    <select
-      value={inviteForm.role}
-      onChange={(e) =>
-        setInviteForm((prev) => ({
-          ...prev,
-          role: e.target.value,
-        }))
-      }
-      className={input}
-    >
-      <option value="MEMBER">Member</option>
-    </select>
-  </div>
-)}
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">
-                Role
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
+                Team (Optional)
               </label>
+
               <select
-                value={inviteForm.role}
-                onChange={(event) => {
-                  setInviteForm({
-                    ...inviteForm,
-                    role: event.target.value,
-                  });
-                }}
+                value={inviteForm.teamId}
+                onChange={(e) =>
+                  setInviteForm((prev) => ({
+                    ...prev,
+                    teamId: e.target.value,
+                  }))
+                }
                 className={input}
               >
-                <option value="MEMBER">Member</option>
-                <option value="TEAM_HEAD">Team Head</option>
+                <option value="">Organization-wide invite</option>
+
+                {teams.map((team) => (
+                  <option key={team.id || team._id} value={team.id || team._id}>
+                    {team.name}
+                  </option>
+                ))}
               </select>
             </div>
+
+            {inviteForm.teamId ? (
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Team Role
+                </label>
+
+                <select
+                  value={inviteForm.teamRole}
+                  onChange={(e) =>
+                    setInviteForm((prev) => ({
+                      ...prev,
+                      teamRole: e.target.value,
+                    }))
+                  }
+                  className={input}
+                >
+                  <option value="MEMBER">Team Member</option>
+                  <option value="LEAD">Team Lead</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Organization Role
+                </label>
+
+                <select
+                  value={inviteForm.role}
+                  onChange={(e) =>
+                    setInviteForm((prev) => ({
+                      ...prev,
+                      role: e.target.value,
+                    }))
+                  }
+                  className={input}
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="TEAM_HEAD">Team Head</option>
+                </select>
+              </div>
+            )}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -1191,9 +1140,7 @@ const requestedTeamId = searchParams.get("teamId");
                 )}
                 Send invite
               </button>
-
             </div>
-
           </form>
         </Modal>
       )}
@@ -1208,7 +1155,7 @@ const requestedTeamId = searchParams.get("teamId");
             className="space-y-4"
           >
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Organization name
               </label>
               <input
@@ -1224,7 +1171,7 @@ const requestedTeamId = searchParams.get("teamId");
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Description
               </label>
               <textarea
@@ -1241,7 +1188,7 @@ const requestedTeamId = searchParams.get("teamId");
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Logo URL
               </label>
               <input
@@ -1277,9 +1224,7 @@ const requestedTeamId = searchParams.get("teamId");
                 )}
                 Save changes
               </button>
-
             </div>
-
           </form>
         </Modal>
       )}
@@ -1294,7 +1239,7 @@ const requestedTeamId = searchParams.get("teamId");
             className="space-y-4"
           >
             <div>
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-[#B6C6D9]">
                 Member role
               </label>
               <select
@@ -1334,25 +1279,25 @@ const requestedTeamId = searchParams.get("teamId");
         </Modal>
       )}
       {showAddTeamMember && (
-  <AddTeamMember
-    organizationId={organizationId}
-    teams={teams}
-    members={members}
-    onClose={() => setShowAddTeamMember(false)}
-    onSuccess={async () => {
-      setShowAddTeamMember(false);
-      setNotice("Member added to team successfully.");
-      await loadWorkspace(false);
-    }}
-  />
-)}
-{selectedChatTeam && (
-  <TeamChat
-    organizationId={organizationId}
-    team={selectedChatTeam}
-    onClose={() => setSelectedChatTeam(null)}
-  />
-)}
+        <AddTeamMember
+          organizationId={organizationId}
+          teams={teams}
+          members={members}
+          onClose={() => setShowAddTeamMember(false)}
+          onSuccess={async () => {
+            setShowAddTeamMember(false);
+            setNotice("Member added to team successfully.");
+            await loadWorkspace(false);
+          }}
+        />
+      )}
+      {selectedChatTeam && (
+        <TeamChat
+          organizationId={organizationId}
+          team={selectedChatTeam}
+          onClose={() => setSelectedChatTeam(null)}
+        />
+      )}
     </OnboardingLayout>
   );
 }

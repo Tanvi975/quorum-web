@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import api from "../../services/api";
+import BackButton from "../../components/BackButton";
 
 const memberOptions = [
   "1-10 members",
@@ -85,6 +86,14 @@ function CreateOrganization() {
 
   return (
     <OnboardingLayout>
+       <div className="mx-auto w-full max-w-5xl px-1 py-2 sm:px-3 sm:py-4">
+       <button
+  type="button"
+  onClick={() => navigate("/organization")}
+  className="mb-4 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+>
+  ← 
+</button>
       <h1 className="text-2xl font-bold text-white mb-1">
         Set up your organization
       </h1>
@@ -194,6 +203,8 @@ function CreateOrganization() {
 >
   {submitting ? "Creating Organization..." : "Set Up Organization"}
 </button>
+
+</div>
     </OnboardingLayout>
   );
 }

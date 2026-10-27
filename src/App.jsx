@@ -6,6 +6,8 @@ import {
   useParams,
 } from "react-router-dom";
 
+
+import DashboardBackground from "./components/DashboardBackground";
 import { useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -62,6 +64,26 @@ function App() {
       <BrowserRouter>
         <Routes>
           
+
+        <Route
+  path="/background-preview"
+  element={
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{ backgroundColor: "#062C5F" }}
+    >
+      <DashboardBackground />
+
+      <div className="relative z-10 p-6 text-white">
+        <h1 className="text-2xl font-bold">
+          Dashboard Background Preview
+        </h1>
+      </div>
+    </div>
+  }
+/>
+
+
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
