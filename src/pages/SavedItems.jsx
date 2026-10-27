@@ -332,35 +332,44 @@ export default function SavedItems() {
   }, [collections, selectedCollectionId]);
 
   return (
-    <div className="min-h-screen bg-[#062C5F] text-[#E8EDF5]">
-      <header className="flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-5 sm:px-8">
+    <div
+      className="min-h-screen overflow-x-hidden text-white"
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage:
+          "linear-gradient(to bottom, #213F70 0%, #315A8A 35%, #506D9A 65%, #7698C5 100%)",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+      }}
+    >
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-[#0F2748]/85 px-4 shadow-sm backdrop-blur-xl sm:px-8">
         <button
           onClick={() => navigate("/dashboard")}
-          className="text-lg font-bold tracking-wide text-[#062C5F]"
+          className="absolute left-1/2 -translate-x-1/2 text-base font-bold tracking-[0.18em] text-white sm:text-lg"
         >
           QUORUM
         </button>
 
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[#64748B] sm:inline">
+          <span className="hidden text-sm text-white/70 sm:inline">
             Saved Items
           </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0068FF] text-sm font-semibold text-white">
-            {user?.name?.[0] || "U"}
-          </div>
         </div>
+        <div className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-gradient-to-br from-[#0066FF] to-[#0148B3] text-sm font-semibold text-white shadow-sm">
+    {user?.name?.[0] || "U"}
+  </div>
       </header>
 
       <div className="min-h-[calc(100vh-64px)]">
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-[1400px]">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="mx-auto w-full max-w-[1400px] min-w-0">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/20 bg-[#102842]/35 p-4 shadow-sm backdrop-blur-sm sm:p-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200">
                   Personal Library
                 </p>
-                <h1 className="mt-1 text-2xl font-bold text-white">
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
                   Saved Items & Collections
                 </h1>
                 <p className="mt-1 text-xs text-white/70">
@@ -372,7 +381,7 @@ export default function SavedItems() {
                 <button
                   type="button"
                   onClick={() => handleOpenCollectionModal()}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#0066FF] px-3.5 py-2 text-xs font-semibold text-white shadow-md transition hover:bg-blue-600"
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-3.5 py-2 text-xs font-semibold text-white shadow-md transition hover:brightness-110"
                 >
                   <FiFolderPlus size={15} />
                   New Collection
@@ -406,7 +415,7 @@ export default function SavedItems() {
               </div>
             )}
 
-            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-white/10 bg-[#0A3973]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1">
                 <FiSearch
                   size={15}
@@ -417,7 +426,7 @@ export default function SavedItems() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search saved notes and content..."
-                  className="h-10 w-full rounded-lg border border-white/15 bg-white/10 pl-9 pr-9 text-xs text-white placeholder:text-white/50 outline-none focus:border-white/40"
+                  className="h-10 w-full min-w-0 rounded-xl border border-white/20 bg-[#102842]/45 pl-9 pr-9 text-xs text-white placeholder:text-white/50 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-400/20"
                 />
                 {searchQuery && (
                   <button
@@ -430,7 +439,7 @@ export default function SavedItems() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {ITEM_TYPES.map((t) => {
                   const Icon = t.icon;
                   const isActive = selectedType === t.key;
@@ -441,7 +450,7 @@ export default function SavedItems() {
                       onClick={() => setSelectedType(t.key)}
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition ${
                         isActive
-                          ? "bg-white text-[#062C5F] shadow"
+                          ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white shadow-md"
                           : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
                       }`}
                     >
@@ -453,9 +462,9 @@ export default function SavedItems() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-              <div className="lg:col-span-1">
-                <div className="rounded-xl border border-white/10 bg-[#0A3973]/60 p-4">
+            <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-4 lg:gap-6">
+              <div className="min-w-0 lg:col-span-1">
+                <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-md p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/80">
                       <FiFolder size={14} />
@@ -477,12 +486,12 @@ export default function SavedItems() {
                       onClick={() => setSelectedCollectionId("")}
                       className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition ${
                         !selectedCollectionId
-                          ? "bg-white/20 text-white"
+                          ? "bg-[#0066FF]/25 text-white ring-1 ring-inset ring-blue-300/30"
                           : "text-white/70 hover:bg-white/10 hover:text-white"
                       }`}
                     >
                       <span>All Collections</span>
-                      <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
+                      <span className="rounded-md border border-white/10 bg-[#062C5F]/30 px-1.5 py-0.5 text-[10px]">
                         {items.length}
                       </span>
                     </button>
@@ -496,7 +505,7 @@ export default function SavedItems() {
                           key={col.id}
                           className={`group flex items-center justify-between rounded-lg px-3 py-2 transition ${
                             isSelected
-                              ? "bg-white/20 text-white"
+                              ? "bg-[#0066FF]/25 text-white ring-1 ring-inset ring-blue-300/30"
                               : "text-white/70 hover:bg-white/10 hover:text-white"
                           }`}
                         >
@@ -513,7 +522,7 @@ export default function SavedItems() {
                           </button>
 
                           <div className="flex items-center gap-1">
-                            <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px] text-white/80">
+                            <span className="rounded-md border border-white/10 bg-[#062C5F]/30 px-1.5 py-0.5 text-[10px] text-white/80">
                               {count}
                             </span>
                             <button
@@ -546,9 +555,9 @@ export default function SavedItems() {
                 </div>
               </div>
 
-              <div className="lg:col-span-3">
+              <div className="min-w-0 lg:col-span-3">
                 {activeCollectionObj && (
-                  <div className="mb-4 flex items-center justify-between rounded-xl border border-white/10 bg-[#0A3973]/40 p-3">
+                  <div className="mb-4 flex items-center justify-between rounded-xl border border-white/20 bg-[#315A8A]/90 backdrop-blur-xl/40 p-3">
                     <div className="flex items-center gap-2.5">
                       <span
                         className="h-3.5 w-3.5 rounded-full"
@@ -579,11 +588,11 @@ export default function SavedItems() {
                 )}
 
                 {loading ? (
-                  <div className="flex h-64 items-center justify-center rounded-xl border border-white/10 bg-[#0A3973]/30">
+                  <div className="flex h-64 items-center justify-center rounded-xl border border-white/20 bg-[#315A8A]/90 backdrop-blur-xl/30">
                     <p className="text-xs text-white/60">Loading saved items...</p>
                   </div>
                 ) : items.length === 0 ? (
-                  <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-[#0A3973]/20 p-6 text-center">
+                  <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-white/30 bg-white/5 p-6 text-center">
                     <FiBookmark size={32} className="mb-2 text-white/30" />
                     <p className="text-sm font-medium text-white/80">
                       No saved items found
@@ -601,16 +610,16 @@ export default function SavedItems() {
                       return (
                         <div
                           key={item.id}
-                          className={`flex flex-col justify-between rounded-xl border p-4 transition ${
+                          className={`flex flex-col justify-between rounded-2xl border p-4 transition ${
                             isAccessible
-                              ? "border-white/15 bg-[#0D3F7D]/80 shadow-md hover:border-white/30"
+                              ? "border-white/20 bg-[#102842]/65 backdrop-blur-sm shadow-md hover:border-white/30"
                               : "border-red-500/20 bg-red-950/20 text-white/60"
                           }`}
                         >
                           <div>
                             <div className="mb-3 flex items-start justify-between gap-2">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="rounded bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-200">
+                                <span className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-200">
                                   {item.itemType}
                                 </span>
                                 {col && (
@@ -652,7 +661,7 @@ export default function SavedItems() {
                                 {item.itemType === "FILE" && (
                                   <div
                                     onClick={() => handleItemClick(item)}
-                                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+                                    className="cursor-pointer rounded-xl border border-white/20 bg-[#102842]/45 p-3 transition hover:bg-white/10"
                                   >
                                     <div className="flex items-center gap-2.5">
                                       <FiFile size={20} className="text-blue-300" />
@@ -687,7 +696,7 @@ export default function SavedItems() {
                                 {item.itemType === "MESSAGE" && (
                                   <div
                                     onClick={() => handleItemClick(item)}
-                                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+                                    className="cursor-pointer rounded-xl border border-white/20 bg-[#102842]/45 p-3 transition hover:bg-white/10"
                                   >
                                     <div className="mb-1 flex items-center justify-between gap-2">
                                       <span className="truncate text-[11px] font-semibold text-blue-200">
@@ -711,7 +720,7 @@ export default function SavedItems() {
                                 {item.itemType === "CHAT" && (
                                   <div
                                     onClick={() => handleItemClick(item)}
-                                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+                                    className="cursor-pointer rounded-xl border border-white/20 bg-[#102842]/45 p-3 transition hover:bg-white/10"
                                   >
                                     <div className="flex items-center justify-between">
                                       <span className="text-xs font-semibold text-white">
@@ -734,7 +743,7 @@ export default function SavedItems() {
                                   item.itemType === "RESOURCE") && (
                                   <div
                                     onClick={() => handleItemClick(item)}
-                                    className="cursor-pointer rounded-lg border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+                                    className="cursor-pointer rounded-xl border border-white/20 bg-[#102842]/45 p-3 transition hover:bg-white/10"
                                   >
                                     <div className="flex items-center justify-between">
                                       <span className="truncate text-xs font-semibold text-white">
@@ -767,14 +776,15 @@ export default function SavedItems() {
                             )}
                           </div>
 
-                          <div className="flex items-center justify-end gap-1.5 border-t border-white/10 pt-2.5">
+                          <div className="flex items-center justify-end gap-1.5 border-t border-white/20 pt-2.5">
                             <button
                               type="button"
                               onClick={() => handleOpenEditItem(item)}
-                              className="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-white/80 transition hover:bg-white/10 hover:text-white"
+                              aria-label={item.note ? "Edit saved item note" : "Add a note to saved item"}
+                              title={item.note ? "Edit note / collection" : "Add note / collection"}
+                              className="rounded-lg border border-white/20 p-2 text-white/80 transition hover:border-blue-300/40 hover:bg-blue-500/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300/40"
                             >
-                              <FiEdit2 size={12} />
-                              {item.note ? "Edit Note" : "Add Note"}
+                              <FiEdit2 size={14} />
                             </button>
                             <button
                               type="button"
@@ -797,7 +807,7 @@ export default function SavedItems() {
                       type="button"
                       disabled={loadingMore}
                       onClick={() => loadItems(true, nextCursor)}
-                      className="rounded-lg border border-white/20 bg-white/10 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:opacity-50"
+                      className="rounded-xl border border-white/20 bg-[#102842]/45 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:opacity-50"
                     >
                       {loadingMore ? "Loading more..." : "Load More"}
                     </button>
@@ -810,10 +820,10 @@ export default function SavedItems() {
       </div>
 
       {collectionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/75 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleSaveCollection}
-            className="w-full max-w-md rounded-xl border border-white/20 bg-[#0A3973] p-5 shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-white/20 bg-[#315A8A]/90 backdrop-blur-xl p-5 shadow-[0_24px_70px_rgba(0,0,0,0.4)]"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-bold text-white">
@@ -848,7 +858,7 @@ export default function SavedItems() {
                   }))
                 }
                 placeholder="e.g. Design Assets, Sprint 42"
-                className="h-10 w-full rounded-lg border border-white/20 bg-white/10 px-3 text-xs text-white outline-none focus:border-white/50"
+                className="h-10 w-full min-w-0 rounded-xl border border-white/20 bg-[#102842]/45 px-3 text-xs text-white outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-400/20"
               />
             </div>
 
@@ -867,7 +877,7 @@ export default function SavedItems() {
                 }))
               }
               placeholder="Brief description of this collection..."
-              className="w-full rounded-lg border border-white/20 bg-white/10 p-2.5 text-xs text-white outline-none focus:border-white/50"
+              className="w-full min-w-0 rounded-xl border border-white/20 bg-[#102842]/45 p-2.5 text-xs text-white outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-400/20"
             />
           </div>
 
@@ -905,7 +915,7 @@ export default function SavedItems() {
             <button
               type="submit"
               disabled={collectionSubmitting}
-              className="rounded-lg bg-[#0066FF] px-4 py-2 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
             >
               {collectionSubmitting ? "Saving..." : "Save Collection"}
             </button>
@@ -915,10 +925,10 @@ export default function SavedItems() {
     )}
 
     {noteModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/75 p-4 backdrop-blur-sm">
         <form
           onSubmit={handleSaveItemChanges}
-          className="w-full max-w-md rounded-xl border border-white/20 bg-[#0A3973] p-5 shadow-2xl"
+          className="w-full max-w-md rounded-xl border border-white/20 bg-[#315A8A]/90 backdrop-blur-xl p-5 shadow-[0_24px_70px_rgba(0,0,0,0.4)]"
         >
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">
@@ -943,7 +953,7 @@ export default function SavedItems() {
               maxLength={20000}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="Add your personal notes or reminders..."
-              className="w-full rounded-lg border border-white/20 bg-white/10 p-2.5 text-xs text-white outline-none focus:border-white/50"
+              className="w-full min-w-0 rounded-xl border border-white/20 bg-[#102842]/45 p-2.5 text-xs text-white outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-400/20"
             />
           </div>
 
@@ -954,7 +964,7 @@ export default function SavedItems() {
             <select
               value={targetCollectionId}
               onChange={(e) => setTargetCollectionId(e.target.value)}
-              className="h-10 w-full rounded-lg border border-white/20 bg-[#062C5F] px-3 text-xs text-white outline-none focus:border-white/50"
+              className="h-10 w-full min-w-0 rounded-lg border border-white/20 bg-[#062C5F] px-3 text-xs text-white outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-400/20"
             >
               <option value="">(No collection - Unassigned)</option>
               {collections.map((col) => (
@@ -976,7 +986,7 @@ export default function SavedItems() {
             <button
               type="submit"
               disabled={updatingItem}
-              className="rounded-lg bg-[#0066FF] px-4 py-2 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
             >
               {updatingItem ? "Saving..." : "Save Changes"}
             </button>
