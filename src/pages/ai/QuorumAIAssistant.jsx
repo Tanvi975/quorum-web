@@ -67,7 +67,7 @@ function SectionTitle({ title, subtitle }) {
   return (
     <div className="mb-6">
       <h2 className="text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+      <p className="mt-1 text-sm text-white/70">{subtitle}</p>
     </div>
   );
   }
@@ -84,11 +84,11 @@ function formatAIResponse(text = "") {
 
 function ResultBox({ title, children }) {
   return (
-    <section className="mt-5 rounded-xl border border-slate-700 bg-[#10213b] p-4">
+    <section className="mt-5 rounded-xl border border-white/20 bg-[#062C5F]/25 p-4">
       {title && (
-        <h3 className="mb-3 text-sm font-semibold text-slate-200">{title}</h3>
+        <h3 className="mb-3 text-sm font-semibold text-white/90">{title}</h3>
       )}
-      <div className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">
+      <div className="whitespace-pre-wrap break-words text-sm leading-7 text-white/90">
         {children}
       </div>
     </section>
@@ -97,7 +97,7 @@ function ResultBox({ title, children }) {
 
 function Loading({ children = "Working on it..." }) {
   return (
-    <p className="mt-4 text-sm text-blue-300" role="status">
+    <p className="mt-4 text-sm text-blue-100" role="status">
       {children}
     </p>
   );
@@ -108,7 +108,6 @@ export default function QuorumAIAssistant() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // AI chat
   const [prompt, setPrompt] = useState("");
   const [context, setContext] = useState("");
   const [messages, setMessages] = useState([]);
@@ -117,19 +116,17 @@ export default function QuorumAIAssistant() {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionDisclaimer, setSuggestionDisclaimer] = useState("");
 
-  // Workspace search
   const [query, setQuery] = useState("");
   const [searchResult, setSearchResult] = useState(null);
 
-  // Project assistance and status reports
   const [targetType, setTargetType] = useState("organizationId");
   const [targetId, setTargetId] = useState("");
+  const [showUuidHelp, setShowUuidHelp] = useState(false);
   const [projectPrompt, setProjectPrompt] = useState("");
   const [projectResult, setProjectResult] = useState(null);
   const [timeframe, setTimeframe] = useState("last_7_days");
   const [statusResult, setStatusResult] = useState(null);
 
-  // AI history
   const [history, setHistory] = useState([]);
   const [historyCursor, setHistoryCursor] = useState("");
   const [nextCursor, setNextCursor] = useState(null);
@@ -147,8 +144,6 @@ export default function QuorumAIAssistant() {
     if (activeTab === "history") {
       loadHistory("", historyFilter);
     }
-    // History is reloaded when the tab or filter changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, historyFilter]);
 
   function runRequest(request) {
@@ -162,8 +157,7 @@ export default function QuorumAIAssistant() {
       .finally(() => {
         setBusy(false);
       });
-  }
-
+    }
   async function handleChat(event) {
     event.preventDefault();
     const text = prompt.trim();
@@ -337,17 +331,26 @@ export default function QuorumAIAssistant() {
   const statusProject = statusResult?.project;
 
   return (
-    <div className="min-h-screen bg-[#071426] p-4 text-white sm:p-6">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div
+      className="relative isolate min-h-screen overflow-x-hidden p-3 text-white sm:p-5 lg:p-6"
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage:
+          "linear-gradient(to bottom, #213F70 0%, #315A8A 35%, #506D9A 65%, #7698C5 100%)",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+      }}
+    >
+      <div className="mx-auto w-full max-w-7xl min-w-0">
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-4 py-4 shadow-lg backdrop-blur-md sm:px-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
-              QUORUM
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">
+              QOURUM
             </p>
-            <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">
+            <h1 className="mt-1 text-lg font-semibold uppercase tracking-wide sm:text-xl">
               AI Assistant
             </h1>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-1 text-xs text-white/70 sm:text-sm">
               Ask questions, search your workspace, and prepare project updates.
             </p>
           </div>
@@ -356,14 +359,14 @@ export default function QuorumAIAssistant() {
             <button
               type="button"
               onClick={startNewChat}
-              className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+              className="rounded-lg border border-white/25 px-4 py-2 text-sm text-white/90 hover:bg-white/10"
             >
               + New chat
             </button>
           )}
         </header>
 
-        <div className="mb-5 flex gap-2 overflow-x-auto border-b border-slate-700 pb-3">
+        <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-white/20 bg-[#102842]/60 p-2 shadow-sm backdrop-blur-md">
           {tabs.map((tab) => (
             <button
               type="button"
@@ -374,8 +377,8 @@ export default function QuorumAIAssistant() {
               }}
               className={`shrink-0 rounded-lg px-4 py-2 text-sm transition ${
                 activeTab === tab.id
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white shadow-sm"
+                  : "text-white/75 hover:bg-white/10 hover:text-white"
               }`}
             >
               {tab.label}
@@ -401,11 +404,11 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "chat" && (
-          <div className="grid min-h-[620px] gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <section className="flex min-h-[620px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-[#0d1c31]">
-              <div className="border-b border-slate-700 px-5 py-4">
+          <div className="grid min-h-[620px] min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <section className="flex min-h-[620px] flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
+              <div className="border-b border-white/20 px-5 py-4">
                 <h2 className="font-medium">Quorum AI</h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-white/70">
                   AI-generated answers may need verification.
                 </p>
               </div>
@@ -413,11 +416,11 @@ export default function QuorumAIAssistant() {
               <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
                 {messages.length === 0 && (
                   <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-xl text-blue-300">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-xl text-blue-100">
                       AI
                     </div>
                     <h3 className="text-lg font-medium">How can I help?</h3>
-                    <p className="mt-2 max-w-md text-sm text-slate-400">
+                    <p className="mt-2 max-w-md text-sm text-white/70">
                       Ask a question about Quorum or provide context for a more
                       relevant answer.
                     </p>
@@ -431,7 +434,7 @@ export default function QuorumAIAssistant() {
                           type="button"
                           key={suggestion}
                           onClick={() => setPrompt(suggestion)}
-                          className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-blue-400"
+                          className="rounded-lg border border-white/25 px-3 py-2 text-sm text-white/80 hover:border-blue-300"
                         >
                           {suggestion}
                         </button>
@@ -450,15 +453,15 @@ export default function QuorumAIAssistant() {
                     <div
                       className={`max-w-[90%] rounded-xl px-4 py-3 sm:max-w-[80%] ${
                         message.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "border border-slate-700 bg-[#142844] text-slate-200"
+                          ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white"
+                          : "border border-white/20 bg-[#142844] text-white/90"
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words text-sm leading-7">
                       {formatAIResponse(message.text)}
                       </p>
                       {message.metadata?.model && (
-                        <p className="mt-2 text-[11px] text-slate-400">
+                        <p className="mt-2 text-[11px] text-white/70">
                           Model: {message.metadata.model}
                         </p>
                       )}
@@ -466,7 +469,7 @@ export default function QuorumAIAssistant() {
                         <button
                           type="button"
                           onClick={() => copyText(message.text)}
-                          className="mt-3 text-xs text-blue-300 hover:text-white"
+                          className="mt-3 text-xs text-blue-100 hover:text-white"
                         >
                           Copy answer
                         </button>
@@ -480,9 +483,9 @@ export default function QuorumAIAssistant() {
 
               <form
                 onSubmit={handleChat}
-                className="border-t border-slate-700 p-4"
+                className="border-t border-white/20 p-4"
               >
-                <label htmlFor="ai-context" className="mb-2 block text-xs text-slate-400">
+                <label htmlFor="ai-context" className="mb-2 block text-xs text-white/70">
                   Optional context
                 </label>
                 <textarea
@@ -492,7 +495,7 @@ export default function QuorumAIAssistant() {
                   maxLength={20000}
                   rows={2}
                   placeholder="Add relevant context (optional)..."
-                  className="mb-3 w-full resize-y max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                  className="mb-3 w-full resize-y max-h-40 overflow-y-auto w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                 />
                 <div className="flex items-end gap-3">
                   <textarea
@@ -503,35 +506,35 @@ export default function QuorumAIAssistant() {
                     required
                     placeholder="Message Quorum AI..."
                     aria-label="Message Quorum AI"
-                    className="min-w-0 flex-1 resize-y max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                    className="min-w-0 flex-1 resize-y max-h-40 overflow-y-auto w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                   />
                   <button
                     type="submit"
                     disabled={busy || !prompt.trim()}
-                    className="rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-3 text-sm font-medium hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busy ? "..." : "Send"}
                   </button>
                 </div>
-                <p className="mt-2 text-right text-xs text-slate-500">
+                <p className="mt-2 text-right text-xs text-white/60">
                   {prompt.length}/10,000
                 </p>
               </form>
             </section>
 
-            <aside className="h-fit rounded-xl border border-slate-700 bg-[#0d1c31] p-4">
+            <aside className="h-fit rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
               <h3 className="font-medium">Message assistant</h3>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-white/70">
                 Generate suggestions for a draft. Review before using them.
               </p>
 
-              <label className="mb-2 mt-5 block text-xs text-slate-400">
+              <label className="mb-2 mt-5 block text-xs text-white/70">
                 Suggestion type
               </label>
               <select
                 value={quickMode}
                 onChange={(event) => setQuickMode(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-white"
+                className="w-full rounded-lg border border-white/20 bg-[#062C5F]/35 p-3 text-sm text-white"
               >
                 {modes.map((mode) => (
                   <option key={mode.value} value={mode.value}>
@@ -540,13 +543,13 @@ export default function QuorumAIAssistant() {
                 ))}
               </select>
 
-              <label className="mb-2 mt-4 block text-xs text-slate-400">
+              <label className="mb-2 mt-4 block text-xs text-white/70">
                 Tone
               </label>
               <select
                 value={tone}
                 onChange={(event) => setTone(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-white"
+                className="w-full rounded-lg border border-white/20 bg-[#062C5F]/35 p-3 text-sm text-white"
               >
                 {tones.map((item) => (
                   <option key={item} value={item}>
@@ -559,7 +562,7 @@ export default function QuorumAIAssistant() {
                 type="button"
                 disabled={busy}
                 onClick={handleQuickReplies}
-                className="mt-4 w-full rounded-lg border border-blue-500/50 bg-blue-600/10 px-4 py-3 text-sm text-blue-200 hover:bg-blue-600/20 disabled:opacity-50"
+                className="mt-4 w-full rounded-lg border border-blue-500/50 bg-gradient-to-r from-[#0066FF] to-[#0148B3]/10 px-4 py-3 text-sm text-blue-100 hover:bg-gradient-to-r from-[#0066FF] to-[#0148B3]/20 disabled:opacity-50"
               >
                 {busy ? "Generating..." : "Generate suggestions"}
               </button>
@@ -569,27 +572,27 @@ export default function QuorumAIAssistant() {
                   {suggestions.map((item, index) => (
                     <div
                       key={`${index}-${item}`}
-                      className="rounded-lg border border-slate-700 bg-[#09172a] p-3"
+                      className="rounded-lg border border-white/20 bg-[#062C5F]/35 p-3"
                     >
-                      <p className="text-sm leading-6 text-slate-200">{item}</p>
+                      <p className="text-sm leading-6 text-white/90">{item}</p>
                       <button
                         type="button"
                         onClick={() => setPrompt(item)}
-                        className="mt-3 text-xs text-blue-300 hover:text-white"
+                        className="mt-3 text-xs text-blue-100 hover:text-white"
                       >
                         Use in draft
                       </button>
                       <button
                         type="button"
                         onClick={() => copyText(item)}
-                        className="ml-4 mt-3 text-xs text-blue-300 hover:text-white"
+                        className="ml-4 mt-3 text-xs text-blue-100 hover:text-white"
                       >
                         Copy
                       </button>
                     </div>
                   ))}
                   {suggestionDisclaimer && (
-                    <p className="text-xs leading-5 text-slate-400">
+                    <p className="text-xs leading-5 text-white/70">
                       {suggestionDisclaimer}
                     </p>
                   )}
@@ -600,7 +603,7 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "search" && (
-          <section className="max-w-4xl rounded-xl border border-slate-700 bg-[#0d1c31] p-5 sm:p-6">
+          <section className="max-w-4xl rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
             <SectionTitle
               title="Workspace Search"
               subtitle="Search available workspace evidence and view the returned sources."
@@ -612,11 +615,11 @@ export default function QuorumAIAssistant() {
                 maxLength={1000}
                 required
                 placeholder="Search messages, posts, teams, meetings..."
-                className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm outline-none focus:border-blue-500"
+                className="min-w-0 flex-1 w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm outline-none focus:border-blue-300"
               />
               <button
                 disabled={busy || !query.trim()}
-                className="rounded-lg bg-blue-600 px-5 py-3 text-sm hover:bg-blue-500 disabled:opacity-50"
+                className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm hover:brightness-110 disabled:opacity-50"
               >
                 {busy ? "Searching..." : "Search"}
               </button>
@@ -638,20 +641,20 @@ export default function QuorumAIAssistant() {
                       {searchResult.sources.map((source) => (
                         <article
                           key={source.id}
-                          className="rounded-lg border border-slate-700 p-4"
+                          className="rounded-lg border border-white/20 p-4"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="font-medium text-slate-100">
+                            <h4 className="font-medium text-white">
                               {source.title || source.type || "Workspace source"}
                             </h4>
-                            <span className="rounded bg-slate-800 px-2 py-1 text-xs text-slate-300">
+                            <span className="rounded bg-slate-800 px-2 py-1 text-xs text-white/80">
                               {source.type}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm leading-6 text-slate-300">
+                          <p className="mt-2 text-sm leading-6 text-white/80">
                             {source.snippet}
                           </p>
-                          <div className="mt-3 text-xs text-slate-400">
+                          <div className="mt-3 text-xs text-white/70">
                             {source.author && <span>By {source.author}</span>}
                             {source.createdAt && (
                               <span>
@@ -663,7 +666,7 @@ export default function QuorumAIAssistant() {
                           {source.url && (
                             <a
                               href={source.url}
-                              className="mt-3 inline-block text-sm text-blue-300 hover:text-white"
+                              className="mt-3 inline-block text-sm text-blue-100 hover:text-white"
                             >
                               Open source
                             </a>
@@ -672,7 +675,7 @@ export default function QuorumAIAssistant() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400">No sources were returned.</p>
+                    <p className="text-sm text-white/70">No sources were returned.</p>
                   )}
                 </div>
               </>
@@ -681,7 +684,7 @@ export default function QuorumAIAssistant() {
         )}
 
         {(activeTab === "project" || activeTab === "update") && (
-          <section className="max-w-4xl rounded-xl border border-slate-700 bg-[#0d1c31] p-5 sm:p-6">
+          <section className="max-w-4xl rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
             <SectionTitle
               title={activeTab === "project" ? "Project Assistance" : "Project Status Report"}
               subtitle="Choose exactly one workspace type and provide its ID."
@@ -689,13 +692,13 @@ export default function QuorumAIAssistant() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-white/80">
                   Workspace type
                 </label>
                 <select
                   value={targetType}
                   onChange={(event) => setTargetType(event.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-white"
+                  className="w-full rounded-lg border border-white/20 bg-[#062C5F]/35 p-3 text-sm text-white"
                 >
                   {targetTypes.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -705,21 +708,39 @@ export default function QuorumAIAssistant() {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-white/80">
                   Workspace UUID
                 </label>
                 <input
                   value={targetId}
                   onChange={(event) => setTargetId(event.target.value)}
                   placeholder="Enter organization/team/community UUID"
-                  className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                  className="w-full w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowUuidHelp((current) => !current)}
+                  aria-expanded={showUuidHelp}
+                  className="mt-2 text-xs font-medium text-blue-100 underline decoration-white/40 underline-offset-4 hover:text-white"
+                >
+                  {showUuidHelp ? "Hide UUID help" : "Where can I find my UUID?"}
+                </button>
+                {showUuidHelp && (
+                  <div className="mt-3 rounded-xl border border-white/20 bg-[#062C5F]/30 p-3 text-xs leading-5 text-white/80 sm:text-sm">
+                    <p className="font-semibold text-white">
+                      Find the ID for the selected workspace type
+                    </p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      <li>Open the relevant Organization, Team, or Community page and check its Details or Settings section.</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 
             {activeTab === "project" ? (
               <form onSubmit={handleProjectAssistance} className="mt-5">
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-white/80">
                   What do you need help with?
                 </label>
                 <textarea
@@ -729,24 +750,24 @@ export default function QuorumAIAssistant() {
                   rows={4}
                   required
                   placeholder="Example: Give me a high-level breakdown of our team structure."
-                  className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-gray-400 outline-none focus:border-blue-500"
+                  className="w-full w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                 />
                 <button
                   disabled={busy || !projectPrompt.trim() || !targetId.trim()}
-                  className="mt-4 rounded-lg bg-blue-600 px-5 py-3 text-sm hover:bg-blue-500 disabled:opacity-50"
+                  className="mt-4 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm hover:brightness-110 disabled:opacity-50"
                 >
                   {busy ? "Generating..." : "Get assistance"}
                 </button>
               </form>
             ) : (
               <div className="mt-5">
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-white/80">
                   Report timeframe
                 </label>
                 <select
                   value={timeframe}
                   onChange={(event) => setTimeframe(event.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-[#09172a] p-3 text-sm text-white sm:max-w-xs"
+                  className="w-full rounded-lg border border-white/20 bg-[#062C5F]/35 p-3 text-sm text-white sm:max-w-xs"
                 >
                   {timeframes.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -758,7 +779,7 @@ export default function QuorumAIAssistant() {
                   type="button"
                   onClick={handleStatusUpdate}
                   disabled={busy || !targetId.trim()}
-                  className="mt-4 rounded-lg bg-blue-600 px-5 py-3 text-sm hover:bg-blue-500 disabled:opacity-50"
+                  className="mt-4 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm hover:brightness-110 disabled:opacity-50"
                 >
                   {busy ? "Generating..." : "Generate status report"}
                 </button>
@@ -783,12 +804,12 @@ export default function QuorumAIAssistant() {
 
             {activeTab === "update" && statusResult && (
               <div className="mt-5 space-y-4">
-                <div className="rounded-lg border border-slate-700 bg-[#10213b] p-4">
+                <div className="rounded-lg border border-white/20 bg-[#062C5F]/25 p-4">
                   <h3 className="font-medium">{getProjectLabel(statusProject)}</h3>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="mt-1 text-sm text-white/70">
                     {statusResult.timeframe} · {statusResult.activitySource || "Activity source not specified"}
                   </p>
-                  <p className="mt-3 text-sm text-slate-300">
+                  <p className="mt-3 text-sm text-white/80">
                     Members: {statusResult.retrievedFacts?.membersCount ?? 0}
                     {" · "}Discussions: {statusResult.retrievedFacts?.discussionsAnalyzed ?? 0}
                     {" · "}Teams: {statusResult.retrievedFacts?.teamsRecorded ?? 0}
@@ -806,7 +827,7 @@ export default function QuorumAIAssistant() {
                 <button
                   type="button"
                   onClick={() => copyText(statusResult.statusUpdate || "")}
-                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800"
+                  className="rounded-lg border border-white/25 px-4 py-2 text-sm hover:bg-white/10"
                 >
                   Copy report
                 </button>
@@ -816,7 +837,7 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "history" && (
-          <section className="rounded-xl border border-slate-700 bg-[#0d1c31] p-5 sm:p-6">
+          <section className="rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <SectionTitle
                 title="AI History"
@@ -833,14 +854,14 @@ export default function QuorumAIAssistant() {
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">
-              <label htmlFor="history-filter" className="text-sm text-slate-300">
+              <label htmlFor="history-filter" className="text-sm text-white/80">
                 Filter:
               </label>
               <select
                 id="history-filter"
                 value={historyFilter}
                 onChange={(event) => setHistoryFilter(event.target.value)}
-                className="rounded-lg border border-slate-700 bg-[#09172a] p-2 text-sm text-white"
+                className="rounded-lg border border-white/20 bg-[#062C5F]/35 p-2 text-sm text-white"
               >
                 <option value="">All interactions</option>
                 {actionTypes.map((type) => (
@@ -851,7 +872,7 @@ export default function QuorumAIAssistant() {
                 type="button"
                 onClick={() => loadHistory("")}
                 disabled={historyLoading}
-                className="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50"
+                className="rounded-lg border border-white/25 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
               >
                 Refresh
               </button>
@@ -860,7 +881,7 @@ export default function QuorumAIAssistant() {
             {historyLoading && <Loading>Loading history...</Loading>}
 
             {!historyLoading && history.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">
+              <p className="rounded-lg border border-dashed border-white/20 p-8 text-center text-sm text-white/70">
                 No AI interactions found.
               </p>
             )}
@@ -869,14 +890,14 @@ export default function QuorumAIAssistant() {
               {history.map((item) => (
                 <article
                   key={item.id}
-                  className="rounded-lg border border-slate-700 bg-[#10213b] p-4"
+                  className="rounded-lg border border-white/20 bg-[#062C5F]/25 p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <span className="rounded bg-slate-800 px-2 py-1 text-xs text-blue-200">
+                      <span className="rounded bg-slate-800 px-2 py-1 text-xs text-blue-100">
                         {item.actionType}
                       </span>
-                      <p className="mt-3 whitespace-pre-wrap break-words text-sm font-medium text-slate-100">
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm font-medium text-white">
                         {item.prompt}
                       </p>
                     </div>
@@ -889,10 +910,10 @@ export default function QuorumAIAssistant() {
                       Delete
                     </button>
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">
+                  <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
                   {formatAIResponse(item.response)}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                  <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/60">
                     {item.createdAt && (
                       <span>{new Date(item.createdAt).toLocaleString()}</span>
                     )}
@@ -902,7 +923,7 @@ export default function QuorumAIAssistant() {
                   <button
                     type="button"
                     onClick={() => copyText(item.response || "")}
-                    className="mt-3 text-xs text-blue-300 hover:text-white"
+                    className="mt-3 text-xs text-blue-100 hover:text-white"
                   >
                     Copy response
                   </button>
@@ -915,13 +936,14 @@ export default function QuorumAIAssistant() {
                 type="button"
                 onClick={() => loadHistory(nextCursor)}
                 disabled={historyLoading}
-                className="mt-5 rounded-lg border border-slate-600 px-4 py-3 text-sm hover:bg-slate-800 disabled:opacity-50"
+                className="mt-5 rounded-lg border border-white/25 px-4 py-3 text-sm hover:bg-white/10 disabled:opacity-50"
               >
                 {historyLoading ? "Loading..." : "Load more"}
               </button>
             )}
           </section>
         )}
+         
       </div>
     </div>
   );
