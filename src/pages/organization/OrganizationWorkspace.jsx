@@ -514,9 +514,8 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedChatTeam(team)}
+        <button
+         onClick={() => setSelectedChatTeam(team)}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-2 text-xs font-medium text-[#C6EAFF] transition hover:bg-[#38BDF8]/20 sm:text-sm"
           >
             Open Team Chat
@@ -579,7 +578,7 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
     return (
       <div
         key={id}
-        className="flex flex-col gap-3 rounded-xl border border-white/20 bg-white/[0.12] px-3 py-4 transition hover:bg-white/[0.20] sm:flex-row sm:items-center sm:justify-between sm:px-4"
+        className="flex flex-col gap-3 rounded-xl border border-white/20 bg-[#062C52]/40 px-3 py-4 transition hover:bg-[#062C52]/90] sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
         <div className="flex min-w-0 items-center gap-3">
           {avatar ? (
@@ -694,6 +693,18 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
       </OnboardingLayout>
     );
   }
+  if (selectedChatTeam) {
+    return (
+      <OnboardingLayout>
+        <TeamChat
+          organizationId={organizationId}
+          team={selectedChatTeam}
+          currentUser={currentUser}
+          onClose={() => setSelectedChatTeam(null)}
+        />
+      </OnboardingLayout>
+    );
+  }
   return (
     <OnboardingLayout>
      <div className="mx-auto w-full max-w-none min-w-0 p-3 text-[#EDEFF7] sm:p-5 lg:p-6">
@@ -781,7 +792,7 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
           </div>
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          {["Overview", "Teams", "Members"].map((tab) => (
+        {["Overview", "Teams", "Members", "About"].map((tab) => (
             <button
               key={tab}
               type="button"
@@ -956,6 +967,51 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               </p>
             )}
           </div>
+        )}
+                {activeTab === "About" && (
+          <section className={`${card} mt-6 p-4 sm:p-6`}>
+            <h2 className="mb-5 text-lg font-semibold text-white">
+              About Organization
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-[#B6C6D9]">
+                  Organization Name
+                </p>
+                <p className="mt-1 text-white">
+                  {organization?.name || "Not provided"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-[#B6C6D9]">
+                  Organization ID
+                </p>
+                <p className="mt-1 break-all text-sm text-white">
+                  {organization?._id || organization?.id || organizationId}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-[#B6C6D9]">
+                  Description
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-white">
+                  {organization?.description || "No description available."}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-[#B6C6D9]">
+                  Website
+                </p>
+                <p className="mt-1 break-all text-sm text-white">
+                  {organization?.website || "Not provided"}
+                </p>
+              </div>
+            </div>
+          </section>
         )}
       </div>
       {modal === "create-team" && (
@@ -1289,13 +1345,6 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
             setNotice("Member added to team successfully.");
             await loadWorkspace(false);
           }}
-        />
-      )}
-      {selectedChatTeam && (
-        <TeamChat
-          organizationId={organizationId}
-          team={selectedChatTeam}
-          onClose={() => setSelectedChatTeam(null)}
         />
       )}
     </OnboardingLayout>

@@ -22,6 +22,7 @@ import {
   FiX,
   FiBookmark,
   FiArrowLeft,
+  FiMenu,
 } from "react-icons/fi";
 import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
@@ -135,7 +136,7 @@ export default function Chat() {
   const [selectedMentionUserIds, setSelectedMentionUserIds] = useState([]);
 const [mentionQuery, setMentionQuery] = useState(null);
 const [mentionStart, setMentionStart] = useState(-1);
-  const [showInfo, setShowInfo] = useState(true);
+const [showInfo, setShowInfo] = useState(false);
   const [showMobileContacts, setShowMobileContacts] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [error, setError] = useState("");
@@ -1173,6 +1174,15 @@ const handleSaveConversation = async () => {
       <div className="mx-auto flex h-[calc(100vh-16px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md sm:h-[calc(100vh-32px)] lg:h-[calc(100vh-40px)]">
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/75 px-4 backdrop-blur-md sm:h-14">
           <div className="flex items-center gap-2">
+          <button
+  type="button"
+  onClick={() => setShowMobileContacts((prev) => !prev)}
+  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-white/85 transition hover:bg-white/10 md:hidden"
+  aria-label="Toggle conversations"
+  title="Toggle conversations"
+>
+  <FiMenu size={22} />
+</button>
           <button
       type="button"
       onClick={() => navigate("/dashboard")}

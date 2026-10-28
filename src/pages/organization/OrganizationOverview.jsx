@@ -133,6 +133,7 @@ export default function OrganizationOverview({
 
   return (
     <div className="w-full min-w-0 space-y-5 text-[#EDEFF7]">
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {stats.map((stat) => (
           <div

@@ -1,4 +1,9 @@
+
 import { createContext, useContext, useState, useEffect } from "react";
+import {
+  getCurrentUser,
+  logoutUser,
+} from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -7,34 +12,55 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    const savedToken = localStorage.getItem("accessToken");
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const res = await getCurrentUser();
+
+        if (!cancelled) {
+          const currentUser = res.data?.user ?? res.user ?? res.data;
+          setUser(currentUser || null);
+
+          if (currentUser) {
+            localStorage.setItem("user", JSON.stringify(currentUser));
+          } else {
+            localStorage.removeItem("user");
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setUser(null);
+          localStorage.removeItem("user");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
-    setLoading(false);
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-
-  function login(userData, accessToken, rememberMe = false) {
+  function login(userData) {
     setUser(userData);
-  
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("user");
-  
-    const storage = rememberMe ? localStorage : sessionStorage;
-  
-    storage.setItem("accessToken", accessToken);
-    storage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(userData));
   }
-  
-  
-  function logout() {
-    setUser(null);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
+
+  async function logout() {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem("user");
+    }
   }
 
   return (

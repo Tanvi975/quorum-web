@@ -68,8 +68,8 @@ function SetNewPassword() {
     <AuthLayout
     title="Set New Password"
     subtitle="Your new password must be different from previous ones."
-    leftTitle="Architecting Seamless Global Alignment"
-    leftSubtitle="Connected video spaces designed to bridge teams everywhere."
+    leftTitle="Secure Workspace Continuity"
+    leftSubtitle="Enterprise-grade encryption keeping your organizational data proctected."
     leftImage={illustration3}
   >
       <form onSubmit={handleSubmit} noValidate>

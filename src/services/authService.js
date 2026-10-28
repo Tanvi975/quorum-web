@@ -5,10 +5,16 @@ export async function registerUser(name, email, password) {
     return res.data;
 }
 
-export async function loginUser(email, password) {
-    const res = await api.post("/api/auth/login", { email, password });
+
+export async function loginUser(email, password, rememberMe = false) {
+    const res = await api.post("/api/auth/login", {
+        email,
+        password,
+        rememberMe,
+    });
     return res.data;
 }
+
 
 export async function getCurrentUser() {
     const res = await api.get("/api/auth/me");

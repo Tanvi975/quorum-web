@@ -24,7 +24,7 @@ function SSO() {
     <AuthLayout
     title="Single Sign-On (SSO)"
     subtitle="Enter your Organization ID or Work Email to proceed."
-    leftTitle="Crystal-Clear Syncs for Modern Teams"
+    leftTitle="Real-Time Collaboration for Modern Teams"
     leftSubtitle="Ultra-low latency video and smart audio built for fast team check-ins."
     leftImage={illustration1}
   >

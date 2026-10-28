@@ -25,7 +25,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [isVideoOff, setIsVideoOff] = useState(false);
 
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc?.remoteDescription) return;
+        if (!pc ?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
@@ -238,17 +238,16 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             import.meta.env.VITE_API_URL;
         const socketUrl = apiUrl.replace(/\/api\/?$/, "");
 
-        const token = localStorage.getItem("accessToken");
-
         const socket = io(socketUrl, {
+            withCredentials: true,
             transports: ["websocket"],
             auth: {
-                token,
                 userId: user.id,
                 name: user.name,
                 role: isHost ? "host" : "participant",
             },
         });
+
 
         socketRef.current = socket;
 

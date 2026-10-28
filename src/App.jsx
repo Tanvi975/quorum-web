@@ -37,7 +37,7 @@ import SavedItems from "./pages/SavedItems";
 import MobileBottomNav from "./components/MobileBottomNav";
 import CreateCommunity from "./pages/communities/CreateCommunity";
 
-import api from "./services/api";
+import { initCsrf } from "./services/api";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -52,8 +52,7 @@ function MeetRedirect() {
 
 function App() {
   useEffect(() => {
-    api
-      .get("/api/csrf-token")
+    initCsrf()
       .then(() => console.log("CSRF initialized"))
       .catch((err) =>
         console.error("CSRF initialization failed", err)

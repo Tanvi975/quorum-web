@@ -38,8 +38,8 @@ function Login() {
 
     setLoading(true);
     try {
-      const res = await loginUser(email, password);
-      login(res.data.user, res.data.accessToken, rememberMe);
+      const res = await loginUser(email, password, rememberMe);
+      login(res.data.user);
       if (res.data.user.isOnboarded) {
       navigate("/dashboard");
       } else {
@@ -88,8 +88,8 @@ function Login() {
   return (
     <AuthLayout
       title="Welcome back"
-      leftTitle="Crystal-Clear Syncs for Modern Teams"
-      leftSubtitle="Built for fast team check-ins."
+      leftTitle="Real-Time Collaboration for Modern Teams"
+      leftSubtitle="High-fidelity video syncs integrated directly into your workspace."
       leftImage={illustration1}
       showBack={false}
     >
