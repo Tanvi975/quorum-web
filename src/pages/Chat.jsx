@@ -21,11 +21,13 @@ import {
   FiMessageSquare,
   FiX,
   FiBookmark,
+  FiArrowLeft,
 } from "react-icons/fi";
 import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
 import { getChatUploadSignature } from "../services/chatService";
+import { useNavigate } from "react-router-dom";
 
 function getUser(participant) {
   return participant?.user || participant || {};
@@ -108,7 +110,7 @@ function IconButton({ children, onClick, label }) {
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#A6B6C8] transition hover:bg-[#263F59] hover:text-white"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/75 transition hover:bg-white/10 hover:text-white"
     >
       {children}
     </button>
@@ -168,6 +170,7 @@ const [saveMessage, setSaveMessage] = useState("");
   const searchRequestRef = useRef(0);
   const activeConversationRef = useRef(null);
   const messagesRef = useRef([]);
+  const navigate = useNavigate();
 
   const activeContact = activeConversation
     ? getOtherParticipant(activeConversation, currentUserId)
@@ -1144,7 +1147,14 @@ const handleSaveConversation = async () => {
 
 
   return (
-    <div className="h-screen overflow-hidden bg-[#121419] p-3 text-[#E8EDF5] sm:p-5">
+    <div
+      className="h-screen overflow-hidden p-2 text-white sm:p-4 lg:p-5"
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage:
+          "linear-gradient(to bottom, #213F70 0%, #315A8A 35%, #506D9A 65%, #7698C5 100%)",
+      }}
+    >
         {saveMessage && (
       <div
         role="status"
@@ -1160,14 +1170,21 @@ const handleSaveConversation = async () => {
         </button>
       </div>
     )}
-      <div className="mx-auto flex h-[calc(100vh-24px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#0D1F33] sm:h-[calc(100vh-40px)]">
-        <header className="flex h-11 shrink-0 items-center justify-between border-b border-[#253D57] bg-[#0D1F33] px-4">
+      <div className="mx-auto flex h-[calc(100vh-16px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md sm:h-[calc(100vh-32px)] lg:h-[calc(100vh-40px)]">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/75 px-4 backdrop-blur-md sm:h-14">
           <div className="flex items-center gap-2">
-            <FiMessageSquare className="text-[#38BDF8]" size={17} />
+          <button
+      type="button"
+      onClick={() => navigate("/dashboard")}
+      className="rounded-md p-2 text-white/80 hover:bg-white/10"
+      aria-label="Back to dashboard"
+    >
+      <FiArrowLeft size={20} />
+    </button>
             <span className="text-sm font-semibold tracking-wide text-white">
               Quorum
             </span>
-            <span className="ml-1 hidden text-xs text-[#7F95AB] sm:inline">
+            <span className="ml-1 hidden text-xs text-white/65 sm:inline">
               / Messages
             </span>
           </div>
@@ -1178,7 +1195,7 @@ const handleSaveConversation = async () => {
                 connected ? "bg-[#38BDF8]" : "bg-red-400"
               }`}
             />
-            <span className="text-[11px] text-[#A6B6C8]">
+            <span className="text-[11px] text-white/75">
               {connected ? "Connected" : "Disconnected"}
             </span>
           </div>
@@ -1189,20 +1206,20 @@ const handleSaveConversation = async () => {
             <aside
               className={`${
                 showMobileContacts ? "flex" : "hidden"
-              } w-full shrink-0 flex-col rounded-lg border border-[#253D57] bg-[#192D43] p-3 md:flex md:w-[245px] lg:w-[265px] xl:w-[275px]`}
+              } w-full shrink-0 flex-col rounded-xl border border-white/20 bg-[#102842]/55 p-3 shadow-sm backdrop-blur-md md:flex md:w-[245px] lg:w-[265px] xl:w-[275px]`}
             >
          <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white">
          Conversations
          </h2>
-         <span className="rounded-md bg-[#263F59] px-2 py-1 text-[10px] text-[#A6B6C8]">
+         <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-white/75">
          {conversations.length}
          </span>
          </div>
 
          <div className="relative mb-4">
          <FiSearch
-         className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8095AB]"
+         className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65"
            size={14}
           />
           <input
@@ -1215,13 +1232,13 @@ const handleSaveConversation = async () => {
         setSearchMode(false);
            }}
          onChange={(event) => setSearch(event.target.value)}
-         className="h-9 w-full rounded-md border border-[#304A64] bg-[#11253A] pl-9 pr-8 text-xs text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
+         className="h-9 w-full rounded-md border border-white/25 bg-[#062C5F]/30 pl-9 pr-8 text-xs text-white outline-none placeholder:text-white/50 focus:border-[#85B6FF]"
          />
           {search && (
            <button
           type="button"
           onClick={() => setSearch("")}
-           className="absolute right-2 top-1/2 -translate-y-1/2 text-[#A6B6C8]"
+           className="absolute right-2 top-1/2 -translate-y-1/2 text-white/75"
            aria-label="Clear search"
              >
             <FiX size={13} />
@@ -1231,12 +1248,12 @@ const handleSaveConversation = async () => {
 
               {searchMode ? (
                 <>
-             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-[#7F95AB]">
+             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-white/65">
              Find people
              </p>
              <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
               {search.trim() && searching && (
-              <p className="p-2 text-xs text-[#A6B6C8]">
+              <p className="p-2 text-xs text-white/75">
               Searching users...
               </p>
               )}
@@ -1245,14 +1262,14 @@ const handleSaveConversation = async () => {
              type="button"
              key={getUserId(person)}
             onClick={() => openUserChat(person)}
-             className="flex w-full items-center gap-2.5 rounded-md border border-transparent p-2 text-left hover:bg-[#20374E]"
+             className="flex w-full items-center gap-2.5 rounded-md border border-transparent p-2 text-left hover:bg-white/10"
               >
              <Avatar name={getUserName(person)} size={31} />
              <div className="min-w-0 flex-1">
-             <p className="truncate text-[11px] font-semibold text-[#EDF3FA]">
+             <p className="truncate text-[11px] font-semibold text-white">
                {getUserName(person)}
                </p>
-               <p className="truncate text-[10px] text-[#93A7BB]">
+               <p className="truncate text-[10px] text-white/70">
                 {person.email || "Start direct chat"}
                 </p>
                 </div>
@@ -1260,12 +1277,12 @@ const handleSaveConversation = async () => {
                   </button>
                     ))}
                     {search.trim() && !searching && searchResults.length === 0 && (
-                      <p className="px-2 py-5 text-center text-xs text-[#8196AC]">
+                      <p className="px-2 py-5 text-center text-xs text-white/60">
                         No users found
                       </p>
                     )}
                     {!search.trim() && (
-                      <p className="px-2 py-5 text-center text-xs text-[#8196AC]">
+                      <p className="px-2 py-5 text-center text-xs text-white/60">
                         Type a name or email to find people.
                       </p>
                     )}
@@ -1276,19 +1293,19 @@ const handleSaveConversation = async () => {
                       setSearchMode(false);
                       setSearch("");
                     }}
-                    className="mt-3 h-9 rounded-md border border-[#304A64] text-xs text-[#C3D1E0] hover:bg-[#20374E]"
+                    className="mt-3 h-9 rounded-md border border-white/25 text-xs text-white/85 hover:bg-white/10"
                   >
                     Back to conversations
                   </button>
                 </>
               ) : (
                 <>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-[#7F95AB]">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-white/65">
                     Direct conversations
                   </p>
                   <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
                     {loadingConversations && (
-                      <p className="p-2 text-xs text-[#A6B6C8]">
+                      <p className="p-2 text-xs text-white/75">
                         Loading conversations...
                       </p>
                     )}
@@ -1325,18 +1342,18 @@ const handleSaveConversation = async () => {
                      }}
                      className={`flex w-full items-center gap-2.5 rounded-md border p-2 text-left transition ${
                        active
-                      ? "border-[#315C82] bg-[#243E59]"
-                      : "border-transparent hover:bg-[#20374E]"
+                      ? "border-[#85B6FF]/70 bg-gradient-to-r from-[#0066FF] to-[#0148B3]/25"
+                      : "border-transparent hover:bg-white/10"
                         }`}
                           >
                             <Avatar name={conversationName} size={31} />
                             <div className="min-w-0 flex-1">
                            <div className="flex items-center justify-between gap-1">
-                           <span className="truncate text-[11px] font-semibold text-[#EDF3FA]">
+                           <span className="truncate text-[11px] font-semibold text-white">
                           {conversationName}
                         </span>
                               </div>
-                              <p className="mt-1 truncate text-[10px] text-[#93A7BB]">
+                              <p className="mt-1 truncate text-[10px] text-white/70">
                                 {lastMessage?.content || "No messages yet"}
                               </p>
                             </div>
@@ -1349,7 +1366,7 @@ const handleSaveConversation = async () => {
                         );
                       })}
                     {!loadingConversations && visibleConversations.length === 0 && (
-                      <p className="px-2 py-5 text-center text-xs text-[#8196AC]">
+                      <p className="px-2 py-5 text-center text-xs text-white/60">
                         No conversations yet. Start a new chat.
                       </p>
                     )}
@@ -1357,7 +1374,7 @@ const handleSaveConversation = async () => {
                   <button
                     type="button"
                     onClick={startNewChat}
-                    className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#0066FF] text-xs font-semibold text-white transition hover:bg-[#1678FF]"
+                    className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-xs font-semibold text-white transition hover:brightness-110"
                   >
                     <FiPlus size={15} />
                     New Chat
@@ -1372,7 +1389,7 @@ const handleSaveConversation = async () => {
     setSelectedGroupUsers([]);
     setShowGroupModal(true);
   }}
-  className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-md border border-[#46617C] text-xs font-semibold text-[#DCE8F5] transition hover:bg-[#263F59]"
+  className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/30 text-xs font-semibold text-white/90 transition hover:bg-white/10"
 >
   <FiPlus size={15} />
   New Group
@@ -1385,26 +1402,18 @@ const handleSaveConversation = async () => {
 <main
   className={`${
     showMobileContacts ? "hidden md:flex" : "flex"
-  } min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#253D57] bg-[#263F5B]`}
+  } min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/25 bg-white/10 shadow-sm backdrop-blur-md`}
 >
             {activeConversation ? (
               <>
-               <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-[#35516E] bg-[#20364F] px-3 sm:px-4">
+               <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/55 px-3 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowMobileContacts(true)}
-                      className="rounded-md p-1 text-[#A6B6C8] hover:bg-[#304A64] md:hidden"
-                      aria-label="Show conversations"
-                    >
-                      <FiMessageSquare size={17} />
-                    </button>
                     <Avatar name={activeConversationName} size={35} />
                     <div className="min-w-0">
                     <h2 className="truncate text-xs font-semibold text-white sm:text-sm">
                    {activeConversationName}
                    </h2>
-                      <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[#9DB0C4]">
+                      <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/75">
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
                             connected ? "bg-[#38BDF8]" : "bg-[#7D8C9D]"
@@ -1462,12 +1471,12 @@ const handleSaveConversation = async () => {
 
                 <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
                   <div className="mb-1 flex justify-center">
-                    <span className="rounded-full border border-[#405B76] bg-[#20374F] px-3 py-1 text-[9px] text-[#A6B6C8]">
+                    <span className="rounded-full border border-white/25 bg-[#315A8A]/45 px-3 py-1 text-[9px] text-white/75">
                       Messages
                     </span>
                   </div>
                   {loadingMessages && (
-                    <p className="text-center text-xs text-[#A6B6C8]">
+                    <p className="text-center text-xs text-white/75">
                       Loading messages...
                     </p>
                   )}
@@ -1482,8 +1491,8 @@ const handleSaveConversation = async () => {
                         <div
                           className={`max-w-[88%] rounded-md px-3 py-2 sm:max-w-[75%] ${
                             item.mine
-                              ? "rounded-br-sm border border-[#1267B6] bg-[#0879D9] text-white"
-                              : "rounded-bl-sm border border-[#405873] bg-[#1A3048] text-[#E4ECF5]"
+                              ? "rounded-br-sm border border-[#1267B6] bg-[#1A3048] text-white"
+                              : "rounded-bl-sm border border-white/25 bg-[#1A3048] text-[#E4ECF5]"
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">
@@ -1544,9 +1553,9 @@ const handleSaveConversation = async () => {
 
                 <form
                   onSubmit={sendMessage}
-                  className="shrink-0 border-t border-[#35516E] bg-[#20364F] p-3 sm:px-4 sm:py-3.5"
+                  className="shrink-0 border-t border-white/20 bg-white/5 p-3 sm:px-4 sm:py-3.5"
                 >
-                  <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-[#46617C] bg-[#263F59] px-2.5 focus-within:border-[#38BDF8]">
+                  <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-white/30 bg-transparent px-2.5 focus-within:border-[#85B6FF]">
                   <IconButton
   label="Attach file"
   onClick={() => fileInputRef.current?.click()}
@@ -1571,13 +1580,13 @@ const handleSaveConversation = async () => {
                       type="submit"
                       disabled={!message.trim() || sending || !connected}
                       aria-label="Send message"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0066FF] text-white transition hover:bg-[#1678FF] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <FiSend size={14} />
                     </button>
                   </div>
                   {sending && (
-                    <p className="mt-1 text-[10px] text-[#A6B6C8]">Sending...</p>
+                    <p className="mt-1 text-[10px] text-white/75">Sending...</p>
                   )}
 
                 </form>
@@ -1585,11 +1594,11 @@ const handleSaveConversation = async () => {
             ) : (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="max-w-sm text-center">
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#1A3048] text-[#38BDF8]">
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[#1A3048] text-blue-100">
                     <FiMessageSquare size={32} />
                   </div>
                   <h2 className="mt-5 text-xl font-bold text-white">Your messages</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#A6B6C8]">
+                  <p className="mt-2 text-sm leading-6 text-white/75">
                     Select a conversation or search for a person to start a direct chat.
                   </p>
                   {!connected && (
@@ -1606,7 +1615,7 @@ const handleSaveConversation = async () => {
          
           {showInfo && activeConversation && (
  
-<aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto rounded-none border border-[#253D57] bg-[#192D43] p-4 sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:p-3 xl:w-[260px]">
+<aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto rounded-none border border-white/20 bg-[#102842]/55 backdrop-blur-md p-4 sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:p-3 xl:w-[260px]">
     <div className="mb-5 flex items-center justify-between">
       <h2 className="text-xs font-semibold text-white">
         {activeIsGroup ? "Group info" : "Contact info"}
@@ -1621,14 +1630,14 @@ const handleSaveConversation = async () => {
 
     {activeIsGroup ? (
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        <div className="border-b border-[#304A64] pb-3 text-center">
+        <div className="border-b border-white/25 pb-3 text-center">
           <div className="flex justify-center">
             <Avatar name={activeConversationName} size={52} />
           </div>
           <h3 className="mt-3 break-words text-sm font-semibold text-white">
             {activeConversationName}
           </h3>
-          <p className="mt-1 text-[10px] text-[#94A9BE]">
+          <p className="mt-1 text-[10px] text-white/70">
             {activeConversation?.participants?.length || 0} members
           </p>
 
@@ -1640,7 +1649,7 @@ const handleSaveConversation = async () => {
                 setRenamedAvatar(activeConversation.avatar || "");
                 setShowRenameGroup(true);
               }}
-              className="mt-3 w-full rounded-md border border-[#46617C] px-3 py-2 text-xs text-white hover:bg-[#263F59]"
+              className="mt-3 w-full rounded-md border border-white/30 px-3 py-2 text-xs text-white hover:bg-white/10"
             >
               Edit Group Details
             </button>
@@ -1648,7 +1657,7 @@ const handleSaveConversation = async () => {
         </div>
 
         <div>
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-[#7F95AB]">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-white/65">
             Members
           </p>
 
@@ -1665,7 +1674,7 @@ const handleSaveConversation = async () => {
             return (
               <div
                 key={String(userId)}
-                className="mb-3 rounded-md bg-[#20374E] p-2"
+                className="mb-3 rounded-md bg-white/10 p-2"
               >
                 <div className="flex items-center gap-2">
                   <Avatar name={getUserName(person)} size={28} />
@@ -1681,7 +1690,7 @@ const handleSaveConversation = async () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-[#94A9BE]">
+                    <p className="text-[10px] text-white/70">
                     {isTargetOwner
                         ? "Group Owner"
                         : isTargetAdmin
@@ -1698,7 +1707,7 @@ const handleSaveConversation = async () => {
                         type="button"
                         disabled={updatingMemberId === String(userId)}
                         onClick={() => handlePromoteAdmin(participant)}
-                        className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                        className="rounded border border-white/30 px-2 py-1 text-[10px] text-white disabled:opacity-50"
                       >
                         {updatingMemberId === String(userId)
                           ? "Updating..."
@@ -1710,7 +1719,7 @@ const handleSaveConversation = async () => {
                         type="button"
                         disabled={updatingMemberId === String(userId)}
                         onClick={() => handleDemoteAdmin(participant)}
-                        className="rounded border border-[#46617C] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                        className="rounded border border-white/30 px-2 py-1 text-[10px] text-white disabled:opacity-50"
                       >
                         {updatingMemberId === String(userId)
                           ? "Updating..."
@@ -1751,28 +1760,28 @@ const handleSaveConversation = async () => {
       </div>
     ) : (
       <>
-        <div className="flex flex-col items-center border-b border-[#304A64] pb-5 text-center">
+        <div className="flex flex-col items-center border-b border-white/25 pb-5 text-center">
           <Avatar name={getUserName(activeContact)} size={52} />
           <h3 className="mt-3 text-sm font-semibold text-white">
             {getUserName(activeContact)}
           </h3>
         </div>
 
-        <div className="border-b border-[#304A64] py-4">
-          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
+        <div className="border-b border-white/25 py-4">
+          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-white/65">
             Contact details
           </p>
-          <p className="mb-1 text-[10px] text-[#7F95AB]">Name</p>
+          <p className="mb-1 text-[10px] text-white/65">Name</p>
           <p className="break-words text-xs text-[#E6EDF5]">
             {getUserName(activeContact)}
           </p>
         </div>
 
         <div className="py-4">
-          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-[#7F95AB]">
+          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-white/65">
             Shared media
           </p>
-          <p className="text-[10px] text-[#8196AC]">
+          <p className="text-[10px] text-white/60">
             Media integration is not connected yet.
           </p>
         </div>
@@ -1782,10 +1791,10 @@ const handleSaveConversation = async () => {
 )}
 
       {showGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleCreateGroup}
-            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-[#304A64] bg-[#192D43] p-5 shadow-2xl"
+            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5 shadow-2xl"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-white">
@@ -1794,14 +1803,14 @@ const handleSaveConversation = async () => {
               <button
                 type="button"
                 onClick={() => setShowGroupModal(false)}
-                className="rounded-md p-2 text-[#A6B6C8] hover:bg-[#263F59]"
+                className="rounded-md p-2 text-white/75 hover:bg-white/10"
                 aria-label="Close group dialog"
               >
                 <FiX size={17} />
               </button>
             </div>
 
-            <label className="mb-1 text-xs text-[#C3D1E0]">
+            <label className="mb-1 text-xs text-white/85">
               Group name
             </label>
             <input
@@ -1809,38 +1818,38 @@ const handleSaveConversation = async () => {
               onChange={(event) => setGroupName(event.target.value)}
               maxLength={80}
               placeholder="Enter group name"
-              className="mb-3 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
+              className="mb-3 h-10 rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-[#85B6FF]"
               />
   
-              <label className="mb-1 text-xs text-[#C3D1E0]">
+              <label className="mb-1 text-xs text-white/85">
                 Group icon / avatar URL (optional)
               </label>
               <input
                 value={groupAvatar}
                 onChange={(event) => setGroupAvatar(event.target.value)}
                 placeholder="https://... (optional)"
-              className="mb-4 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
+              className="mb-4 h-10 rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-[#85B6FF]"
             />
 
-            <label className="mb-1 text-xs text-[#C3D1E0]">
+            <label className="mb-1 text-xs text-white/85">
               Search and select members
             </label>
             <input
               value={groupSearch}
               onChange={(event) => setGroupSearch(event.target.value)}
               placeholder="Search by name or email"
-              className="mb-3 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none placeholder:text-[#71869D] focus:border-[#38BDF8]"
+              className="mb-3 h-10 rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-[#85B6FF]"
             />
 
             {selectedGroupUsers.length > 0 && (
-              <p className="mb-2 text-xs text-[#38BDF8]">
+              <p className="mb-2 text-xs text-blue-100">
                 {selectedGroupUsers.length} member(s) selected
               </p>
             )}
 
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
               {!groupSearch.trim() && (
-                <p className="py-5 text-center text-xs text-[#8196AC]">
+                <p className="py-5 text-center text-xs text-white/60">
                   Search for people to add to your group.
                 </p>
               )}
@@ -1860,8 +1869,8 @@ const handleSaveConversation = async () => {
                       onClick={() => toggleGroupUser(person)}
                       className={`flex w-full items-center gap-3 rounded-md p-2 text-left ${
                         selected
-                          ? "bg-[#244766]"
-                          : "hover:bg-[#20374E]"
+                          ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3]/20"
+                          : "hover:bg-white/10"
                       }`}
                     >
                       <Avatar name={getUserName(person)} size={32} />
@@ -1869,11 +1878,11 @@ const handleSaveConversation = async () => {
                         <p className="truncate text-xs font-medium text-white">
                           {getUserName(person)}
                         </p>
-                        <p className="truncate text-[10px] text-[#93A7BB]">
+                        <p className="truncate text-[10px] text-white/70">
                           {person.email || ""}
                         </p>
                       </div>
-                      <span className="text-xs text-[#38BDF8]">
+                      <span className="text-xs text-blue-100">
                         {selected ? "Selected ✓" : "Select"}
                       </span>
                     </button>
@@ -1881,7 +1890,7 @@ const handleSaveConversation = async () => {
                 })}
 
               {groupSearch.trim() && groupUsers.length === 0 && (
-                <p className="py-5 text-center text-xs text-[#8196AC]">
+                <p className="py-5 text-center text-xs text-white/60">
                   No users found. Try another search.
                 </p>
               )}
@@ -1897,14 +1906,14 @@ const handleSaveConversation = async () => {
               <button
                 type="button"
                 onClick={() => setShowGroupModal(false)}
-                className="rounded-md border border-[#46617C] px-4 py-2 text-xs text-[#DCE8F5] hover:bg-[#263F59]"
+                className="rounded-md border border-white/30 px-4 py-2 text-xs text-white/90 hover:bg-white/10"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={creatingGroup}
-                className="rounded-md bg-[#0066FF] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1678FF] disabled:opacity-50"
+                className="rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
               >
                 {creatingGroup ? "Creating..." : "Create Group"}
               </button>
@@ -1913,10 +1922,10 @@ const handleSaveConversation = async () => {
         </div>
       )}
 {showAddMembersModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
     <form
       onSubmit={handleAddMembers}
-      className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-[#304A64] bg-[#192D43] p-5"
+      className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5"
     >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-white">
@@ -1925,7 +1934,7 @@ const handleSaveConversation = async () => {
         <button
           type="button"
           onClick={() => setShowAddMembersModal(false)}
-          className="p-2 text-[#A6B6C8]"
+          className="p-2 text-white/75"
           aria-label="Close"
         >
           <FiX size={17} />
@@ -1936,7 +1945,7 @@ const handleSaveConversation = async () => {
         value={addMemberSearch}
         onChange={(event) => setAddMemberSearch(event.target.value)}
         placeholder="Search by name or email"
-        className="mb-3 h-10 rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none"
+        className="mb-3 h-10 rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none"
       />
 
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
@@ -1961,7 +1970,7 @@ const handleSaveConversation = async () => {
                 )
               }
               className={`flex w-full items-center gap-3 rounded-md p-2 text-left ${
-                selected ? "bg-[#244766]" : "hover:bg-[#20374E]"
+                selected ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3]/20" : "hover:bg-white/10"
               }`}
             >
               <Avatar name={getUserName(person)} size={32} />
@@ -1969,11 +1978,11 @@ const handleSaveConversation = async () => {
                 <p className="truncate text-xs text-white">
                   {getUserName(person)}
                 </p>
-                <p className="truncate text-[10px] text-[#93A7BB]">
+                <p className="truncate text-[10px] text-white/70">
                   {person.email || ""}
                 </p>
               </div>
-              <span className="text-xs text-[#38BDF8]">
+              <span className="text-xs text-blue-100">
                 {selected ? "Selected ✓" : "Select"}
               </span>
             </button>
@@ -1981,13 +1990,13 @@ const handleSaveConversation = async () => {
         })}
 
         {addMemberSearch.trim() && addMemberUsers.length === 0 && (
-          <p className="py-5 text-center text-xs text-[#8196AC]">
+          <p className="py-5 text-center text-xs text-white/60">
             No new members found.
           </p>
         )}
       </div>
 
-      <p className="mt-2 text-xs text-[#A6B6C8]">
+      <p className="mt-2 text-xs text-white/75">
         {selectedAddMembers.length} member(s) selected
       </p>
 
@@ -1999,14 +2008,14 @@ const handleSaveConversation = async () => {
         <button
           type="button"
           onClick={() => setShowAddMembersModal(false)}
-          className="rounded-md border border-[#46617C] px-4 py-2 text-xs text-white"
+          className="rounded-md border border-white/30 px-4 py-2 text-xs text-white"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={addingMembers || selectedAddMembers.length === 0}
-          className="rounded-md bg-[#0066FF] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          className="rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
         >
           {addingMembers ? "Adding..." : "Add Members"}
         </button>
@@ -2015,30 +2024,30 @@ const handleSaveConversation = async () => {
   </div>
 )}
 {showRenameGroup && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
     <form
       onSubmit={handleRenameGroup}
-      className="w-full max-w-sm rounded-xl border border-[#304A64] bg-[#192D43] p-5 shadow-2xl"
+      className="w-full max-w-sm rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5 shadow-2xl"
     >
       <h2 className="mb-4 text-base font-semibold text-white">
       Edit Group Details
       </h2>
-      <label className="mb-1 block text-xs text-[#C3D1E0]">Group name</label>
+      <label className="mb-1 block text-xs text-white/85">Group name</label>
       <input
         value={renamedGroup}
         onChange={(event) => setRenamedGroup(event.target.value)}
         maxLength={80}
         required
         placeholder="Enter group name"
-        className="mb-3 h-10 w-full rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none focus:border-[#38BDF8]"
+        className="mb-3 h-10 w-full rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none focus:border-[#85B6FF]"
         />
   
-        <label className="mb-1 block text-xs text-[#C3D1E0]">Group avatar URL (optional)</label>
+        <label className="mb-1 block text-xs text-white/85">Group avatar URL (optional)</label>
         <input
           value={renamedAvatar}
           onChange={(event) => setRenamedAvatar(event.target.value)}
           placeholder="https://... (optional)"
-          className="mb-4 h-10 w-full rounded-md border border-[#304A64] bg-[#11253A] px-3 text-sm text-white outline-none focus:border-[#38BDF8]"
+          className="mb-4 h-10 w-full rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none focus:border-[#85B6FF]"
       />
 
       <div className="mt-4 flex justify-end gap-2">
@@ -2049,14 +2058,14 @@ const handleSaveConversation = async () => {
             setRenamedGroup("");
             setRenamedAvatar("");
           }}
-          className="rounded-md border border-[#46617C] px-3 py-2 text-xs text-white"
+          className="rounded-md border border-white/30 px-3 py-2 text-xs text-white"
         >
           Cancel
         </button>
 
         <button
           type="submit"
-          className="rounded-md bg-[#0066FF] px-3 py-2 text-xs font-semibold text-white"
+          className="rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-3 py-2 text-xs font-semibold text-white"
         >
           Save
         </button>

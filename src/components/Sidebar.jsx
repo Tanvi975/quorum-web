@@ -6,6 +6,7 @@ import {
   FiUsers,
   FiMessageCircle,
   FiCpu,
+  FiGlobe,
 } from "react-icons/fi";
 
 const navigationItems = [
@@ -14,6 +15,7 @@ const navigationItems = [
   { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
+  { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
 ];
 
