@@ -91,8 +91,8 @@ function Signup() {
   return (
     <AuthLayout
       title="Create Account"
-      leftTitle="Turn Complex Discussions into Action"
-      leftSubtitle="Integrated whiteboards and live agendas to keep projects moving forward."
+      leftTitle="Turn Complex Ideas into Direct Action"
+      leftSubtitle="Interactive whiteboards and structured agendas build for immediate alignment."
       leftImage={illustration2}
     >
       <form onSubmit={handleSubmit} noValidate className="w-full min-w-0">
