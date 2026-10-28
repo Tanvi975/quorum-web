@@ -126,20 +126,6 @@ async function handleNewMeeting() {
 </h1>
           
           <div className="hidden md:flex items-center w-[280px] lg:w-[360px] h-[38px] bg-[#F7F9FC] border border-[#E5E7EB] rounded-lg px-4">
-            <svg
-              className="w-4 h-4 text-[#64748B] mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"
-              />
-            </svg>
-
             <input
               type="text"
               placeholder="Search"
