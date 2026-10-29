@@ -111,7 +111,18 @@ export default function WhiteboardWorkspace({
 
       const list = [...merged.values()];
       setBoards(list);
-      if (!boardId && list.length > 0) setShowBoardPicker(true);
+      // Prefer a board attached to this meeting so every attendee is directed
+      // to the same persisted board instead of independently creating one.
+      const sharedMeetingBoard = meetingBoards[0];
+      const sharedId = sharedMeetingBoard && (sharedMeetingBoard.id || sharedMeetingBoard._id || sharedMeetingBoard.whiteboardId);
+      if (!boardId && sharedId) {
+        const normalizedId = String(sharedId);
+        setBoardId(normalizedId);
+        setBoardName(sharedMeetingBoard.name || "Meeting whiteboard");
+        setShowBoardPicker(false);
+      } else if (!boardId && list.length > 0) {
+        setShowBoardPicker(true);
+      }
 
       if (organizationId && organizationResult?.status === "rejected") {
         setPageError(
@@ -134,7 +145,7 @@ export default function WhiteboardWorkspace({
 
   async function createBoard() {
     const name = boardName.trim();
-    if (!name || creating) return;
+    if (!isHost || !name || creating) return;
 
     setCreating(true);
     setPageError("");
@@ -248,6 +259,7 @@ export default function WhiteboardWorkspace({
         <div className="mt-2 grid shrink-0 gap-3 rounded-lg border border-white/15 bg-[#0B2344] p-3 sm:grid-cols-2">
           <div className="space-y-2">
             <h2 className="text-sm font-semibold">Create a whiteboard</h2>
+            {!isHost && <p className="text-xs text-white/55">The host creates the shared meeting board. Refresh to open it once it appears.</p>}
             <input
               value={boardName}
               onChange={(event) => setBoardName(event.target.value)}
@@ -257,10 +269,10 @@ export default function WhiteboardWorkspace({
             <button
               type="button"
               onClick={createBoard}
-              disabled={creating || !boardName.trim()}
+              disabled={!isHost || creating || !boardName.trim()}
               className="w-full rounded-md bg-[#0066FF] px-3 py-2 text-xs font-semibold disabled:opacity-50"
             >
-              {creating ? "Creating..." : "Create board"}
+              {!isHost ? "Host creates board" : creating ? "Creating..." : "Create board"}
             </button>
           </div>
 
@@ -306,6 +318,7 @@ export default function WhiteboardWorkspace({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 gap-2 pt-2 sm:gap-3">
+          <div className="hidden w-56 shrink-0 md:block">
           <MeetingSidebar
             user={user}
             participants={participants}
@@ -314,6 +327,7 @@ export default function WhiteboardWorkspace({
             isMuted={isMuted}
             isVideoOff={isVideoOff}
           />
+          </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#B6C6D9]/40 bg-[#4C698E]/60 p-1.5 sm:p-3">
@@ -339,7 +353,7 @@ export default function WhiteboardWorkspace({
                 />
               </div>
 
-              <div className="fixed bottom-24 left-1/2 z-[9999] flex min-h-12 max-w-[95vw] -translate-x-1/2 items-center justify-center overflow-x-auto rounded-xl border border-white/30 bg-[#0B2344] p-2 shadow-2xl">
+              <div className="absolute bottom-3 left-1/2 z-30 flex min-h-12 max-w-[95%] -translate-x-1/2 items-center justify-center overflow-x-auto rounded-xl border border-white/30 bg-[#0B2344] p-2 shadow-2xl sm:bottom-4">
                 <WhiteboardToolbar
                   tool={tool}
                   setTool={setTool}

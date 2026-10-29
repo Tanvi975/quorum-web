@@ -140,6 +140,7 @@ function OrganizationWorkspace() {
   const [selectedMeetingMembers, setSelectedMeetingMembers] = useState([]);
   const [meetingMemberSearch, setMeetingMemberSearch] = useState("");
   const [startingMeeting, setStartingMeeting] = useState(false);
+  const [joinMeetingCode, setJoinMeetingCode] = useState("");
 
   const [teamForm, setTeamForm] = useState({
     name: "",
@@ -169,6 +170,18 @@ function OrganizationWorkspace() {
 
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId;
+
+  // The meeting creator joins as host, so they should not appear in the
+  // optional organization-member selection list.
+  const meetingSelectableMembers = members.filter((member) => {
+    const id =
+      member.userId ||
+      member.user?._id ||
+      member.user?.id ||
+      member._id ||
+      member.id;
+    return Boolean(id) && (!currentUserId || String(id) !== String(currentUserId));
+  });
 
   const isOrganizationOwner =
     Boolean(currentUserId) &&
@@ -299,6 +312,28 @@ function OrganizationWorkspace() {
     } finally {
       setStartingMeeting(false);
     }
+  }
+
+  function openMeetingDialog() {
+    setSelectedMeetingMembers([]);
+    setMeetingMemberSearch("");
+    setJoinMeetingCode("");
+    setShowMeetingInviteModal(true);
+    setOpenMenu("");
+  }
+
+  function joinMeetingWithCode(event) {
+    event.preventDefault();
+    const code = joinMeetingCode.trim();
+    if (!code) {
+      setNotice("Please enter a meeting code.");
+      return;
+    }
+
+    setShowMeetingInviteModal(false);
+    navigate(
+      `/video-call?code=${encodeURIComponent(code)}&organizationId=${encodeURIComponent(organizationId)}`
+    );
   }
 
   function openOrgEdit() {
@@ -820,16 +855,11 @@ function OrganizationWorkspace() {
 
             <button
               type="button"
-              onClick={() => {
-                setSelectedMeetingMembers([]);
-                setMeetingMemberSearch("");
-                setShowMeetingInviteModal(true);
-                setOpenMenu("");
-              }}
-              className={`${primary} shrink-0 whitespace-nowrap`}
+              onClick={openMeetingDialog}
+              className={`${secondary} shrink-0 whitespace-nowrap`}
             >
               <FaVideo className="shrink-0" />
-              <span>Video Call</span>
+              <span>Join meeting</span>
             </button>
 
             {menu("organization", [
@@ -1060,11 +1090,40 @@ function OrganizationWorkspace() {
 
         {showMeetingInviteModal && (
           <Modal
-            title="Start an organization meeting"
-            description="Select the organization members you want to invite."
+            title="Video call"
+            description="Start a new meeting or join an existing meeting with its code."
             close={() => setShowMeetingInviteModal(false)}
           >
             <div className="space-y-4">
+              <form
+                onSubmit={joinMeetingWithCode}
+                className="space-y-3 rounded-xl border border-[#38BDF8]/25 bg-white/[0.04] p-3"
+              >
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Join with code</h3>
+                  <p className="mt-1 text-xs text-[#B6C6D9]">Enter the meeting code shared by the host.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={joinMeetingCode}
+                    onChange={(event) => setJoinMeetingCode(event.target.value)}
+                    placeholder="Enter meeting code"
+                    aria-label="Meeting code"
+                    className={input}
+                    autoComplete="off"
+                  />
+                  <button type="submit" className={`${primary} shrink-0`} disabled={!joinMeetingCode.trim()}>
+                    Join meeting
+                  </button>
+                </div>
+              </form>
+
+              <div className="flex items-center gap-3 text-xs text-[#B6C6D9]">
+                <span className="h-px flex-1 bg-white/10" />
+                OR START A NEW MEETING
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
+              <div className="text-xs text-[#B6C6D9]">Optionally select organization members below.</div>
               <input
                 value={meetingMemberSearch}
                 onChange={(event) => setMeetingMemberSearch(event.target.value)}
@@ -1073,7 +1132,7 @@ function OrganizationWorkspace() {
               />
 
               <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {members
+                {meetingSelectableMembers
                   .filter((member) => {
                     const name = member.name || member.user?.name || "";
                     const email = member.email || member.user?.email || "";
@@ -1118,14 +1177,14 @@ function OrganizationWorkspace() {
                     );
                   })}
 
-                {members.length === 0 && (
+                {meetingSelectableMembers.length === 0 && (
                   <p className="py-6 text-center text-sm text-[#B6C6D9]">
-                    No organization members found.
+                    No other organization members found.
                   </p>
                 )}
 
-                {members.length > 0 &&
-                  !members.some((member) => {
+                {meetingSelectableMembers.length > 0 &&
+                  !meetingSelectableMembers.some((member) => {
                     const name = member.name || member.user?.name || "";
                     const email = member.email || member.user?.email || "";
                     return `${name} ${email}`
@@ -1154,7 +1213,7 @@ function OrganizationWorkspace() {
                   <button
                     type="button"
                     onClick={startOrganizationMeeting}
-                    disabled={startingMeeting || selectedMeetingMembers.length === 0}
+                    disabled={startingMeeting}
                     className={`${primary} whitespace-nowrap`}
                   >
                     {startingMeeting ? (

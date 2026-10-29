@@ -13,6 +13,7 @@ import {
   FiMonitor,
   FiUsers,
   FiInfo,
+  FiMessageCircle,
   FiEdit3,
   FiPhoneOff,
 } from "react-icons/fi";
@@ -74,16 +75,36 @@ function VideoCall() {
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [activeSideTab, setActiveSideTab] = useState("participants");
   const [chatInput, setChatInput] = useState("");
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const previousMessageCount = useRef(messages.length);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    if (videoRef.current && localStream) {
-      videoRef.current.srcObject = localStream;
+    const added = Math.max(0, messages.length - previousMessageCount.current);
+    previousMessageCount.current = messages.length;
+    if (added && !(showSidePanel && activeSideTab === "chat")) {
+      setUnreadMessages((count) => count + added);
     }
-  }, [localStream]);
+  }, [messages, showSidePanel, activeSideTab]);
+
+  function openMeetingPanel(tab) {
+    setActiveSideTab(tab);
+    setShowSidePanel(true);
+    if (tab === "chat") setUnreadMessages(0);
+  }
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.srcObject = localStream || null;
+    if (localStream) {
+      const playPromise = video.play();
+      if (playPromise?.catch) playPromise.catch(() => {});
+    }
+  }, [localStream, showWhiteboard]);
 
   async function stopScreenShare() {
     const screenTrack = screenTrackRef.current;
@@ -190,10 +211,7 @@ function confirmLeaveMeeting() {
           {organizationId && (
             <button
               type="button"
-              onClick={() => {
-                setShowWhiteboard((open) => !open);
-                setShowSidePanel(false);
-              }}
+              onClick={() => setShowWhiteboard((open) => !open)}
               className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
                 showWhiteboard ? "bg-[#0066FF] hover:bg-[#0057DB]" : "bg-white/10 hover:bg-white/20"
               }`}
@@ -272,7 +290,7 @@ function confirmLeaveMeeting() {
                   )}, minmax(0, 1fr))`,
                 }}
               >
-                <div className="relative overflow-hidden rounded-xl border border-[#0B8FD8]/50 bg-[#0B2344]">
+                <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-[#0B8FD8]/50 bg-[#0B2344]">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -306,7 +324,7 @@ function confirmLeaveMeeting() {
                   return (
                     <div
                       key={peerId}
-                      className="relative flex min-h-[200px] items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/40 bg-[#0B2344]"
+                      className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/40 bg-[#0B2344]"
                     >
                       <RemoteVideo stream={remoteStream} />
 
@@ -333,7 +351,7 @@ function confirmLeaveMeeting() {
                 })}
 
                 {Object.keys(remoteStreams).length === 0 && (
-                  <div className="relative flex min-h-[200px] items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#0B2344]">
+                  <div className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#0B2344]">
                     <div className="text-center">
                       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#12355B]">
                         <FiUsers size={20} />
@@ -347,25 +365,27 @@ function confirmLeaveMeeting() {
                 )}
               </div>
 
-              <ParticipantPanel
-                isOpen={showSidePanel}
-                activeTab={activeSideTab}
-                onTabChange={setActiveSideTab}
-                onClose={() => setShowSidePanel(false)}
-                participants={participants}
-                messages={messages}
-                user={user}
-                isHost={isHost}
-                chatInput={chatInput}
-                setChatInput={setChatInput}
-                onSendMessage={(content) => sendMessage(content)}
-              />
             </div>
         </>
         )}
+        <div className={`absolute inset-y-2 right-2 z-40 sm:inset-y-4 sm:right-4 ${showSidePanel ? "block" : "hidden"}`}>
+          <ParticipantPanel
+            isOpen={showSidePanel}
+            activeTab={activeSideTab}
+            onTabChange={openMeetingPanel}
+            onClose={() => setShowSidePanel(false)}
+            participants={participants}
+            messages={messages}
+            user={user}
+            isHost={isHost}
+            chatInput={chatInput}
+            setChatInput={setChatInput}
+            onSendMessage={(content) => sendMessage(content)}
+          />
+        </div>
       </main>
 
-      <footer className="flex h-20 shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 sm:gap-3">
+      <footer className="flex min-h-20 shrink-0 flex-wrap items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 py-3 sm:gap-3">
         <button
           type="button"
           onClick={toggleMic}
@@ -400,7 +420,26 @@ function confirmLeaveMeeting() {
           <FiMonitor size={18} />
         </button>
 
+        <button
+          type="button"
+          onClick={() => openMeetingPanel("participants")}
+          className={`relative flex h-11 w-11 items-center justify-center rounded-full transition ${showSidePanel && activeSideTab === "participants" ? "bg-[#0066FF]" : "bg-white/10 hover:bg-white/20"}`}
+          title="Participants"
+          aria-label={`Participants, ${participants.length} in meeting`}
+        >
+          <FiUsers size={18} />
+        </button>
 
+        <button
+          type="button"
+          onClick={() => openMeetingPanel("chat")}
+          className={`relative flex h-11 w-11 items-center justify-center rounded-full transition ${showSidePanel && activeSideTab === "chat" ? "bg-[#0066FF]" : "bg-white/10 hover:bg-white/20"}`}
+          title="Meeting chat"
+          aria-label={unreadMessages ? `Meeting chat, ${unreadMessages} unread messages` : "Meeting chat"}
+        >
+          <FiMessageCircle size={18} />
+          {unreadMessages > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">{unreadMessages > 99 ? "99+" : unreadMessages}</span>}
+        </button>
 
         <button
           type="button"

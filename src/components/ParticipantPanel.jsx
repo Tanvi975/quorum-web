@@ -24,7 +24,7 @@ export default function ParticipantPanel({
     setChatInput("");
   }
   return (
-    <aside className="flex h-full min-h-0 w-[min(340px,88vw)] shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0B2344] shadow-xl">
+    <aside className="flex h-full max-h-full min-h-0 w-[min(340px,calc(100vw-1rem))] shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0B2344] shadow-xl">
       <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-3 py-3">
         <div><h2 className="text-sm font-semibold">Meeting panel</h2><p className="text-[11px] text-white/50">{activeTab === "participants" ? `${participants.length} participant${participants.length === 1 ? "" : "s"}` : "Messages in this meeting"}</p></div>
         <button type="button" onClick={onClose} aria-label="Close meeting panel" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white"><FiX size={17} /></button>
