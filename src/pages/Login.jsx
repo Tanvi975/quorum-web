@@ -6,6 +6,7 @@ import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { loginUser } from "../services/authService";
 import illustration1 from "../assets/team-illustration-1.svg";
+import { FiArrowLeft } from "react-icons/fi";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -91,7 +92,7 @@ function Login() {
       leftTitle="Real-Time Collaboration for Modern Teams"
       leftSubtitle="High-fidelity video syncs integrated directly into your workspace."
       leftImage={illustration1}
-      showBack={false}
+      showBack={true}
     >
       <form onSubmit={handleSubmit} noValidate>
         <AuthInput
