@@ -7,6 +7,13 @@ export default defineConfig({
     server: {
         port: 3000,
         strictPort: true,
+        proxy: {
+            '/api': {
+                target: 'https://api.newquorum.me',
+                changeOrigin: true,
+                secure: true,
+                cookieDomainRewrite: '',
+            },
+        },
     },
-
 })
