@@ -6,7 +6,15 @@ const api = axios.create({
     xsrfCookieName: "XSRF-TOKEN",
     xsrfHeaderName: "X-XSRF-TOKEN",
 });
+
 let csrfToken = null;
+let refreshPromise = null;
+let refreshFailed = false;
+
+export function resetRefreshState() {
+    refreshFailed = false;
+    refreshPromise = null;
+}
 
 export async function initCsrf() {
     const res = await api.get("/api/csrf-token");
@@ -36,26 +44,51 @@ api.interceptors.response.use(
     async(error) => {
         const originalRequest = error.config;
         const status = error.response ?.status;
+        const url = originalRequest ?.url || "";
+
+        const isAuthEndpoint =
+            url.includes("/api/auth/login") ||
+            url.includes("/api/auth/register") ||
+            url.includes("/api/auth/refresh-token") ||
+            url.includes("/api/auth/logout") ||
+            url.includes("/api/auth/logout-all") ||
+            url.includes("/api/csrf-token");
 
         if (
-            status === 401 &&
-            originalRequest &&
-            !originalRequest._retry &&
-            !originalRequest.url ?.includes("/api/auth/refresh-token") &&
-            !originalRequest.url ?.includes("/api/auth/login")
+            status !== 401 ||
+            !originalRequest ||
+            originalRequest._retry ||
+            isAuthEndpoint ||
+            refreshFailed
         ) {
-            originalRequest._retry = true;
-
-            try {
-                await api.post("/api/auth/refresh-token", {});
-                return api(originalRequest);
-            } catch (refreshError) {
-                localStorage.removeItem("user");
-                return Promise.reject(refreshError);
-            }
+            return Promise.reject(error);
         }
 
-        return Promise.reject(error);
+        originalRequest._retry = true;
+
+        try {
+            if (!refreshPromise) {
+                refreshPromise = api
+                    .post("/api/auth/refresh-token", {})
+                    .then((response) => {
+                        refreshFailed = false;
+                        return response;
+                    })
+                    .catch((refreshError) => {
+                        refreshFailed = true;
+                        localStorage.removeItem("user");
+                        return Promise.reject(refreshError);
+                    })
+                    .finally(() => {
+                        refreshPromise = null;
+                    });
+            }
+
+            await refreshPromise;
+            return api(originalRequest);
+        } catch (refreshError) {
+            return Promise.reject(refreshError);
+        }
     }
 );
 

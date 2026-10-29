@@ -1,10 +1,9 @@
-import api from "./api";
+import api, { resetRefreshState } from "./api";
 
 export async function registerUser(name, email, password) {
     const res = await api.post("/api/auth/register", { name, email, password });
     return res.data;
 }
-
 
 export async function loginUser(email, password, rememberMe = false) {
     const res = await api.post("/api/auth/login", {
@@ -12,9 +11,10 @@ export async function loginUser(email, password, rememberMe = false) {
         password,
         rememberMe,
     });
+
+    resetRefreshState();
     return res.data;
 }
-
 
 export async function getCurrentUser() {
     const res = await api.get("/api/auth/me");

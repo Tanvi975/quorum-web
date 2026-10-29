@@ -85,11 +85,17 @@ function Dashboard() {
     setShowLogoutDialog(true);
   }
 
-  function confirmLogout() {
+
+  async function confirmLogout() {
     setShowLogoutDialog(false);
-    logout();
-    navigate("/login", { replace: true });
+  
+    try {
+      await logout();
+    } finally {
+      navigate("/login", { replace: true });
+    }
   }
+  
 
   function handleJoinMeeting() {
     const code = meetingCode.trim();
@@ -264,15 +270,18 @@ function Dashboard() {
           </main>
         </div>
       </div>
+    
       <ConfirmDialog
-        isOpen={showLogoutDialog}
-        onClose={() => setShowLogoutDialog(false)}
+        open={showLogoutDialog}
+        type="logout"
+        onCancel={() => setShowLogoutDialog(false)}
         onConfirm={confirmLogout}
-        title="Log out?"
+        title="Log out of Quorum?"
         message="Are you sure you want to log out of your account?"
-        confirmText="Logout"
+        confirmText="Log out"
         cancelText="Cancel"
       />
+
     </div>
   );
 }
