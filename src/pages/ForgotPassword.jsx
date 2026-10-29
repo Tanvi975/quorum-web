@@ -44,8 +44,8 @@ function ForgotPassword() {
   return (
     <AuthLayout
     title="Reset Password"
-    leftTitle="Architecting Seamless Global Alignment"
-    leftSubtitle="Connected video spaces designed to bridge teams everywhere."
+    leftTitle="Secure Workspace Continuity"
+    leftSubtitle="Enterprise-grade encryption keeping your organizational data proctected."
     leftImage={illustration3}
   >
       <form onSubmit={handleSubmit} noValidate className="w-full min-w-0">
