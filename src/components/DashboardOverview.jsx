@@ -17,9 +17,9 @@ import {
 } from "react-icons/fi";
 
 const cardStyle =
-  "rounded-2xl border border-slate-200 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.08)]";
+  "rounded-2xl border border-[#2D79B8] bg-[#1F4A70] shadow-[0_8px_28px_rgba(0,0,0,0.22)]";
 
-const mutedText = "text-sm text-slate-500";
+const mutedText = "text-sm text-[#C0D5E8]";
 
 function getDateKey(date) {
   const year = date.getFullYear();
@@ -120,12 +120,12 @@ function DashboardOverview({
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A5A83] text-[#8CC4FF]">
                   <FiVideo size={19} />
                 </span>
 
                 <div>
-                  <h2 className="font-semibold text-slate-900">
+                  <h2 className="font-semibold text-[#F4F8FC]">
                     Upcoming Meetings
                   </h2>
                   <p className={`mt-1 text-xs ${mutedText}`}>
@@ -138,7 +138,7 @@ function DashboardOverview({
             <button
               type="button"
               onClick={() => navigate("/calendar")}
-              className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 transition hover:text-slate-900"
+              className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#8CC4FF] transition hover:text-white"
             >
               View all <FiArrowUpRight size={15} />
             </button>
@@ -149,28 +149,21 @@ function DashboardOverview({
               {[1, 2, 3].map((item) => (
                 <div
                   key={item}
-                  className="h-[76px] animate-pulse rounded-xl bg-slate-100"
+                  className="h-[76px] animate-pulse rounded-xl bg-[#2A5A83]"
                 />
               ))}
             </div>
           ) : upcomingError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-600">{upcomingError}</p>
-              <button
-                type="button"
-                onClick={() => navigate("/calendar")}
-                className="mt-3 text-sm font-medium text-blue-600 hover:text-slate-900"
-              >
-                Open Calendar
-              </button>
-            </div>
+            <p role="alert" className="text-sm text-red-300">
+              Could not load meetings. Try again.
+            </p>
           ) : upcomingEvents.length === 0 ? (
-            <div className="flex min-h-[230px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center">
-              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+            <div className="flex min-h-[230px] flex-col items-center justify-center rounded-xl border border-dashed border-[#2D79B8] bg-[#244F76] px-4 text-center">
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2A5A83] text-[#8CC4FF]">
                 <FiCalendar size={23} />
               </span>
 
-              <h3 className="font-medium text-slate-900">
+              <h3 className="font-medium text-[#F4F8FC]">
                 Your schedule is clear
               </h3>
 
@@ -182,7 +175,7 @@ function DashboardOverview({
               <button
                 type="button"
                 onClick={() => navigate("/calendar")}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#005BE0]"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#087BFF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0069DF]"
               >
                 <FiPlus size={16} /> Schedule a meeting
               </button>
@@ -192,16 +185,16 @@ function DashboardOverview({
               {upcomingEvents.slice(0, 4).map((event, index) => (
                 <div
                   key={event.id || event._id || `${event.title}-${index}`}
-                  className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-300 hover:bg-blue-50 sm:gap-4"
+                  className="group flex items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] p-3 transition hover:border-[#75A8D8] hover:bg-[#2A5A83] sm:gap-4"
                 >
-                  <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-blue-100 bg-blue-50">
-                    <span className="text-lg font-bold leading-5 text-slate-900">
+                  <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-[#3976A5] bg-[#2A5A83]">
+                    <span className="text-lg font-bold leading-5 text-[#F4F8FC]">
                       {event.startDate &&
                       !Number.isNaN(new Date(event.startDate).getTime())
                         ? new Date(event.startDate).getDate()
                         : "—"}
                     </span>
-                    <span className="mt-1 text-[9px] uppercase tracking-wider text-slate-7000">
+                    <span className="mt-1 text-[9px] uppercase tracking-wider text-[#DCEAF7]">
                       {event.startDate &&
                       !Number.isNaN(new Date(event.startDate).getTime())
                         ? new Date(event.startDate).toLocaleDateString(
@@ -213,7 +206,7 @@ function DashboardOverview({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-semibold text-slate-900">
+                    <h3 className="truncate text-sm font-semibold text-[#F4F8FC]">
                       {event.title || "Untitled meeting"}
                     </h3>
 
@@ -228,7 +221,7 @@ function DashboardOverview({
                       href={event.meetingLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="shrink-0 rounded-lg bg-[#0068FF] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#005BE0]"
+                      className="shrink-0 rounded-lg bg-[#087BFF] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0069DF]"
                     >
                       Join
                     </a>
@@ -236,7 +229,7 @@ function DashboardOverview({
                     <button
                       type="button"
                       onClick={() => navigate("/calendar")}
-                      className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-blue-700 transition hover:bg-slate-100"
+                      className="shrink-0 rounded-lg border border-[#32658F] px-3 py-2 text-xs font-medium text-[#A9D1FA] transition hover:bg-[#2A5A83]"
                     >
                       Details
                     </button>
@@ -248,7 +241,7 @@ function DashboardOverview({
                 <button
                   type="button"
                   onClick={() => navigate("/calendar")}
-                  className="w-full rounded-lg py-2 text-sm font-medium text-blue-600 hover:bg-slate-100 hover:text-slate-900"
+                  className="w-full rounded-lg py-2 text-sm font-medium text-[#8CC4FF] hover:bg-[#2A5A83] hover:text-white"
                 >
                   See all {upcomingEvents.length} meetings
                   <FiArrowRight className="ml-1 inline" size={14} />
@@ -261,11 +254,11 @@ function DashboardOverview({
         <div className={`${cardStyle} min-w-0 p-5 sm:p-6`}>
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A5A83] text-[#8CC4FF]">
                 <FiCalendar size={19} />
               </span>
               <div>
-                <h2 className="font-semibold text-slate-900">My Calendar</h2>
+                <h2 className="font-semibold text-[#F4F8FC]">My Calendar</h2>
                 <p className={`mt-1 text-xs ${mutedText}`}>
                   Your monthly overview
                 </p>
@@ -275,14 +268,14 @@ function DashboardOverview({
             <button
               type="button"
               onClick={() => navigate("/calendar")}
-              className="text-xs font-semibold text-blue-600 hover:text-slate-900"
+              className="text-xs font-semibold text-[#8CC4FF] hover:text-white"
             >
               Open
             </button>
           </div>
 
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-[#F4F8FC]">
               {monthLabel}
             </h3>
 
@@ -291,7 +284,7 @@ function DashboardOverview({
                 type="button"
                 aria-label="Previous month"
                 onClick={() => changeMonth(-1)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#32658F] text-[#D2E4F4] transition hover:bg-[#2A5A83]"
               >
                 <FiChevronLeft size={17} />
               </button>
@@ -300,7 +293,7 @@ function DashboardOverview({
                 type="button"
                 aria-label="Next month"
                 onClick={() => changeMonth(1)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#32658F] text-[#D2E4F4] transition hover:bg-[#2A5A83]"
               >
                 <FiChevronRight size={17} />
               </button>
@@ -311,7 +304,7 @@ function DashboardOverview({
             {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
               <div
                 key={`${day}-${index}`}
-                className="py-2 text-[11px] font-semibold text-slate-400"
+                className="py-2 text-[11px] font-semibold text-[#A8C5DF]"
               >
                 {day}
               </div>
@@ -334,17 +327,17 @@ function DashboardOverview({
                   onClick={() => navigate("/calendar")}
                   className={`relative flex h-9 items-center justify-center rounded-lg text-xs transition ${
                     isToday
-                      ? "bg-[#0068FF] font-bold text-white shadow-md shadow-blue-950/30"
+                      ? "bg-[#087BFF] font-bold text-white shadow-md shadow-blue-950/30"
                       : hasMeeting
-                        ? "bg-blue-100 font-semibold text-blue-800 hover:bg-blue-200"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        ? "bg-[#2A5A83] font-semibold text-[#F4F8FC] hover:bg-[#3976A5]"
+                        : "text-[#D2E4F4] hover:bg-[#2A5A83] hover:text-white"
                   }`}
                 >
                   {date.getDate()}
                   {hasMeeting && (
                     <span
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        isToday ? "bg-white" : "bg-cyan-300"
+                        isToday ? "bg-white" : "bg-[#2878E8]"
                       }`}
                     />
                   )}
@@ -353,13 +346,13 @@ function DashboardOverview({
             })}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 pt-4">
-            <span className="flex items-center gap-2 text-[11px] text-slate-500">
-              <span className="h-2 w-2 rounded-full bg-[#0068FF]" />
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#32658F] pt-4">
+            <span className="flex items-center gap-2 text-[11px] text-[#C0D5E8]">
+              <span className="h-2 w-2 rounded-full bg-[#087BFF]" />
               Today
             </span>
-            <span className="flex items-center gap-2 text-[11px] text-slate-500">
-              <span className="h-2 w-2 rounded-full bg-cyan-300" />
+            <span className="flex items-center gap-2 text-[11px] text-[#C0D5E8]">
+              <span className="h-2 w-2 rounded-full bg-[#2878E8]" />
               Meeting scheduled
             </span>
           </div>
@@ -369,7 +362,7 @@ function DashboardOverview({
       <div>
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-[#F4F8FC]">
               Your Workspace
             </h2>
             <p className={`mt-1 text-sm ${mutedText}`}>
@@ -383,26 +376,26 @@ function DashboardOverview({
           <button
             type="button"
             onClick={() => navigate("/organization")}
-            className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40 hover:bg-blue-50`}
+            className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#75A8D8] hover:bg-[#2A5A83]`}
           >
             <div className="flex items-start justify-between">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-400/15 text-violet-200">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2A5A83] text-white">
                 <FiUsers size={23} />
               </span>
               <FiArrowUpRight
-                className="text-slate-400 transition group-hover:text-slate-900"
+                className="text-[#A8C5DF] transition group-hover:text-white"
                 size={19}
               />
             </div>
 
-            <h3 className="mt-5 font-semibold text-slate-900">
+            <h3 className="mt-5 font-semibold text-[#F4F8FC]">
               Your Organizations
             </h3>
             <p className={`mt-2 text-sm leading-6 ${mutedText}`}>
               Manage your organization, workspace and team collaboration.
             </p>
 
-            <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:text-slate-900">
+            <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#8CC4FF] group-hover:text-white">
               Explore organizations <FiArrowRight size={15} />
             </span>
           </button>
@@ -410,37 +403,37 @@ function DashboardOverview({
           <button
             type="button"
             onClick={() => navigate("/communities")}
-            className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-blue-400/40 hover:bg-blue-50`}
+            className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#75A8D8] hover:bg-[#2A5A83]`}
           >
             <div className="flex items-start justify-between">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2A5A83] text-white">
                 <FiGlobe size={23} />
               </span>
               <FiArrowUpRight
-                className="text-slate-400 transition group-hover:text-slate-900"
+                className="text-[#A8C5DF] transition group-hover:text-white"
                 size={19}
               />
             </div>
 
-            <h3 className="mt-5 font-semibold text-slate-900">
+            <h3 className="mt-5 font-semibold text-[#F4F8FC]">
               Your Communities
             </h3>
             <p className={`mt-2 text-sm leading-6 ${mutedText}`}>
               Discover communities, join conversations and share ideas.
             </p>
 
-            <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:text-slate-900">
+            <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#8CC4FF] group-hover:text-white">
               Explore communities <FiArrowRight size={15} />
             </span>
           </button>
 
           <div className={`${cardStyle} p-5`}>
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-200">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2A5A83] text-white">
                 <FiPlus size={23} />
               </span>
               <div>
-                <h3 className="font-semibold text-slate-900">Quick Actions</h3>
+                <h3 className="font-semibold text-[#F4F8FC]">Quick Actions</h3>
                 <p className={`mt-1 text-xs ${mutedText}`}>
                   Jump straight into your work
                 </p>
@@ -451,55 +444,55 @@ function DashboardOverview({
               <button
                 type="button"
                 onClick={() => navigate("/calendar")}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-100"
+                className="flex w-full items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] px-3 py-3 text-left text-sm text-[#DCEAF7] transition hover:bg-[#2A5A83]"
               >
-                <FiCalendar className="text-blue-600" size={17} />
+                <FiCalendar className="text-[#8CC4FF]" size={17} />
                 Schedule a meeting
-                <FiArrowRight className="ml-auto text-slate-400" size={15} />
+                <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
               </button>
 
               <button
                 type="button"
                 onClick={() => navigate("/chat")}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-100"
+                className="flex w-full items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] px-3 py-3 text-left text-sm text-[#DCEAF7] transition hover:bg-[#2A5A83]"
               >
-                <FiMessageCircle className="text-blue-600" size={17} />
+                <FiMessageCircle className="text-[#8CC4FF]" size={17} />
                 Open team chat
-                <FiArrowRight className="ml-auto text-slate-400" size={15} />
+                <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
               </button>
 
               <button
                 type="button"
                 onClick={() => navigate("/ai-assistant")}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-100"
+                className="flex w-full items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] px-3 py-3 text-left text-sm text-[#DCEAF7] transition hover:bg-[#2A5A83]"
               >
-                <FiCpu className="text-blue-600" size={17} />
+                <FiCpu className="text-[#8CC4FF]" size={17} />
                 Open Quorum AI
-                <FiArrowRight className="ml-auto text-slate-400" size={15} />
+                <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
               </button>
 
               <button
                 type="button"
                 onClick={() => navigate("/saved-items")}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-100"
+                className="flex w-full items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] px-3 py-3 text-left text-sm text-[#DCEAF7] transition hover:bg-[#2A5A83]"
               >
-                <FiBookmark className="text-blue-600" size={17} />
+                <FiBookmark className="text-[#8CC4FF]" size={17} />
                 Saved items
-                <FiArrowRight className="ml-auto text-slate-400" size={15} />
+                <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
-        <p className="text-xs text-slate-600/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#32658F] bg-[#1F4A70] px-4 py-3">
+        <p className="text-xs text-[#D2E4F4]/50">
           Your workspace, connected.
         </p>
         <button
           type="button"
           onClick={() => navigate("/calendar")}
-          className="text-xs font-medium text-blue-600 hover:text-slate-900"
+          className="text-xs font-medium text-[#8CC4FF] hover:text-white"
         >
           View your schedule <FiArrowRight className="ml-1 inline" size={13} />
         </button>
