@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createMeeting } from "../services/meetingService";
+import ConfirmDialog from "../components/ConfirmDialog";
 import {
   FiArrowLeft,
   FiCalendar,
@@ -20,9 +21,6 @@ import {
   deleteCalendarEvent,
 } from "../services/calendarService";
 
-/* ------------------------------------------------------------------ */
-/* Constants                                                           */
-/* ------------------------------------------------------------------ */
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const MAX_TITLE = 80;
@@ -36,10 +34,8 @@ const emptyForm = {
   description: "",
   attendeeEmails: "",
 };
-
-// Figma: Card & Sidebar #212F44 + glass border/blur
 const GLASS = {
-  background: "rgba(33, 47, 68, 0.88)",
+  background: "rgba(42, 79, 116, 0.92)",
   border: "1px solid rgba(255, 255, 255, 0.14)",
   boxShadow: "0 18px 45px rgba(2, 16, 38, 0.35)",
   backdropFilter: "blur(18px)",
@@ -52,11 +48,6 @@ const inputClass =
   "w-full rounded-xl border border-white/30 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/50 focus:border-sky-300 focus:ring-2 focus:ring-sky-300/20";
 
 const labelClass = "mb-1.5 block text-sm font-medium text-white/90";
-
-/* ------------------------------------------------------------------ */
-/* Helpers                                                             */
-/* ------------------------------------------------------------------ */
-
 function toDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -106,11 +97,6 @@ function GlassPanel({ children, className = "" }) {
     </section>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/* Component                                                           */
-/* ------------------------------------------------------------------ */
-
 function Calendar() {
   const navigate = useNavigate();
   const todayKey = toDateKey(new Date());
@@ -127,7 +113,7 @@ function Calendar() {
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [calendarError, setCalendarError] = useState("");
   const [deletingEventId, setDeletingEventId] = useState(null);
-
+  const [eventToDelete, setEventToDelete] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
   const [formError, setFormError] = useState("");
@@ -135,8 +121,6 @@ function Calendar() {
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
-
-  /* ----------------------------- data ----------------------------- */
 
   async function loadCalendarEvents(targetYear, targetMonth) {
     setLoadingEvents(true);
@@ -178,10 +162,6 @@ function Calendar() {
   useEffect(() => {
     loadUpcomingEvents();
   }, []);
-
-  /* ---------------------------- derived --------------------------- */
-
-  // Previous / next month ke dates dimmed dikhte hain (Figma)
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
     const mondayOffset = (firstDay.getDay() + 6) % 7;
@@ -235,8 +215,6 @@ function Calendar() {
       day: "numeric",
     });
   }, [selectedDate]);
-
-  /* ---------------------------- actions --------------------------- */
 
   function changeMonth(offset) {
     setCurrentMonth(
@@ -403,7 +381,15 @@ function Calendar() {
       setDeletingEventId(null);
     }
   }
-
+  async function confirmDeleteEvent() {
+    if (!eventToDelete) return;
+  
+    const eventId = eventToDelete.id;
+  
+    await deleteEvent(eventId);
+  
+    setEventToDelete(null);
+  }
   function selectEventDate(event) {
     setSelectedDate(event.date);
 
@@ -445,12 +431,6 @@ function Calendar() {
     QUORUM
   </button>
 </header>
-
-
-      {/*
-        Body: sirf bacha hua area. Sidebar tumhare layout se pehle se aata hai,
-        isliye yahan add nahi kiya.
-      */}
       <main
         className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-8"
         style={{
@@ -513,7 +493,6 @@ function Calendar() {
           )}
 
           <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-            {/* ---------------- Main calendar ---------------- */}
             <GlassPanel className="sm:p-5 lg:p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-white sm:text-base">
@@ -554,8 +533,6 @@ function Calendar() {
                   Loading calendar events...
                 </p>
               )}
-
-              {/* Weekday header */}
               <div className="grid grid-cols-7 gap-1 border-b border-white/15 pb-2 sm:gap-2">
                 {WEEKDAYS.map((day) => (
                   <div
@@ -568,7 +545,6 @@ function Calendar() {
                 ))}
               </div>
 
-              {/* Date cards */}
               <div className="grid grid-cols-7 gap-1 pt-3 sm:gap-2">
                 {calendarDays.map((cell) => {
                   if (!cell.dateKey) {
@@ -576,7 +552,7 @@ function Calendar() {
                       <div
                         key={cell.key}
                         aria-hidden="true"
-                        className="min-h-[50px] rounded-lg border border-white/10 bg-[#7698C5]/35 p-1 text-[10px] font-semibold text-[#223044]/45 sm:min-h-[84px] sm:p-2 sm:text-xs lg:min-h-[96px]"
+                        className="min-h-[50px] rounded-lg border border-white/10 bg-[#7698C5]/35 p-1 text-[10px] font-semibold text-[#A9C1D9] sm:min-h-[84px] sm:p-2 sm:text-xs lg:min-h-[96px]"
                       >
                         {cell.day}
                       </div>
@@ -599,7 +575,7 @@ function Calendar() {
                       onClick={() => setSelectedDate(dateKey)}
                       aria-label={`${dateKey}, ${dayEvents.length} events`}
                       aria-pressed={isSelected}
-                      className={`relative min-h-[50px] min-w-0 overflow-hidden rounded-lg border pt-0 pb-1 px-0 text-left sm:pt-0 sm:pb-2 sm:px-0 text-[#000000] shadow-sm transition duration-150 sm:min-h-[84px] 1 lg:min-h-[96px] ${
+                      className={`relative min-h-[50px] min-w-0 overflow-hidden rounded-lg border pt-0 pb-1 px-0 text-left sm:pt-0 sm:pb-2 sm:px-0 text-[#294761]shadow-sm transition duration-150 sm:min-h-[84px] 1 lg:min-h-[96px] ${
                         isSelected
                           ? "border-[#0066FF] bg-[#B6C6D9] ring-2 ring-[#0066FF]/50"
                           : "border-white/60 bg-[#E2E8F0] hover:border-[#38BDF8] hover:bg-white"
@@ -614,8 +590,6 @@ function Calendar() {
   {cell.day}
 </span>
 
-
-                      {/* Mobile: sirf dots */}
                       {dayEvents.length > 0 && (
                         <div className="mt-1.5 flex items-center gap-0.5 sm:hidden">
                           {dayEvents.slice(0, 3).map((event) => (
@@ -625,14 +599,13 @@ function Calendar() {
                             />
                           ))}
                           {dayEvents.length > 3 && (
-                            <span className="text-[8px] font-bold text-[#334155]">
+                            <span className="text-[8px] font-bold text-[#496985]">
                               +
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Tablet / desktop: event chips */}
                       <div className="mt-1 hidden space-y-1 sm:block">
                         {dayEvents.slice(0, 2).map((event) => (
                           <div
@@ -657,9 +630,7 @@ function Calendar() {
               </div>
             </GlassPanel>
 
-            {/* ---------------- Right side ---------------- */}
             <aside className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-1">
-              {/* Selected date */}
               <GlassPanel>
                 <h2 className="text-sm font-bold text-white">
                   {selectedDateLabel}
@@ -715,7 +686,7 @@ function Calendar() {
 
                           <button
                             type="button"
-                            onClick={() => deleteEvent(event.id)}
+                            onClick={() => setEventToDelete(event)}
                             disabled={
                               String(deletingEventId) === String(event.id)
                             }
@@ -741,7 +712,6 @@ function Calendar() {
                 </button>
               </GlassPanel>
 
-              {/* Upcoming */}
               <GlassPanel>
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-sm font-bold text-white">Upcoming</h2>
@@ -789,7 +759,6 @@ function Calendar() {
         </div>
       </main>
 
-      {/* Create event modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#06152B]/65 p-3 backdrop-blur-md sm:p-5"
@@ -978,6 +947,20 @@ function Calendar() {
           </section>
         </div>
       )}
+       <ConfirmDialog
+        open={Boolean(eventToDelete)}
+        type="delete"
+        title="Delete event?"
+        message={
+          eventToDelete
+            ? `Are you sure you want to delete "${eventToDelete.title}"? This action cannot be undone.`
+            : "Are you sure you want to delete this event?"
+        }
+        confirmText="Delete event"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteEvent}
+        onCancel={() => setEventToDelete(null)}
+      />
     </div>
   );
 }
