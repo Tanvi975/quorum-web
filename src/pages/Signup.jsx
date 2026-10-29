@@ -13,7 +13,7 @@ function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   function validate() {
@@ -54,39 +54,50 @@ function Signup() {
     return Object.keys(newErrors).length === 0;
   }
 
+
   async function handleSubmit(e) {
     e.preventDefault();
-
-    if (!validate()) return;
-
+  
+    if (isSubmitting || !validate()) return;
+  
+    setIsSubmitting(true);
+  
     try {
-      await registerUser(fullName, email, password);
-
+      await registerUser(fullName.trim(), email.trim(), password);
+  
       navigate("/verify-code", {
-        state: { email, from: "signup", rememberMe },
+        state: {
+          email: email.trim(),
+          from: "signup",
+          rememberMe,
+        },
       });
     } catch (err) {
-      const status = err.response && err.response.status;
-
+      const status = err.response?.status;
+      const backendMessage = err.response?.data?.message;
+  
       let message;
-
+  
       if (status === 409) {
         message = "An account with this email already exists.";
       } else if (status === 400) {
-        message = "Please check your details and try again.";
+        message = backendMessage || "Please check your details and try again.";
       } else if (status === 429) {
-        message = "Too many attempts. Please wait a moment and try again.";
+        message = "Too many attempts. Please try again after 15 minutes.";
       } else if (status >= 500) {
         message = "We're having trouble. Please try again in a moment.";
       } else if (!err.response) {
         message = "Unable to connect. Please check your internet connection.";
       } else {
-        message = "We couldn't create your account. Please try again.";
+        message = backendMessage || "We couldn't create your account. Please try again.";
       }
-
-      setErrors({ form: message });
+  
+      setErrors((prev) => ({ ...prev, form: message }));
+    } finally {
+      setIsSubmitting(false);
     }
   }
+  
 
   return (
     <AuthLayout
@@ -156,7 +167,9 @@ function Signup() {
           )}
         </div>
 
-        <AuthButton>Create Account</AuthButton>
+        <AuthButton disabled={isSubmitting}>
+  {isSubmitting ? "Creating Account..." : "Create Account"}
+</AuthButton>
       </form>
 
       <p className="mt-4 w-full min-w-0 text-center text-sm text-gray-600 break-words">

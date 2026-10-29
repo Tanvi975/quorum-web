@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
@@ -14,19 +15,20 @@ function VerifyCode() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-  const { login } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
+  const { login } = useAuth();
   const inputRefs = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const email = location.state && location.state.email;
-  const from = location.state && location.state.from;
+  const email = location.state?.email;
+  const from = location.state?.from;
 
   if (!email) {
     return <Navigate to="/forgot-password" replace />;
   }
-
 
   function handleChange(index, value) {
     if (value !== "" && !/^\d$/.test(value)) return;
@@ -35,6 +37,7 @@ function VerifyCode() {
     updated[index] = value;
     setCode(updated);
     setError("");
+    setInfo("");
 
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
@@ -46,24 +49,35 @@ function VerifyCode() {
       inputRefs.current[index - 1]?.focus();
     }
   }
+
   function handlePaste(e) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+
     if (!pasted) return;
-  
+
     const updated = [...code];
+
     for (let i = 0; i < 6; i++) {
       updated[i] = pasted[i] || "";
     }
+
     setCode(updated);
     setError("");
-  
+    setInfo("");
+
     const nextIndex = pasted.length < 6 ? pasted.length : 5;
     inputRefs.current[nextIndex]?.focus();
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (isSubmitting) return;
 
     const otp = code.join("");
 
@@ -72,16 +86,23 @@ function VerifyCode() {
       return;
     }
 
+    setIsSubmitting(true);
+    setError("");
+    setInfo("");
+
     try {
       if (from === "signup") {
-    
         const res = await verifyEmailOTP(email, otp);
-    
-        login(res.data.user, res.data.accessToken);
-    
-        navigate("/dashboard");
-      } else {
+        const payload = res?.data ?? res;
+        const verifiedUser = payload?.user ?? payload?.data?.user;
 
+        if (!verifiedUser) {
+          throw new Error("User information was not returned.");
+        }
+
+        login(verifiedUser);
+        navigate("/dashboard", { replace: true });
+      } else {
         navigate("/set-new-password", {
           state: {
             email,
@@ -90,21 +111,34 @@ function VerifyCode() {
         });
       }
     } catch (err) {
-      const status = err.response && err.response.status;
+      const status = err.response?.status;
 
       if (status === 400) {
         setError("Invalid or expired verification code");
+      } else if (status === 401) {
+        setError("Your session could not be verified. Please try again.");
       } else if (status === 429) {
-        setError("Too many attempts. Please wait a moment.");
+        setError("Too many attempts. Please wait before trying again.");
       } else if (!err.response) {
         setError("Unable to connect. Please check your internet connection.");
       } else {
-        setError("Verification failed. Please try again.");
+        setError(
+          err.response?.data?.message ||
+            "Verification failed. Please try again."
+        );
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleResend() {
+    if (isResending) return;
+
+    setIsResending(true);
+    setError("");
+    setInfo("");
+
     try {
       if (from === "signup") {
         await sendVerificationOTP(email);
@@ -112,85 +146,92 @@ function VerifyCode() {
         await forgotPassword(email);
       }
 
-      setError("");
       setInfo("A new code has been sent to your email.");
       setCode(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
     } catch (err) {
-      const status = err.response && err.response.status;
-
-      setInfo("");
+      const status = err.response?.status;
 
       if (status === 429) {
-        setError("Please wait a moment before requesting another code.");
+        setError("Too many attempts. Please wait before requesting another code.");
       } else if (!err.response) {
         setError("Unable to connect. Please check your internet connection.");
       } else {
-        setError("We couldn't resend the code. Please try again.");
+        setError(
+          err.response?.data?.message ||
+            "We couldn't resend the code. Please try again."
+        );
       }
+    } finally {
+      setIsResending(false);
     }
   }
 
   return (
-   
     <AuthLayout
-  title="Enter Verification Code"
-  subtitle={
-    from === "signup"
-      ? "We have sent a verification code to your email."
-      : "We have sent a recovery code to your email."
-  }
-  leftTitle="Real-Time Collaboration for Modern Teams"
-  leftSubtitle="High-fidelity video syncs integrated directly into your workspace."
-  leftImage={illustration1}
->
+      title="Enter Verification Code"
+      subtitle={
+        from === "signup"
+          ? "We have sent a verification code to your email."
+          : "We have sent a recovery code to your email."
+      }
+      leftTitle="Real-Time Collaboration for Modern Teams"
+      leftSubtitle="High-fidelity video syncs integrated directly into your workspace."
+      leftImage={illustration1}
+    >
       <form onSubmit={handleSubmit}>
-      <div className="mb-1 flex w-full min-w-0 justify-center gap-1.5 sm:gap-2">
+        <div className="mb-1 flex w-full min-w-0 justify-center gap-1.5 sm:gap-2">
           {code.map((digit, index) => (
             <input
               key={index}
               ref={(el) => (inputRefs.current[index] = el)}
               type="text"
               inputMode="numeric"
-              maxLength="1"
+              autoComplete={index === 0 ? "one-time-code" : "off"}
+              maxLength={1}
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
+              aria-label={`Verification digit ${index + 1}`}
               className="h-12 w-10 min-w-0 shrink rounded-xl border border-gray-300 bg-gray-100 text-center text-base outline-none focus:ring-2 focus:ring-blue-500 sm:w-11 sm:shrink-0"
             />
           ))}
         </div>
 
         {error && (
-         <p className="mb-2 w-full break-words text-center text-xs text-red-500">
-         {error}
-       </p>
+          <p className="mb-2 w-full break-words text-center text-xs text-red-500">
+            {error}
+          </p>
         )}
 
         {info && (
           <p className="mb-2 w-full break-words text-center text-xs text-green-700">
-          {info}
-        </p>
+            {info}
+          </p>
         )}
 
-        <div className="text-right mb-6">
+        <div className="mb-6 text-right">
           <button
             type="button"
             onClick={handleResend}
-            className="text-xs text-[#2563EB] font-medium underline"
+            disabled={isResending || isSubmitting}
+            className="text-xs font-medium text-[#2563EB] underline disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Resend Code
+            {isResending ? "Sending..." : "Resend Code"}
           </button>
         </div>
 
-        <AuthButton>Verify & Continue</AuthButton>
+        <AuthButton disabled={isSubmitting || isResending}>
+          {isSubmitting ? "Verifying..." : "Verify & Continue"}
+        </AuthButton>
       </form>
 
-      <p className="text-center text-sm text-gray-600 mt-4">
+      <p className="mt-4 text-center text-sm text-gray-600">
         Already have an account?{" "}
         <Link
           to="/login"
-          className="text-[#2563EB] font-medium underline"
+          className="font-medium text-[#2563EB] underline"
         >
           Sign In
         </Link>

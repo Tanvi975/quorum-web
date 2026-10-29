@@ -9,7 +9,7 @@ import {
 
 import DashboardBackground from "./components/DashboardBackground";
 import { useEffect } from "react";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -51,6 +51,18 @@ function MeetRedirect() {
   );
 }
 
+
+function HomeRedirect() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Checking session...</div>;
+  }
+
+  return <Navigate to={user ? "/dashboard" : "/landing"} replace />;
+}
+
+
 function App() {
   useEffect(() => {
     initCsrf()
@@ -65,7 +77,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           
-
+       
         <Route
   path="/background-preview"
   element={
@@ -83,9 +95,10 @@ function App() {
     </div>
   }
 />
-
-
-          <Route path="/" element={<Navigate to="/login" replace />} />
+           
+<Route path="/" element={<HomeRedirect />} />
+<Route path="/landing" element={<LandingPage />} />
+    
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -113,8 +126,7 @@ function App() {
           <Route path="/ai-assistant" element={<ProtectedRoute><QuorumAIAssistant /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/landing" element={<LandingPage />} />
+          <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
