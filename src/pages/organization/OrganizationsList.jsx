@@ -5,8 +5,6 @@ import {
   FiArrowLeft,
   FiPlus,
   FiSearch,
-  FiUsers,
-  FiGrid,
   FiBriefcase,
   FiMoreVertical,
   FiEdit2,
@@ -42,6 +40,12 @@ const getItems = (response, key) => {
 
   return [];
 };
+
+const primaryButton =
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#0066FF] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0148B3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] disabled:cursor-wait disabled:opacity-60";
+
+const secondaryButton =
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/70 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#315A8A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]";
 
 export default function OrganizationsList() {
   const navigate = useNavigate();
@@ -95,10 +99,7 @@ export default function OrganizationsList() {
     document.addEventListener("mousedown", handleOutsideClick);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
+      document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
 
@@ -277,327 +278,272 @@ export default function OrganizationsList() {
   };
 
   return (
-    <OnboardingLayout>
-    
-      {/* <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-[#0C315B] via-[#204D79] to-[#B8CCDD] px-3 py-5 text-white sm:px-5 sm:py-8 lg:px-8"> */}
-        {/* <main className="mx-auto w-full max-w-6xl rounded-2xl border border-white/20 bg-[#244A70]/55 p-4 shadow-2xl shadow-[#082747]/15 backdrop-blur-xl sm:rounded-3xl sm:p-6 lg:p-8"> */}
+    <OnboardingLayout wide>
+      <div className="w-full min-w-0 text-[#EDEFF7]">
+        {/* Page heading */}
+        <header className="mb-6 border-b border-white/20 pb-6 sm:mb-7">
+          <button
+            type="button"
+            onClick={() => navigate("/organization")}
+            aria-label="Back to organization options"
+            className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-[#315A8A]/60 text-white transition hover:bg-[#315A8A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
+          >
+            <FiArrowLeft size={18} />
+          </button>
 
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#C6EAFF]">
+                Your workspace
+              </p>
 
-          <header className="mb-7">
-            <button
-              type="button"
-              onClick={() => navigate("/organization")}
-              aria-label="Back to organization options"
-              className="mb-6 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              <FiArrowLeft size={19} />
-            </button>
+              <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                Organizations
+              </h1>
 
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div className="min-w-0">
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#A8D7FF]">
-                  Your workspace
-                </p>
-
-                <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                  Organizations
-                </h1>
-
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50/80 sm:text-base">
-                  Manage your organizations and continue where your
-                  team works.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/organization/create")}
-                className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1680FF] to-[#0758D8] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/20 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:w-auto"
-              >
-                <FiPlus size={18} />
-                Create organization
-              </button>
-            </div>
-          </header>
-
-          <section className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-md">
-              <FiSearch
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-blue-100/75"
-                size={18}
-              />
-
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search organizations..."
-                aria-label="Search organizations"
-                className="min-h-12 w-full rounded-xl border border-white/20 bg-[#173A5E]/65 py-3 pl-11 pr-4 text-sm text-white shadow-sm outline-none transition placeholder:text-blue-100/65 focus:border-blue-300/80 focus:ring-2 focus:ring-blue-300/20"
-              />
-            </div>
-
-            <p className="text-sm font-medium text-blue-50/85 sm:text-right">
-              {filteredOrganizations.length} of {organizations.length}{" "}
-              {organizations.length === 1
-                ? "organization"
-                : "organizations"}
-            </p>
-          </section>
-
-          {notice && (
-            <div
-              role="status"
-              className={`mb-5 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
-                notice.type === "error"
-                  ? "border-red-200/30 bg-red-400/15 text-red-50"
-                  : notice.type === "info"
-                    ? "border-blue-200/30 bg-blue-300/15 text-blue-50"
-                    : "border-emerald-200/30 bg-emerald-300/15 text-emerald-50"
-              }`}
-            >
-              <p>{notice.message}</p>
-
-              <button
-                type="button"
-                onClick={dismissNotice}
-                aria-label="Dismiss notification"
-                className="shrink-0 rounded-md p-0.5 opacity-80 transition hover:opacity-100"
-              >
-                <FiX size={17} />
-              </button>
-            </div>
-          )}
-
-          {loading && (
-            <div className="rounded-2xl border border-white/15 bg-white/[0.07] px-5 py-16 text-center">
-              <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-2 border-white/25 border-t-blue-300" />
-
-              <p className="text-sm text-blue-50/80">
-                Loading your organizations...
+              <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">
+                Manage your organizations and continue where your team works.
               </p>
             </div>
-          )}
 
-          {!loading && loadError && (
-            <div className="rounded-2xl border border-red-200/25 bg-red-300/10 px-5 py-12 text-center">
-              <p className="text-sm text-red-50">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => navigate("/organization/create")}
+              className={`${primaryButton} w-full shrink-0 sm:w-auto`}
+            >
+              <FiPlus size={17} />
+              Create organization
+            </button>
+          </div>
+        </header>
 
-              <button
-                type="button"
-                onClick={fetchOrganizations}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/20"
-              >
-                <FiRefreshCw size={16} />
-                Try again
-              </button>
-            </div>
-          )}
+        {/* Search */}
+        <section className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/75 px-4 shadow-sm transition focus-within:border-[#C6EAFF] focus-within:ring-2 focus-within:ring-[#38BDF8]/20 sm:max-w-md">
+            <FiSearch className="shrink-0 text-[#EDEFF7]" size={17} />
 
-          {!loading && !loadError && (
-            filteredOrganizations.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:gap-6">
-                {filteredOrganizations.map((org) => {
-                  const organizationId = getOrganizationId(org);
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search organizations..."
+              aria-label="Search organizations"
+              className="w-full min-w-0 bg-transparent py-2 text-sm text-white outline-none placeholder:text-white/70"
+            />
+          </label>
 
-                  return (
-                    <article
-                      key={organizationId || org.slug || org.name}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open ${org.name || "organization"}`}
-                      onClick={() => openWorkspace(org)}
-                      onKeyDown={(event) => {
-                        if (
-                          event.key === "Enter" ||
-                          event.key === " "
-                        ) {
-                          event.preventDefault();
-                          openWorkspace(org);
-                        }
-                      }}
-                      className="group relative flex min-h-[215px] min-w-0 cursor-pointer flex-col gap-4 rounded-2xl border border-white/20 bg-[#7191B0]/30 p-4 shadow-lg shadow-[#082747]/10 backdrop-blur-md transition duration-200 hover:-translate-y-1 hover:border-blue-100/45 hover:bg-[#85A4C1]/35 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 sm:p-5 lg:p-6"
-                    >
-                      <div className="flex min-w-0 items-start gap-3 pr-8 sm:gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-200/35 bg-[#173D65]/65 text-[#BDE0FF] shadow-sm sm:h-14 sm:w-14">
-                          {org.logo ? (
-                            <img
-                              src={org.logo}
-                              alt={`${org.name || "Organization"} logo`}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <FiBriefcase size={24} />
-                          )}
-                        </div>
+          <p className="text-sm font-medium text-white/90 sm:text-right">
+            {filteredOrganizations.length} of {organizations.length}{" "}
+            {organizations.length === 1
+              ? "organization"
+              : "organizations"}
+          </p>
+        </section>
 
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <h2 className="break-words text-lg font-semibold text-white transition group-hover:text-[#D7EBFF] sm:text-xl">
-                            {org.name || "Untitled organization"}
-                          </h2>
+        {/* Notifications */}
+        {notice && (
+          <div
+            role="status"
+            className={`mb-5 flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
+              notice.type === "error"
+                ? "border-red-200/40 bg-red-400/15 text-red-50"
+                : notice.type === "info"
+                  ? "border-[#38BDF8]/40 bg-[#38BDF8]/15 text-white"
+                  : "border-emerald-200/40 bg-emerald-400/15 text-emerald-50"
+            }`}
+          >
+            <p>{notice.message}</p>
 
-                          {org.slug && (
-                            <p className="mt-1 break-all text-sm text-blue-50/75">
-                              {org.slug}
-                            </p>
-                          )}
-                        </div>
+            <button
+              type="button"
+              onClick={dismissNotice}
+              aria-label="Dismiss notification"
+              className="shrink-0 rounded-md p-1 opacity-80 transition hover:opacity-100"
+            >
+              <FiX size={17} />
+            </button>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="rounded-xl border border-white/25 bg-[#315A8A]/45 px-5 py-16 text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+            <p className="text-sm text-white/85">
+              Loading your organizations...
+            </p>
+          </div>
+        )}
+
+        {/* Error */}
+        {!loading && loadError && (
+          <div className="rounded-xl border border-red-200/35 bg-[#315A8A]/45 px-5 py-12 text-center">
+            <p className="text-sm text-red-50">{loadError}</p>
+
+            <button
+              type="button"
+              onClick={fetchOrganizations}
+              className={`${secondaryButton} mt-5`}
+            >
+              <FiRefreshCw size={16} />
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Organization cards */}
+        {!loading &&
+          !loadError &&
+          (filteredOrganizations.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+              {filteredOrganizations.map((org) => {
+                const organizationId = getOrganizationId(org);
+
+                return (
+                  <article
+                    key={organizationId || org.slug || org.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${org.name || "organization"}`}
+                    onClick={() => openWorkspace(org)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                      ) {
+                        event.preventDefault();
+                        openWorkspace(org);
+                      }
+                    }}
+                    className="group relative flex min-h-[150px] min-w-0 cursor-pointer flex-col justify-center gap-4 rounded-xl border border-[#B6C6D9]/30 bg-[#7191B0]/55 p-4 shadow-sm transition duration-200 hover:border-[#C6EAFF]/60 hover:bg-[#85A4C1]/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] sm:p-5"
+                  >
+                    <div className="flex min-w-0 items-center gap-3 pr-9 sm:gap-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/30 bg-[#315A8A]/70 text-white sm:h-12 sm:w-12">
+                        {org.logo ? (
+                          <img
+                            src={org.logo}
+                            alt={`${org.name || "Organization"} logo`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <FiBriefcase size={22} />
+                        )}
                       </div>
 
-                      <div className="min-h-7">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="break-words text-base font-semibold text-white transition group-hover:text-[#EDEFF7] sm:text-lg">
+                          {org.name || "Untitled organization"}
+                        </h2>
+
+                        {org.slug && (
+                          <p className="mt-1 break-all text-sm text-white/80">
+                            {org.slug}
+                          </p>
+                        )}
+
                         {org.role && (
-                          <span className="inline-flex max-w-full items-center rounded-full border border-blue-200/35 bg-blue-300/15 px-3 py-1 text-xs font-semibold text-blue-50">
+                          <span className="mt-2 inline-flex max-w-full items-center rounded-md border border-white/30 bg-[#315A8A]/45 px-2.5 py-1 text-xs font-medium text-white">
                             {getRoleLabel(org.role)}
                           </span>
                         )}
                       </div>
+                    </div>
 
-                      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-white/20 pt-4">
-                        <span className="inline-flex items-center gap-2 text-sm text-blue-50/90">
-                          <FiUsers
-                            size={16}
-                            className="shrink-0 text-[#C1DFFF]"
-                          />
-                          <span className="font-semibold text-white">
-                            {org.membersCount ??
-                              org.memberCount ??
-                              "—"}
-                          </span>
-                          <span>
-                            {(org.membersCount ??
-                              org.memberCount) === 1
-                              ? "member"
-                              : "members"}
-                          </span>
-                        </span>
-
-                        <span className="inline-flex items-center gap-2 text-sm text-blue-50/90">
-                          <FiGrid
-                            size={16}
-                            className="shrink-0 text-[#C1DFFF]"
-                          />
-                          <span className="font-semibold text-white">
-                            {org.teamsCount ?? org.teamCount ?? "—"}
-                          </span>
-                          <span>
-                            {(org.teamsCount ?? org.teamCount) === 1
-                              ? "team"
-                              : "teams"}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div
-                        className="absolute right-3 top-3 sm:right-4 sm:top-4"
-                        ref={
-                          activeMenu === organizationId
-                            ? menuRef
-                            : null
+                    {/* Organization options */}
+                    <div
+                      className="absolute right-3 top-3"
+                      ref={activeMenu === organizationId ? menuRef : null}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Options for ${org.name || "organization"}`}
+                        aria-expanded={activeMenu === organizationId}
+                        onClick={() =>
+                          setActiveMenu((current) =>
+                            current === organizationId
+                              ? null
+                              : organizationId
+                          )
                         }
-                        onClick={(event) => event.stopPropagation()}
-                        onKeyDown={(event) =>
-                          event.stopPropagation()
-                        }
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-white/90 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
                       >
-                        <button
-                          type="button"
-                          aria-label={`Options for ${org.name || "organization"}`}
-                          aria-expanded={
-                            activeMenu === organizationId
-                          }
-                          onClick={() =>
-                            setActiveMenu((current) =>
-                              current === organizationId
-                                ? null
-                                : organizationId
-                            )
-                          }
-                          className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-50/85 transition hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
-                        >
-                          <FiMoreVertical size={20} />
-                        </button>
+                        <FiMoreVertical size={19} />
+                      </button>
 
-                        {activeMenu === organizationId && (
-                          <div className="absolute right-0 top-10 z-30 w-48 overflow-hidden rounded-xl border border-white/20 bg-[#173B61] p-1.5 shadow-2xl shadow-black/25">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(org)}
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-blue-50 transition hover:bg-white/10"
-                            >
-                              <FiEdit2 size={16} />
-                              Edit organization
-                            </button>
+                      {activeMenu === organizationId && (
+                        <div className="absolute right-0 top-9 z-30 w-48 overflow-hidden rounded-lg border border-white/25 bg-[#315A8A] p-1.5 shadow-xl shadow-[#213F70]/25">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(org)}
+                            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-white transition hover:bg-white/15"
+                          >
+                            <FiEdit2 size={16} />
+                            Edit organization
+                          </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openDeleteConfirmation(org)
-                              }
-                              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-200 transition hover:bg-red-400/15"
-                            >
-                              <FiTrash2 size={16} />
-                              Delete organization
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
+                          <button
+                            type="button"
+                            onClick={() => openDeleteConfirmation(org)}
+                            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-red-100 transition hover:bg-red-400/20"
+                          >
+                            <FiTrash2 size={16} />
+                            Delete organization
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/25 bg-[#7191B0]/40 px-5 py-14 text-center sm:py-16">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/30 bg-[#315A8A]/45 text-white">
+                {search ? <FiSearch size={22} /> : <FiBriefcase size={22} />}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-white/20 bg-white/[0.07] px-5 py-14 text-center sm:py-16">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200/30 bg-blue-300/15 text-blue-100">
-                  {search ? (
-                    <FiSearch size={24} />
-                  ) : (
-                    <FiBriefcase size={24} />
-                  )}
+
+              <h2 className="text-lg font-semibold text-white">
+                {search
+                  ? "No matching organizations"
+                  : "No organizations yet"}
+              </h2>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/80">
+                {search
+                  ? "Try a different name or search term."
+                  : "Create an organization or join one using an invitation to get started."}
+              </p>
+
+              {!search && (
+                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/organization/create")}
+                    className={primaryButton}
+                  >
+                    <FiPlus size={17} />
+                    Create organization
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/organization/join")}
+                    className={secondaryButton}
+                  >
+                    Join organization
+                  </button>
                 </div>
+              )}
+            </div>
+          ))}
 
-                <h2 className="text-lg font-semibold text-white sm:text-xl">
-                  {search
-                    ? "No matching organizations"
-                    : "No organizations yet"}
-                </h2>
-
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-blue-50/80">
-                  {search
-                    ? "Try a different name or search term."
-                    : "Create an organization or join one using an invitation to get started."}
-                </p>
-
-                {!search && (
-                  <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate("/organization/create")
-                      }
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1680FF] to-[#0758D8] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
-                    >
-                      <FiPlus size={17} />
-                      Create organization
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => navigate("/organization/join")}
-                      className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
-                    >
-                      Join organization
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          )}
-        {/* </main> */}
-
-
+        {/* Edit organization modal */}
         {editingOrg && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#07192B]/65 p-3 backdrop-blur-md sm:p-5"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#213F70]/65 p-3 backdrop-blur-sm sm:p-5"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 closeEditModal();
@@ -608,7 +554,7 @@ export default function OrganizationsList() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="edit-organization-title"
-              className="my-auto w-full max-w-md rounded-2xl border border-white/20 bg-[#21496F] p-5 shadow-2xl sm:p-6"
+              className="my-auto w-full max-w-md rounded-xl border border-white/30 bg-[#315A8A] p-5 shadow-2xl sm:p-6"
             >
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
@@ -619,7 +565,7 @@ export default function OrganizationsList() {
                     Edit organization
                   </h2>
 
-                  <p className="mt-1 text-sm text-blue-50/75">
+                  <p className="mt-1 text-sm text-white/80">
                     Update the name of your organization.
                   </p>
                 </div>
@@ -629,7 +575,7 @@ export default function OrganizationsList() {
                   onClick={closeEditModal}
                   disabled={saving}
                   aria-label="Close edit dialog"
-                  className="rounded-lg p-2 text-blue-50/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  className="rounded-lg p-2 text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-50"
                 >
                   <FiX size={19} />
                 </button>
@@ -638,7 +584,7 @@ export default function OrganizationsList() {
               <form onSubmit={handleEditOrganization}>
                 <label
                   htmlFor="organization-name"
-                  className="mb-2 block text-sm font-medium text-blue-50"
+                  className="mb-2 block text-sm font-medium text-white"
                 >
                   Organization name
                 </label>
@@ -647,21 +593,16 @@ export default function OrganizationsList() {
                   id="organization-name"
                   type="text"
                   value={editName}
-                  onChange={(event) =>
-                    setEditName(event.target.value)
-                  }
+                  onChange={(event) => setEditName(event.target.value)}
                   maxLength={100}
                   autoFocus
                   required
-                  className="w-full rounded-xl border border-white/20 bg-[#173654]/75 px-4 py-3 text-sm text-white outline-none placeholder:text-blue-100/50 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20"
+                  className="w-full rounded-lg border border-white/30 bg-[#213F70]/60 px-4 py-3 text-sm text-white outline-none placeholder:text-white/60 focus:border-[#C6EAFF] focus:ring-2 focus:ring-[#38BDF8]/25"
                   placeholder="Enter organization name"
                 />
 
                 {modalError && (
-                  <p
-                    role="alert"
-                    className="mt-3 text-sm text-red-200"
-                  >
+                  <p role="alert" className="mt-3 text-sm text-red-100">
                     {modalError}
                   </p>
                 )}
@@ -671,7 +612,7 @@ export default function OrganizationsList() {
                     type="button"
                     onClick={closeEditModal}
                     disabled={saving}
-                    className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/15 disabled:opacity-50"
+                    className={secondaryButton}
                   >
                     Cancel
                   </button>
@@ -679,7 +620,7 @@ export default function OrganizationsList() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1680FF] to-[#0758D8] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
+                    className={primaryButton}
                   >
                     {saving && (
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -693,9 +634,10 @@ export default function OrganizationsList() {
           </div>
         )}
 
+        {/* Delete confirmation */}
         {confirmDeleteOrg && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#07192B]/65 p-3 backdrop-blur-md sm:p-5"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#213F70]/65 p-3 backdrop-blur-sm sm:p-5"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 setConfirmDeleteOrg(null);
@@ -706,10 +648,10 @@ export default function OrganizationsList() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="delete-organization-title"
-              className="my-auto w-full max-w-md rounded-2xl border border-white/20 bg-[#21496F] p-5 shadow-2xl sm:p-6"
+              className="my-auto w-full max-w-md rounded-xl border border-white/30 bg-[#315A8A] p-5 shadow-2xl sm:p-6"
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-red-200/20 bg-red-300/10 text-red-200">
-                <FiTrash2 size={22} />
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-red-200/35 bg-red-300/15 text-red-100">
+                <FiTrash2 size={21} />
               </div>
 
               <h2
@@ -719,16 +661,16 @@ export default function OrganizationsList() {
                 Delete organization?
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-blue-50/80">
-                The delete action is not connected because the
-                backend delete endpoint has not been confirmed.
+              <p className="mt-2 text-sm leading-6 text-white/85">
+                The delete action is not connected because the backend
+                delete endpoint has not been confirmed.
               </p>
 
               <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteOrg(null)}
-                  className="min-h-11 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/15"
+                  className={secondaryButton}
                 >
                   Cancel
                 </button>
@@ -736,7 +678,7 @@ export default function OrganizationsList() {
                 <button
                   type="button"
                   onClick={handleDeleteOrganization}
-                  className="min-h-11 rounded-xl border border-red-200/25 bg-red-300/10 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-300/20"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200/40 bg-red-300/15 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-300/25"
                 >
                   Close
                 </button>
@@ -744,7 +686,7 @@ export default function OrganizationsList() {
             </section>
           </div>
         )}
-      {/* </div> */}
+      </div>
     </OnboardingLayout>
   );
 }
