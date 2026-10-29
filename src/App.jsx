@@ -36,6 +36,7 @@ import Calendar from "./pages/Calendar";
 import SavedItems from "./pages/SavedItems";
 import MobileBottomNav from "./components/MobileBottomNav";
 import CreateCommunity from "./pages/communities/CreateCommunity";
+import LandingPage from "./pages/LandingPage";
 
 import { initCsrf } from "./services/api";
 
@@ -113,6 +114,7 @@ function App() {
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/landing" element={<LandingPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
