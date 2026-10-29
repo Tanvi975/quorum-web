@@ -1584,7 +1584,7 @@ const handleSaveConversation = async () => {
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
                       placeholder={`Send message to ${activeConversationName}...`}
-                      className="min-w-0 flex-1 bg-transparent py-2 text-xs text-white outline-none placeholder:text-[#91A5BB]"
+                      className="min-w-0 flex-1 bg-transparent py-2 text-xm text-white outline-none placeholder:text-[#263238]/90"
                     />
                     <button
                       type="submit"

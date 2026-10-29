@@ -1,7 +1,9 @@
 import api from "./api";
 
-export async function createMeeting() {
-    const response = await api.post("/api/meetings", {});
+export async function createMeeting({ organizationId } = {}) {
+    const payload = organizationId ? { organizationId } : {};
+
+    const response = await api.post("/api/meetings", payload);
     return response.data.data;
 }
 

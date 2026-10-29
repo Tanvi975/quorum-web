@@ -1,10 +1,8 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-
 import {
-  FaArrowLeft,
   FaBuilding,
-  FaUsers,
   FaUserPlus,
   FaPlus,
   FaEllipsisH,
@@ -15,9 +13,12 @@ import {
   FaCheck,
   FaLayerGroup,
   FaSpinner,
+  FaArrowLeft,
+  FaVideo,
 } from "react-icons/fa";
 
 import api from "../../services/api";
+import { createMeeting } from "../../services/meetingService";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
 import TeamChat from "./TeamChat";
@@ -27,16 +28,17 @@ const btn =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-50";
 
 const primary =
-  `${btn} border border-[#60A5FA]/40 bg-gradient-to-r from-[#1680FF] to-[#0057D9] text-white shadow-md shadow-blue-900/10 hover:brightness-105`;
+  `${btn} border border-[#60A5FA]/40 bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white shadow-md shadow-blue-900/20 hover:brightness-110`;
 
 const secondary =
-  `${btn} border border-white/30 bg-white/15 text-white hover:bg-white/25`;
+  `${btn} border border-white/20 bg-white/10 text-white hover:bg-white/20`;
 
 const input =
-  "w-full min-w-0 rounded-xl border border-white/30 bg-white/15 px-3.5 py-3 text-sm text-white outline-none placeholder:text-white/65 transition focus:border-[#93C5FD] focus:ring-2 focus:ring-blue-300/25";
+  "w-full min-w-0 rounded-xl border border-white/20 bg-[#212F44]/60 px-3.5 py-3 text-sm text-white outline-none placeholder:text-[#B6C6D9] transition focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20";
 
 const card =
-  "rounded-2xl border border-white/25 bg-white/[0.13] shadow-lg shadow-blue-950/10 backdrop-blur-xl";
+  "min-w-0 rounded-2xl border border-[#38BDF8]/20 bg-[#305485]/50 shadow-lg shadow-[#0B1F39]/10 backdrop-blur-xl";
+
 const ROLE_LABELS = {
   ORG_ADMIN: "Organization admin",
   ADMIN: "Admin",
@@ -50,18 +52,10 @@ function roleLabel(value) {
 }
 
 function items(data, key) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-  if (Array.isArray(data?.[key])) {
-    return data[key];
-  }
-  if (Array.isArray(data?.data?.[key])) {
-    return data.data[key];
-  }
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.[key])) return data[key];
+  if (Array.isArray(data?.data?.[key])) return data.data[key];
+  if (Array.isArray(data?.data)) return data.data;
   return [];
 }
 
@@ -72,6 +66,7 @@ function errorMessage(error) {
     "Something went wrong. Please try again."
   );
 }
+
 function initials(name = "") {
   return (
     name
@@ -82,28 +77,26 @@ function initials(name = "") {
       .join("") || "U"
   );
 }
+
 function Modal({ title, description, close, children }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0F19]/70 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          close();
-        }
+        if (event.target === event.currentTarget) close();
       }}
     >
       <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#38BDF8]/25 bg-[#212F44] p-5 shadow-2xl shadow-black/40 sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              {title}
-            </h2>
+            <h2 className="text-lg font-semibold text-white">{title}</h2>
             {description && (
-              <p className="mt-1 text-sm text-[#B6C6D9]">
+              <p className="mt-1 text-sm leading-5 text-[#B6C6D9]">
                 {description}
               </p>
             )}
           </div>
+
           <button
             type="button"
             onClick={close}
@@ -119,11 +112,14 @@ function Modal({ title, description, close, children }) {
     </div>
   );
 }
+
 function OrganizationWorkspace() {
   const { organizationId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const requestedTeamId = searchParams.get("teamId");
+
   const [organization, setOrganization] = useState(null);
   const [teams, setTeams] = useState([]);
   const [members, setMembers] = useState([]);
@@ -137,26 +133,39 @@ function OrganizationWorkspace() {
   const [modal, setModal] = useState("");
   const [showAddTeamMember, setShowAddTeamMember] = useState(false);
   const [selectedChatTeam, setSelectedChatTeam] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [memberToRemove, setMemberToRemove] = useState(null);
+  const [memberRole, setMemberRole] = useState("MEMBER");
+  const [showMeetingInviteModal, setShowMeetingInviteModal] = useState(false);
+  const [selectedMeetingMembers, setSelectedMeetingMembers] = useState([]);
+  const [meetingMemberSearch, setMeetingMemberSearch] = useState("");
+  const [startingMeeting, setStartingMeeting] = useState(false);
+
   const [teamForm, setTeamForm] = useState({
     name: "",
     description: "",
   });
+
   const [inviteForm, setInviteForm] = useState({
     email: "",
     role: "MEMBER",
     teamId: "",
     teamRole: "MEMBER",
   });
+
   const [orgForm, setOrgForm] = useState({
     name: "",
     description: "",
     logo: "",
   });
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [memberRole, setMemberRole] = useState("MEMBER");
-  const currentUser = JSON.parse(
-    localStorage.getItem("user") || "null"
-  );
+
+  let currentUser = null;
+
+  try {
+    currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    currentUser = null;
+  }
 
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId;
@@ -173,53 +182,54 @@ function OrganizationWorkspace() {
 
   const canCreateTeam =
     role === "ORG_ADMIN" || role === "TEAM_HEAD";
+
   async function loadWorkspace(showLoader = true) {
-    if (showLoader) {
-      setLoading(true);
-    }
+    if (showLoader) setLoading(true);
     setError("");
+
     try {
       const [orgResult, teamResult, memberResult] =
         await Promise.allSettled([
           api.get(`/api/organizations/${organizationId}`),
-
           api.get(`/api/organizations/${organizationId}/teams`),
-
           api.get(`/api/organizations/${organizationId}/members`),
         ]);
+
       if (orgResult.status === "rejected") {
         throw orgResult.reason;
       }
+
       const data = orgResult.value.data;
 
       setOrganization(
         data?.organization ||
-        data?.data?.organization ||
-        data?.data ||
-        data
+          data?.data?.organization ||
+          data?.data ||
+          data
       );
-      if (teamResult.status === "fulfilled") {
-        setTeams(items(teamResult.value.data, "teams"));
-      } else {
-        setTeams([]);
-      }
 
-      if (memberResult.status === "fulfilled") {
-        setMembers(items(memberResult.value.data, "members"));
-      } else {
-        setMembers([]);
-      }
+      setTeams(
+        teamResult.status === "fulfilled"
+          ? items(teamResult.value.data, "teams")
+          : []
+      );
+
+      setMembers(
+        memberResult.status === "fulfilled"
+          ? items(memberResult.value.data, "members")
+          : []
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
   }
+
   useEffect(() => {
-    if (organizationId) {
-      loadWorkspace();
-    }
+    if (organizationId) loadWorkspace();
   }, [organizationId]);
+
   useEffect(() => {
     if (loading || !requestedTeamId || !teams.length) return;
 
@@ -242,41 +252,68 @@ function OrganizationWorkspace() {
     organization,
     setSearchParams,
   ]);
-  useEffect(() => {
-    if (!notice) {
-      return;
-    }
-    const timeout = setTimeout(() => {
-      setNotice("");
-    }, 3500);
 
-    return () => {
-      clearTimeout(timeout);
-    };
+  useEffect(() => {
+    if (!notice) return;
+
+    const timeout = setTimeout(() => setNotice(""), 3500);
+    return () => clearTimeout(timeout);
   }, [notice]);
+
   function closeModal() {
     setModal("");
     setSelectedMember(null);
+    setMemberToRemove(null);
     setSaving(false);
   }
+
+  function toggleMeetingMember(memberId) {
+    setSelectedMeetingMembers((current) =>
+      current.includes(memberId)
+        ? current.filter((id) => id !== memberId)
+        : [...current, memberId]
+    );
+  }
+
+  async function startOrganizationMeeting() {
+    if (startingMeeting) return;
+
+    setStartingMeeting(true);
+    setNotice("");
+
+    try {
+      const meeting = await createMeeting({ organizationId });
+
+      if (!meeting?.code) {
+        throw new Error("Meeting code was not found.");
+      }
+
+      const meetingUrl =
+        `/video-call?code=${encodeURIComponent(meeting.code)}` +
+        `&host=1&organizationId=${encodeURIComponent(organizationId)}`;
+
+      setShowMeetingInviteModal(false);
+      navigate(meetingUrl);
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setStartingMeeting(false);
+    }
+  }
+
   function openOrgEdit() {
     setOrgForm({
       name: organization?.name || "",
-
       description: organization?.description || "",
-
-      logo:
-        organization?.logo ||
-        organization?.logoUrl ||
-        "",
+      logo: organization?.logo || organization?.logoUrl || "",
     });
 
     setOpenMenu("");
     setModal("edit-org");
   }
+
   async function createTeam(event) {
     event.preventDefault();
-
     setSaving(true);
 
     try {
@@ -289,16 +326,9 @@ function OrganizationWorkspace() {
       );
 
       closeModal();
-
-      setTeamForm({
-        name: "",
-        description: "",
-      });
-
+      setTeamForm({ name: "", description: "" });
       setNotice("Team created successfully.");
-
       setActiveTab("Teams");
-
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -306,6 +336,7 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
+
   async function inviteMember(event) {
     event.preventDefault();
 
@@ -337,7 +368,6 @@ function OrganizationWorkspace() {
       );
 
       closeModal();
-
       setInviteForm({
         email: "",
         role: "MEMBER",
@@ -346,7 +376,6 @@ function OrganizationWorkspace() {
       });
 
       setNotice("Invitation sent successfully.");
-
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -354,10 +383,11 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
+
   async function editOrganization(event) {
     event.preventDefault();
-
     setSaving(true);
+
     try {
       await api.patch(
         `/api/organizations/${organizationId}`,
@@ -369,9 +399,7 @@ function OrganizationWorkspace() {
       );
 
       closeModal();
-
       setNotice("Organization updated successfully.");
-
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -379,6 +407,23 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
+
+  async function leaveOrganization() {
+    if (saving) return;
+    setSaving(true);
+    setNotice("");
+
+    try {
+      await api.post(`/api/organizations/${organizationId}/leave`);
+      setModal("");
+      navigate("/organizations", { replace: true });
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function editMember(event) {
     event.preventDefault();
 
@@ -390,16 +435,16 @@ function OrganizationWorkspace() {
       selectedMember?.id;
 
     if (!id) {
-      return setNotice("Member ID is missing.");
+      setNotice("Member ID is missing.");
+      return;
     }
 
     setSaving(true);
+
     try {
       await api.patch(
         `/api/organizations/${organizationId}/members/${id}`,
-        {
-          role: memberRole,
-        }
+        { role: memberRole }
       );
 
       closeModal();
@@ -411,7 +456,8 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
-  async function removeMember(member) {
+
+  function removeMember(member) {
     setOpenMenu("");
 
     const id =
@@ -422,7 +468,8 @@ function OrganizationWorkspace() {
       member?.id;
 
     if (!id) {
-      return setNotice("Member ID is missing.");
+      setNotice("Member ID is missing.");
+      return;
     }
 
     const name =
@@ -431,35 +478,42 @@ function OrganizationWorkspace() {
       member.email ||
       "this member";
 
-    const confirmed = window.confirm(
-      `Remove ${name} from this organization?`
-    );
-    if (!confirmed) {
-      return;
-    }
+    setMemberToRemove({ id, name });
+    setModal("remove-member");
+  }
+
+  async function confirmRemoveMember() {
+    if (!memberToRemove?.id || saving) return;
+    setSaving(true);
+    setNotice("");
+
     try {
       await api.delete(
-        `/api/organizations/${organizationId}/members/${id}`
+        `/api/organizations/${organizationId}/members/${memberToRemove.id}`
       );
+      setModal("");
+      setMemberToRemove(null);
       setNotice("Member removed successfully.");
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
+    } finally {
+      setSaving(false);
     }
   }
+
   function menu(id, options) {
     return (
       <div className="relative shrink-0">
         <button
           type="button"
           aria-label="More options"
-          onClick={() => {
-            setOpenMenu(openMenu === id ? "" : id);
-          }}
+          onClick={() => setOpenMenu(openMenu === id ? "" : id)}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-[#B6C6D9] transition hover:bg-white/10 hover:text-white"
         >
           <FaEllipsisH />
         </button>
+
         {openMenu === id && (
           <>
             <button
@@ -468,6 +522,7 @@ function OrganizationWorkspace() {
               className="fixed inset-0 z-20 cursor-default"
               onClick={() => setOpenMenu("")}
             />
+
             <div className="absolute right-0 top-10 z-30 w-52 rounded-xl border border-[#B6C6D9]/20 bg-[#212F44] p-2 shadow-2xl shadow-black/40">
               {options.map((option) => (
                 <button
@@ -490,14 +545,16 @@ function OrganizationWorkspace() {
       </div>
     );
   }
+
   function teamRow(team) {
     const id = team._id || team.id || team.name;
+
     return (
       <div
-        key={id} 
-className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-4 transition hover:border-[#8BB9E8]/45 hover:bg-[#315A83]/50 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+        key={id}
+        className="flex min-w-0 flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-3 transition hover:border-[#8BB9E8]/45 hover:bg-[#315A83]/50 sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
-        <div className="flex min-w-0 flex-1 basis-48 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-[#C6EAFF]">
             <FaLayerGroup />
           </div>
@@ -506,7 +563,6 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
             <p className="truncate text-sm font-medium text-white">
               {team.name || "Unnamed team"}
             </p>
-
             <p className="mt-1 truncate text-xs text-[#D0E1F3]">
               {team.description || "No description"}
             </p>
@@ -514,19 +570,20 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-        <button
-         onClick={() => setSelectedChatTeam(team)}
+          <button
+            type="button"
+            onClick={() => setSelectedChatTeam(team)}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-2 text-xs font-medium text-[#C6EAFF] transition hover:bg-[#38BDF8]/20 sm:text-sm"
           >
             Open Team Chat
           </button>
+
           {menu(`team-${id}`, [
             {
               label: "Edit team",
               icon: <FaEdit />,
               onClick: () => {
                 setOpenMenu("");
-
                 setNotice(
                   "Edit team UI is ready; connect the backend endpoint to save changes."
                 );
@@ -538,7 +595,6 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               danger: true,
               onClick: () => {
                 setOpenMenu("");
-
                 setNotice(
                   "Delete team option is visible; connect the backend endpoint to delete this team."
                 );
@@ -549,17 +605,10 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
       </div>
     );
   }
+
   function memberRow(member) {
-    const name =
-      member.name ||
-      member.user?.name ||
-      "Member";
-
-    const email =
-      member.email ||
-      member.user?.email ||
-      "";
-
+    const name = member.name || member.user?.name || "Member";
+    const email = member.email || member.user?.email || "";
     const id =
       member.userId ||
       member.user?._id ||
@@ -569,16 +618,14 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
       email;
 
     const currentMemberRole =
-      member.role ||
-      member.user?.role ||
-      "MEMBER";
-    const avatar =
-      member.avatar ||
-      member.user?.avatar;
+      member.role || member.user?.role || "MEMBER";
+
+    const avatar = member.avatar || member.user?.avatar;
+
     return (
       <div
         key={id}
-        className="flex flex-col gap-3 rounded-xl border border-white/20 bg-[#062C52]/40 px-3 py-4 transition hover:bg-[#062C52]/90] sm:flex-row sm:items-center sm:justify-between sm:px-4"
+        className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/10 bg-[#062C52]/40 px-3 py-3 transition hover:bg-[#062C52]/70 sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
         <div className="flex min-w-0 items-center gap-3">
           {avatar ? (
@@ -594,14 +641,8 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
           )}
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">
-              {name}
-            </p>
-
-            <p className="mt-1 truncate text-xs text-[#A4A5AF]">
-              {email}
-            </p>
-
+            <p className="truncate text-sm font-medium text-white">{name}</p>
+            <p className="mt-1 truncate text-xs text-[#B6C6D9]">{email}</p>
             <p className="mt-0.5 text-xs text-[#C6EAFF] sm:hidden">
               {roleLabel(currentMemberRole)}
             </p>
@@ -638,15 +679,14 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
 
   const normalizedSearch = search.trim().toLowerCase();
 
-  const filteredTeams = teams.filter((team) => {
-    const teamDetails = `${team.name || ""} ${team.description || ""}`
-      .toLowerCase();
+  const filteredTeams = teams.filter((team) =>
+    `${team.name || ""} ${team.description || ""}`
+      .toLowerCase()
+      .includes(normalizedSearch)
+  );
 
-    return teamDetails.includes(normalizedSearch);
-  });
-
-  const filteredMembers = members.filter((member) => {
-    const memberDetails = [
+  const filteredMembers = members.filter((member) =>
+    [
       member.name,
       member.user?.name,
       member.email,
@@ -654,34 +694,30 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
     ]
       .filter(Boolean)
       .join(" ")
-      .toLowerCase();
+      .toLowerCase()
+      .includes(normalizedSearch)
+  );
 
-    return memberDetails.includes(normalizedSearch);
-  });
   if (loading) {
     return (
-      <OnboardingLayout>
-        <div className="flex min-h-64 items-center justify-center gap-3 text-[#B6C6D9]">
+      <OnboardingLayout fullWidth>
+        <div className="flex min-h-64 w-full items-center justify-center gap-3 bg-[linear-gradient(135deg,#253F5B,#305485,#506D91)] text-[#B6C6D9]">
           <FaSpinner className="animate-spin text-[#38BDF8]" />
           Loading workspace...
         </div>
       </OnboardingLayout>
     );
   }
+
   if (error && !organization) {
     return (
-      <OnboardingLayout>
-        <div className="py-12 text-center">
+      <OnboardingLayout fullWidth>
+        <div className="min-h-screen w-full bg-[linear-gradient(135deg,#253F5B,#305485,#506D91)] px-4 py-12 text-center">
           <FaBuilding className="mx-auto mb-4 text-3xl text-[#B6C6D9]" />
-
           <h2 className="text-lg font-semibold text-white">
             Unable to load workspace
           </h2>
-
-          <p className="mt-2 text-sm text-[#B6C6D9]">
-            {error}
-          </p>
-
+          <p className="mt-2 text-sm text-[#B6C6D9]">{error}</p>
           <button
             type="button"
             onClick={() => loadWorkspace()}
@@ -693,9 +729,10 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
       </OnboardingLayout>
     );
   }
+
   if (selectedChatTeam) {
     return (
-      <OnboardingLayout>
+      <OnboardingLayout fullWidth>
         <TeamChat
           organizationId={organizationId}
           team={selectedChatTeam}
@@ -705,20 +742,23 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
       </OnboardingLayout>
     );
   }
+
   return (
-    <OnboardingLayout>
-     <div className="mx-auto w-full max-w-none min-w-0 p-3 text-[#EDEFF7] sm:p-5 lg:p-6">
-        <div className="mb-5 flex items-center justify-between gap-3">
-        <button
-  type="button"
-  onClick={() => navigate("/organizations", { replace: true })}
-  className="mb-4 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
->
-  ← 
-</button>
+    <OnboardingLayout fullWidth>
+      <main className="organization-workspace relative min-h-full w-full min-w-0 max-w-none flex-1 self-stretch bg-[linear-gradient(135deg,#253F5B_0%,#305485_48%,#506D91_100%)] p-3 text-[#EDEFF7] sm:p-4 lg:p-5">
+
+        <div className="mb-3 flex items-center">
+          <button
+            type="button"
+            onClick={() => navigate("/organizations", { replace: true })}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/20"
+          >
+            <FaArrowLeft />
+          </button>
         </div>
+
         {notice && (
-          <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-4 py-3 text-sm text-[#C6EAFF]">
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-[#38BDF8]/30 bg-[#38BDF8]/10 px-4 py-3 text-sm text-[#C6EAFF]">
             <p>{notice}</p>
             <button
               type="button"
@@ -729,9 +769,13 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
             </button>
           </div>
         )}
-        <div
-          className="flex flex-col justify-between gap-5 rounded-2xl border border-white/10 bg-white/[0.07] p-4 shadow-xl shadow-black/10 backdrop-blur-xl sm:flex-row sm:items-center sm:p-6"
-        >
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
+        <section className="mb-4 flex w-full min-w-0 flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-white/[0.10] p-4 shadow-xl shadow-[#0B1F39]/10 backdrop-blur-xl sm:flex-row sm:items-center sm:p-5">
           <div className="flex min-w-0 items-start gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#B6C6D9]/20 bg-[#212F44] text-xl text-[#C6EAFF]">
               {organization?.logo || organization?.logoUrl ? (
@@ -744,19 +788,23 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 <FaBuilding />
               )}
             </div>
+
             <div className="min-w-0">
-              <h1 className="break-words text-xl font-semibold tracking-tight text-[#EDEFF7] sm:text-2xl">
+              <h1 className="break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
                 {organization?.name || "Organization"}
               </h1>
-              <p className="mt-1.5 max-w-xl text-sm leading-6 text-[#B6C6D9]">
+
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#B6C6D9]">
                 {organization?.description ||
                   "Your team's shared workspace."}
               </p>
+
               <span className="mt-3 inline-flex rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/[0.08] px-2.5 py-1 text-xs font-medium text-[#C6EAFF]">
                 {roleLabel(role)}
               </span>
             </div>
           </div>
+
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <button
               type="button"
@@ -770,6 +818,20 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               Invite members
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMeetingMembers([]);
+                setMeetingMemberSearch("");
+                setShowMeetingInviteModal(true);
+                setOpenMenu("");
+              }}
+              className={`${primary} shrink-0 whitespace-nowrap`}
+            >
+              <FaVideo className="shrink-0" />
+              <span>Video Call</span>
+            </button>
+
             {menu("organization", [
               {
                 label: "Edit organization",
@@ -777,22 +839,19 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 onClick: openOrgEdit,
               },
               {
-                label: "Delete organization",
-                icon: <FaTrash />,
+                label: "Leave Organization",
+                icon: <FaArrowLeft />,
                 danger: true,
                 onClick: () => {
                   setOpenMenu("");
-
-                  setNotice(
-                    "Delete organization UI is ready. Connect the backend delete endpoint before enabling deletion."
-                  );
+                  setModal("leave-organization");
                 },
               },
             ])}
           </div>
-        </div>
-        <div className="mt-6 flex flex-wrap gap-2">
-        {["Overview", "Teams", "Members", "About"].map((tab) => (
+        </section>
+        <nav className="mb-4 flex w-full min-w-0 flex-wrap gap-2">
+          {["Overview", "Teams", "Members", "About"].map((tab) => (
             <button
               key={tab}
               type="button"
@@ -803,15 +862,15 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                 activeTab === tab
                   ? "border border-[#38BDF8]/30 bg-[linear-gradient(90deg,#0066FF,#0148B3)] text-white shadow-md shadow-blue-950/30"
-                  : "border border-[#B6C6D9]/15 bg-white/[0.06] text-[#B6C6D9] hover:bg-white/10 hover:text-white"
+                  : "border border-[#B6C6D9]/20 bg-white/[0.08] text-[#B6C6D9] hover:bg-white/15 hover:text-white"
               }`}
             >
               {tab}
             </button>
           ))}
-        </div>
+        </nav>
         {activeTab === "Overview" && (
-          <div className="mt-6 space-y-5">
+          <div className="w-full min-w-0 space-y-4">
             <OrganizationOverview
               organization={organization}
               members={members}
@@ -821,9 +880,7 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               currentUserId={currentUserId}
               onEditMember={(member) => {
                 setSelectedMember(member);
-                setMemberRole(
-                  member.role || member.user?.role || "MEMBER"
-                );
+                setMemberRole(member.role || member.user?.role || "MEMBER");
                 setOpenMenu("");
                 setModal("edit-member");
               }}
@@ -834,7 +891,7 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               }}
             />
 
-            <section className={`${card} p-4 sm:p-6`}>
+            <section className={`${card} p-4 sm:p-5`}>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-base font-semibold text-white">Teams</h2>
                 <button
@@ -847,11 +904,11 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
               </div>
 
               {teams.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {teams.slice(0, 3).map(teamRow)}
                 </div>
               ) : (
-                <div className="rounded-xl border border-white/20 bg-white/[0.10] py-6 text-center text-sm text-white/80">
+                <div className="rounded-xl border border-white/10 bg-white/[0.05] py-6 text-center text-sm text-[#B6C6D9]">
                   No teams yet.
                   {canCreateTeam && (
                     <div>
@@ -870,14 +927,11 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
             </section>
           </div>
         )}
-
         {activeTab === "Teams" && (
-          <div className={`${card} mt-6 p-4 sm:p-6`}>
-            <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <section className={`${card} w-full p-4 sm:p-5`}>
+            <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Teams
-                </h2>
+                <h2 className="text-lg font-semibold text-white">Teams</h2>
                 <p className="mt-1 text-sm text-[#B6C6D9]">
                   Organize people around shared work.
                 </p>
@@ -905,8 +959,9 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 </div>
               )}
             </div>
+
             <div className="relative mb-4">
-              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A4A5AF]" />
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B6C6D9]" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -914,13 +969,12 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 className={`${input} pl-10`}
               />
             </div>
+
             {filteredTeams.length ? (
-              <div className="space-y-1.5">
-                {filteredTeams.map(teamRow)}
-              </div>
+              <div className="space-y-2">{filteredTeams.map(teamRow)}</div>
             ) : (
-              <div className="rounded-xl bg-white/[0.04] px-4 py-10 text-center">
-                <FaLayerGroup className="mx-auto mb-3 text-2xl text-[#A4A5AF]" />
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-10 text-center">
+                <FaLayerGroup className="mx-auto mb-3 text-2xl text-[#B6C6D9]" />
                 <p className="text-sm text-[#B6C6D9]">
                   {search ? "No matching teams" : "No teams yet"}
                 </p>
@@ -936,20 +990,19 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 )}
               </div>
             )}
-          </div>
+          </section>
         )}
         {activeTab === "Members" && (
-          <div className={`${card} mt-6 p-4 sm:p-6`}>
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-white">
-                Members
-              </h2>
+          <section className={`${card} w-full p-4 sm:p-5`}>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white">Members</h2>
               <p className="mt-1 text-sm text-[#B6C6D9]">
                 People who belong to this organization.
               </p>
             </div>
+
             <div className="relative mb-4">
-              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A4A5AF]" />
+              <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B6C6D9]" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -957,55 +1010,46 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
                 className={`${input} pl-10`}
               />
             </div>
+
             {filteredMembers.length ? (
-              <div className="space-y-1.5">
-                {filteredMembers.map(memberRow)}
-              </div>
+              <div className="space-y-2">{filteredMembers.map(memberRow)}</div>
             ) : (
               <p className="rounded-xl bg-white/[0.04] px-4 py-10 text-center text-sm text-[#B6C6D9]">
                 {search ? "No matching members" : "No members found."}
               </p>
             )}
-          </div>
+          </section>
         )}
-                {activeTab === "About" && (
-          <section className={`${card} mt-6 p-4 sm:p-6`}>
+        {activeTab === "About" && (
+          <section className={`${card} w-full p-4 sm:p-5`}>
             <h2 className="mb-5 text-lg font-semibold text-white">
               About Organization
             </h2>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <p className="text-sm text-[#B6C6D9]">
-                  Organization Name
-                </p>
+                <p className="text-sm text-[#B6C6D9]">Organization Name</p>
                 <p className="mt-1 text-white">
                   {organization?.name || "Not provided"}
                 </p>
               </div>
 
               <div>
-                <p className="text-sm text-[#B6C6D9]">
-                  Organization ID
-                </p>
+                <p className="text-sm text-[#B6C6D9]">Organization ID</p>
                 <p className="mt-1 break-all text-sm text-white">
                   {organization?._id || organization?.id || organizationId}
                 </p>
               </div>
 
-              <div>
-                <p className="text-sm text-[#B6C6D9]">
-                  Description
-                </p>
+              <div className="sm:col-span-2">
+                <p className="text-sm text-[#B6C6D9]">Description</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-white">
                   {organization?.description || "No description available."}
                 </p>
               </div>
 
-              <div>
-                <p className="text-sm text-[#B6C6D9]">
-                  Website
-                </p>
+              <div className="sm:col-span-2">
+                <p className="text-sm text-[#B6C6D9]">Website</p>
                 <p className="mt-1 break-all text-sm text-white">
                   {organization?.website || "Not provided"}
                 </p>
@@ -1013,341 +1057,470 @@ className="flex flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83
             </div>
           </section>
         )}
-      </div>
-      {modal === "create-team" && (
-        <Modal
-          title="Create a team"
-          description="Create a team for people working together."
-          close={closeModal}
-        >
-          <form
-            onSubmit={createTeam}
-            className="space-y-4"
+
+        {showMeetingInviteModal && (
+          <Modal
+            title="Start an organization meeting"
+            description="Select the organization members you want to invite."
+            close={() => setShowMeetingInviteModal(false)}
           >
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Team name
-              </label>
+            <div className="space-y-4">
               <input
-                required
-                maxLength={80}
-                value={teamForm.name}
-                onChange={(event) => {
-                  setTeamForm({
-                    ...teamForm,
-                    name: event.target.value,
-                  });
-                }}
-                placeholder="e.g. Engineering"
+                value={meetingMemberSearch}
+                onChange={(event) => setMeetingMemberSearch(event.target.value)}
+                placeholder="Search members by name or email..."
                 className={input}
               />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Description
-              </label>
-              <textarea
-                rows={3}
-                maxLength={300}
-                value={teamForm.description}
-                onChange={(event) => {
-                  setTeamForm({
-                    ...teamForm,
-                    description: event.target.value,
-                  });
-                }}
-                placeholder="What will this team work on?"
-                className={`${input} resize-none`}
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                className={secondary}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={saving || !teamForm.name.trim()}
-                className={primary}
-              >
-                {saving ? (
-                  <FaSpinner className="animate-spin" />
-                ) : (
-                  <FaCheck />
+
+              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {members
+                  .filter((member) => {
+                    const name = member.name || member.user?.name || "";
+                    const email = member.email || member.user?.email || "";
+                    return `${name} ${email}`
+                      .toLowerCase()
+                      .includes(meetingMemberSearch.trim().toLowerCase());
+                  })
+                  .map((member) => {
+                    const id =
+                      member.userId ||
+                      member.user?._id ||
+                      member.user?.id ||
+                      member._id ||
+                      member.id;
+                    const name = member.name || member.user?.name || "Member";
+                    const email = member.email || member.user?.email || "";
+
+                    if (!id) return null;
+
+                    const memberId = String(id);
+
+                    return (
+                      <label
+                        key={memberId}
+                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-[#38BDF8]/30 hover:bg-white/[0.08]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMeetingMembers.includes(memberId)}
+                          onChange={() => toggleMeetingMember(memberId)}
+                          className="h-4 w-4 shrink-0 accent-blue-500"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-white">
+                            {name}
+                          </span>
+                          <span className="block truncate text-xs text-[#B6C6D9]">
+                            {email || "No email available"}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+
+                {members.length === 0 && (
+                  <p className="py-6 text-center text-sm text-[#B6C6D9]">
+                    No organization members found.
+                  </p>
                 )}
-                Create team
-              </button>
+
+                {members.length > 0 &&
+                  !members.some((member) => {
+                    const name = member.name || member.user?.name || "";
+                    const email = member.email || member.user?.email || "";
+                    return `${name} ${email}`
+                      .toLowerCase()
+                      .includes(meetingMemberSearch.trim().toLowerCase());
+                  }) && (
+                    <p className="py-6 text-center text-sm text-[#B6C6D9]">
+                      No members match your search.
+                    </p>
+                  )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                <p className="text-xs text-[#B6C6D9]">
+                  {selectedMeetingMembers.length} selected
+                </p>
+                <div className="flex shrink-0 justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMeetingInviteModal(false)}
+                    className={secondary}
+                    disabled={startingMeeting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startOrganizationMeeting}
+                    disabled={startingMeeting || selectedMeetingMembers.length === 0}
+                    className={`${primary} whitespace-nowrap`}
+                  >
+                    {startingMeeting ? (
+                      <FaSpinner className="animate-spin" />
+                    ) : (
+                      <FaVideo />
+                    )}
+                    {startingMeeting ? "Starting..." : "Start meeting"}
+                  </button>
+                </div>
+              </div>
             </div>
-          </form>
-        </Modal>
-      )}
-      {modal === "invite" && (
-        <Modal
-          title="Invite a member"
-          description="Send an invitation to join your organization."
-          close={closeModal}
-        >
-          <form
-            onSubmit={inviteMember}
-            className="space-y-4"
+          </Modal>
+        )}
+
+        {modal === "create-team" && (
+          <Modal
+            title="Create a team"
+            description="Create a team for people working together."
+            close={closeModal}
           >
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Email address
-              </label>
-              <input
-                required
-                type="email"
-                value={inviteForm.email}
-                onChange={(event) => {
-                  setInviteForm({
-                    ...inviteForm,
-                    email: event.target.value,
-                  });
-                }}
-                placeholder="name@example.com"
-                className={input}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Team (Optional)
-              </label>
-
-              <select
-                value={inviteForm.teamId}
-                onChange={(e) =>
-                  setInviteForm((prev) => ({
-                    ...prev,
-                    teamId: e.target.value,
-                  }))
-                }
-                className={input}
-              >
-                <option value="">Organization-wide invite</option>
-
-                {teams.map((team) => (
-                  <option key={team.id || team._id} value={team.id || team._id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {inviteForm.teamId ? (
+            <form onSubmit={createTeam} className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm text-[#B6C6D9]">
-                  Team Role
+                  Team name
                 </label>
+                <input
+                  required
+                  maxLength={80}
+                  value={teamForm.name}
+                  onChange={(event) =>
+                    setTeamForm({ ...teamForm, name: event.target.value })
+                  }
+                  placeholder="e.g. Engineering"
+                  className={input}
+                />
+              </div>
 
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={teamForm.description}
+                  onChange={(event) =>
+                    setTeamForm({
+                      ...teamForm,
+                      description: event.target.value,
+                    })
+                  }
+                  placeholder="What will this team work on?"
+                  className={`${input} resize-none`}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={secondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={saving || !teamForm.name.trim()}
+                  className={primary}
+                >
+                  {saving ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                  Create team
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+
+        {modal === "invite" && (
+          <Modal
+            title="Invite a member"
+            description="Send an invitation to join your organization."
+            close={closeModal}
+          >
+            <form onSubmit={inviteMember} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Email address
+                </label>
+                <input
+                  required
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(event) =>
+                    setInviteForm({ ...inviteForm, email: event.target.value })
+                  }
+                  placeholder="name@example.com"
+                  className={input}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Team (Optional)
+                </label>
                 <select
-                  value={inviteForm.teamRole}
-                  onChange={(e) =>
-                    setInviteForm((prev) => ({
-                      ...prev,
-                      teamRole: e.target.value,
-                    }))
+                  value={inviteForm.teamId}
+                  onChange={(event) =>
+                    setInviteForm({ ...inviteForm, teamId: event.target.value })
                   }
                   className={input}
                 >
-                  <option value="MEMBER">Team Member</option>
-                  <option value="LEAD">Team Lead</option>
+                  <option value="">Organization-wide invite</option>
+                  {teams.map((team) => (
+                    <option key={team.id || team._id} value={team.id || team._id}>
+                      {team.name}
+                    </option>
+                  ))}
                 </select>
               </div>
-            ) : (
+
+              {inviteForm.teamId ? (
+                <div>
+                  <label className="mb-2 block text-sm text-[#B6C6D9]">
+                    Team Role
+                  </label>
+                  <select
+                    value={inviteForm.teamRole}
+                    onChange={(event) =>
+                      setInviteForm({
+                        ...inviteForm,
+                        teamRole: event.target.value,
+                      })
+                    }
+                    className={input}
+                  >
+                    <option value="MEMBER">Team Member</option>
+                    <option value="LEAD">Team Lead</option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-2 block text-sm text-[#B6C6D9]">
+                    Organization Role
+                  </label>
+                  <select
+                    value={inviteForm.role}
+                    onChange={(event) =>
+                      setInviteForm({ ...inviteForm, role: event.target.value })
+                    }
+                    className={input}
+                  >
+                    <option value="MEMBER">Member</option>
+                    <option value="TEAM_HEAD">Team Head</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={secondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={saving || !inviteForm.email.trim()}
+                  className={primary}
+                >
+                  {saving ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaUserPlus />
+                  )}
+                  Send invite
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+
+        {modal === "edit-org" && (
+          <Modal
+            title="Edit organization"
+            description="Update your organization's information."
+            close={closeModal}
+          >
+            <form onSubmit={editOrganization} className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm text-[#B6C6D9]">
-                  Organization Role
+                  Organization name
                 </label>
-
-                <select
-                  value={inviteForm.role}
-                  onChange={(e) =>
-                    setInviteForm((prev) => ({
-                      ...prev,
-                      role: e.target.value,
-                    }))
+                <input
+                  required
+                  value={orgForm.name}
+                  onChange={(event) =>
+                    setOrgForm({ ...orgForm, name: event.target.value })
                   }
+                  className={input}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={orgForm.description}
+                  maxLength={20000}
+                  onChange={(event) =>
+                    setOrgForm({
+                      ...orgForm,
+                      description: event.target.value,
+                    })
+                  }
+                  className={`${input} resize-none`}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Logo URL
+                </label>
+                <input
+                  type="url"
+                  value={orgForm.logo}
+                  onChange={(event) =>
+                    setOrgForm({ ...orgForm, logo: event.target.value })
+                  }
+                  placeholder="https://example.com/logo.png"
+                  className={input}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={secondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={saving || !orgForm.name.trim()}
+                  className={primary}
+                >
+                  {saving ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+
+        {modal === "edit-member" && (
+          <Modal
+            title="Edit member"
+            description="Update this member's role."
+            close={closeModal}
+          >
+            <form onSubmit={editMember} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">
+                  Member role
+                </label>
+                <select
+                  value={memberRole}
+                  onChange={(event) => setMemberRole(event.target.value)}
                   className={input}
                 >
                   <option value="MEMBER">Member</option>
                   <option value="TEAM_HEAD">Team Head</option>
+                  <option value="ORG_ADMIN">Organization Admin</option>
                 </select>
               </div>
-            )}
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                className={secondary}
-              >
-                Cancel
-              </button>
-              <button
-                disabled={saving || !inviteForm.email.trim()}
-                className={primary}
-              >
-                {saving ? (
-                  <FaSpinner className="animate-spin" />
-                ) : (
-                  <FaUserPlus />
-                )}
-                Send invite
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-      {modal === "edit-org" && (
-        <Modal
-          title="Edit organization"
-          description="Update your organization's information."
-          close={closeModal}
-        >
-          <form
-            onSubmit={editOrganization}
-            className="space-y-4"
-          >
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Organization name
-              </label>
-              <input
-                required
-                value={orgForm.name}
-                onChange={(event) => {
-                  setOrgForm({
-                    ...orgForm,
-                    name: event.target.value,
-                  });
-                }}
-                className={input}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Description
-              </label>
-              <textarea
-                rows={3}
-                value={orgForm.description}
-                maxLength={20000}
-                onChange={(event) => {
-                  setOrgForm({
-                    ...orgForm,
-                    description: event.target.value,
-                  });
-                }}
-                className={`${input} resize-none`}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Logo URL
-              </label>
-              <input
-                type="url"
-                value={orgForm.logo}
-                onChange={(event) => {
-                  setOrgForm({
-                    ...orgForm,
-                    logo: event.target.value,
-                  });
-                }}
-                placeholder="https://example.com/logo.png"
-                className={input}
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={closeModal}
-                className={secondary}
-              >
-                Cancel
-              </button>
 
-              <button
-                disabled={saving || !orgForm.name.trim()}
-                className={primary}
-              >
-                {saving ? (
-                  <FaSpinner className="animate-spin" />
-                ) : (
-                  <FaCheck />
-                )}
-                Save changes
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-      {modal === "edit-member" && (
-        <Modal
-          title="Edit member"
-          description="Update this member's role."
-          close={closeModal}
-        >
-          <form
-            onSubmit={editMember}
-            className="space-y-4"
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={secondary}
+                >
+                  Cancel
+                </button>
+                <button disabled={saving} className={primary}>
+                  {saving ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                  Save changes
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+
+        {modal === "remove-member" && (
+          <Modal
+            title="Remove member?"
+            description={`Are you sure you want to remove ${memberToRemove?.name || "this member"} from this organization? This action cannot be undone.`}
+            close={closeModal}
           >
-            <div>
-              <label className="mb-2 block text-sm text-[#B6C6D9]">
-                Member role
-              </label>
-              <select
-                value={memberRole}
-                onChange={(event) => {
-                  setMemberRole(event.target.value);
-                }}
-                className={input}
-              >
-                <option value="MEMBER">Member</option>
-                <option value="TEAM_HEAD">Team Head</option>
-                <option value="ORG_ADMIN">Organization Admin</option>
-              </select>
-            </div>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={closeModal}
                 className={secondary}
-              >
-                Cancel
-              </button>
-
-              <button
                 disabled={saving}
-                className={primary}
               >
-                {saving ? (
-                  <FaSpinner className="animate-spin" />
-                ) : (
-                  <FaCheck />
-                )}
-                Save changes
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveMember}
+                disabled={saving || !memberToRemove?.id}
+                className={`${btn} border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25`}
+              >
+                {saving ? <FaSpinner className="animate-spin" /> : <FaTrash />}
+                {saving ? "Removing..." : "Remove member"}
               </button>
             </div>
-          </form>
-        </Modal>
-      )}
-      {showAddTeamMember && (
-        <AddTeamMember
-          organizationId={organizationId}
-          teams={teams}
-          members={members}
-          onClose={() => setShowAddTeamMember(false)}
-          onSuccess={async () => {
-            setShowAddTeamMember(false);
-            setNotice("Member added to team successfully.");
-            await loadWorkspace(false);
-          }}
-        />
-      )}
+          </Modal>
+        )}
+
+        {modal === "leave-organization" && (
+          <Modal
+            title="Leave organization?"
+            description={`Are you sure you want to leave ${organization?.name || "this organization"}? You may need a new invitation to join again.`}
+            close={closeModal}
+          >
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeModal}
+                className={secondary}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={leaveOrganization}
+                disabled={saving}
+                className={`${btn} border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25`}
+              >
+                {saving ? <FaSpinner className="animate-spin" /> : <FaArrowLeft />}
+                {saving ? "Leaving..." : "Leave Organization"}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {showAddTeamMember && (
+          <AddTeamMember
+            organizationId={organizationId}
+            teams={teams}
+            members={members}
+            onClose={() => setShowAddTeamMember(false)}
+            onSuccess={async () => {
+              setShowAddTeamMember(false);
+              setNotice("Member added to team successfully.");
+              await loadWorkspace(false);
+            }}
+          />
+        )}
+      </main>
     </OnboardingLayout>
   );
 }
+
 export default OrganizationWorkspace;
