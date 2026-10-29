@@ -29,7 +29,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
     const isDoc = fileType === "document" || /\.(pdf|docx?|xlsx?|pptx?|txt)$/i.test(fileUrl || "");
 
     return (
-        <div className="mt-3 overflow-hidden rounded-xl border border-white/30 bg-[#DCEBFA]/25 backdrop-blur-sm">
+        <div className="mt-3 overflow-hidden rounded-xl border border-white/20 bg-[#2A4F74]/90 backdrop-blur-sm">
             {isImage ? (
                 <div className="group relative max-h-96 overflow-hidden bg-white/10">
                     <img
@@ -38,7 +38,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                         loading="lazy"
                         className="max-h-96 w-full object-contain transition group-hover:scale-[1.01]"
                     />
-                    <div className="flex items-center justify-between border-t border-white/20 bg-[#DCEBFA]/30 p-2.5 text-xs text-blue-950">
+                    <div className="flex items-center justify-between border-t border-white/15 bg-[#214B73] p-2.5 text-xs text-white">
                         <span className="truncate">{fileName || "Image"}</span>
                         <div className="flex items-center gap-3">
                             {fileSize && <span>{formatSize(fileSize)}</span>}
@@ -47,7 +47,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 download={fileName || true}
-                                className="font-semibold text-blue-700 hover:text-blue-950"
+                                className="font-semibold text-blue-200 hover:text-white"
                             >
                                 Open ↗
                             </a>
@@ -64,14 +64,14 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                     </div>
                 </div>
             ) : (
-                <div className="flex items-center justify-between gap-3 p-3 text-sm text-blue-950">
+                <div className="flex items-center justify-between gap-3 p-3 text-sm text-white">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/35 text-xl text-blue-800">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-[#365F86] text-xl text-white">
                             {isDoc ? "📄" : "📁"}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-blue-950">{fileName || "Attached file"}</p>
-                            <p className="mt-0.5 text-xs text-blue-900/70">
+                            <p className="truncate font-medium text-white">{fileName || "Attached file"}</p>
+                            <p className="mt-0.5 text-xs text-blue-100/75">
                                 {fileType || (isDoc ? "document" : "file")}
                                 {fileSize ? ` · ${formatSize(fileSize)}` : ""}
                             </p>
@@ -84,7 +84,7 @@ export function PostAttachment({ fileUrl, fileType, fileName, fileSize, onRemove
                             target="_blank"
                             rel="noopener noreferrer"
                             download={fileName || true}
-                            className="rounded-lg border border-white/30 bg-white/35 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-white/60"
+                            className="rounded-lg border border-white/20 bg-[#365F86] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#426F98]"
                         >
                             Download ↓
                         </a>
@@ -190,17 +190,18 @@ export default function CommunityAttachments({
                     </button>
                 </div>
             ) : (
-                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/50 bg-[#DCEBFA]/25 p-4 shadow-sm backdrop-blur-sm transition hover:border-blue-300 hover:bg-white/35 ${
+                <label
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/30 bg-[#365F86]/80 p-4 shadow-sm backdrop-blur-sm transition hover:border-blue-300 hover:bg-[#426F98] ${
                     disabled ? "pointer-events-none opacity-50" : ""
                 }`}>
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/40 bg-white/35 text-xl text-blue-800">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-[#214B73] text-xl text-white">
                         ↥
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-blue-950">
+                        <span className="block text-sm font-semibold text-white">
                             Attach a file
                         </span>
-                        <span className="mt-1 block text-xs text-blue-900/70">
+                        <span className="mt-1 block text-xs text-blue-100/75">
                             Images, documents or files · Max 25 MiB
                         </span>
                     </span>

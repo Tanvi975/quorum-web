@@ -10,13 +10,13 @@ const unwrap = (response) =>
   response?.data?.data ?? response?.data ?? response;
 
 const panel =
-  "rounded-2xl border border-white/30 bg-[#DCEBFA]/25 shadow-[0_12px_35px_rgba(1,16,39,0.10)] backdrop-blur-xl";
+  "rounded-2xl border border-white/20 bg-[#2A4F74]/95 shadow-[0_12px_35px_rgba(1,16,39,0.22)] backdrop-blur-xl";
 
 const field =
-  "w-full min-w-0 rounded-xl border border-white/20 bg-[#173A5E]/70 px-3 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/60 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20";
+  "w-full min-w-0 rounded-xl border border-white/20 bg-[#214B73] px-3 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/65 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20";
 
 const primaryButton =
-  "inline-flex items-center justify-center rounded-xl bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1678FF] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-xl bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1678FF] disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function CommunityChannels({
   communityId,
@@ -53,9 +53,7 @@ export default function CommunityChannels({
 
       setChannels(list);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to load channels."
-      );
+      setError("Could not load channels. Try again.");
     } finally {
       setLoading(false);
     }
@@ -87,7 +85,7 @@ export default function CommunityChannels({
       setError(
         err.response?.status === 409
           ? "A channel with this name already exists."
-          : err.response?.data?.message || "Unable to create channel."
+          : "Could not create channel. Try again."
       );
     } finally {
       setSaving(false);
@@ -123,7 +121,7 @@ export default function CommunityChannels({
       setError(
         err.response?.status === 409
           ? "A channel with this name already exists."
-          : err.response?.data?.message || "Unable to update channel."
+          : "Could not update channel. Try again."
       );
     } finally {
       setSaving(false);
@@ -162,22 +160,19 @@ export default function CommunityChannels({
       setNotice("Channel deleted successfully.");
       await loadChannels();
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to delete channel."
-      );
+      setError("Could not delete channel. Try again.");
     }
   }
 
   return (
-    <section className={`${panel} min-w-0 overflow-hidden text-blue-950`}>
-      {/* Panel heading */}
+    <section className={`${panel} min-w-0 overflow-hidden text-white`}>
       <div className=" p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-blue-900 sm:text-xm">
+            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-blue-100 sm:text-xs">
               Community spaces
             </p>
-            <h2 className="mt-1 text-lg font-bold text-blue-950 sm:text-xl">
+            <h2 className="mt-1 text-lg font-bold text-white sm:text-xl">
               Channels
             </h2>
             <p className="mt-1 text-xs text-white">
@@ -185,7 +180,7 @@ export default function CommunityChannels({
             </p>
           </div>
 
-          <span className="shrink-0 rounded-full border border-white/40 bg-white/35 px-3 py-1.5 text-xs font-semibold text-blue-900">
+          <span className="shrink-0 rounded-full border border-white/20 bg-[#365F86] px-3 py-1.5 text-xs font-semibold text-white">
             {channels.length} total
           </span>
         </div>
@@ -193,12 +188,9 @@ export default function CommunityChannels({
 
       <div className="space-y-4 p-3 sm:p-4">
         {error && (
-          <div
-            role="alert"
-            className="break-words rounded-xl border border-red-300/40 bg-red-100/70 p-3 text-sm text-red-800"
-          >
+          <p role="alert" className="break-words text-sm text-red-300">
             {error}
-          </div>
+          </p>
         )}
 
         {notice && (
@@ -209,18 +201,16 @@ export default function CommunityChannels({
             {notice}
           </div>
         )}
-
-        {/* All posts */}
         <button
           type="button"
           onClick={() => onSelectChannel?.(null)}
           className={`flex w-full min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition sm:p-3.5 ${
             selectedChannelId == null
-              ? "border-blue-300/50 bg-[#173A5E]/70 shadow-sm"
-              : "border-white/20 bg-[#173A5E]/70 hover:border-blue-300/50 hover:bg-[#214B73]/80"
+              ? "border-[#8CC4FF] bg-[#0068FF] shadow-sm"
+              : "border-white/20 bg-[#365F86]/80 hover:border-[#8CC4FF] hover:bg-[#426F98]"
           }`}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-xl text-blue-100">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-[#214B73] text-xl text-blue-100">
             ✦
           </span>
 
@@ -238,22 +228,21 @@ export default function CommunityChannels({
           )}
         </button>
 
-        {/* Channel list */}
         {loading ? (
           <div className="space-y-3 py-3" aria-live="polite">
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
-                className="h-[62px] animate-pulse rounded-xl border border-white/20 bg-[#173A5E]/50"
+                className="h-[62px] animate-pulse rounded-xl border border-white/20 bg-[#365F86]/60"
               />
             ))}
-            <p className="text-center text-xs text-blue-900/70">
+            <p className="text-center text-xs text-blue-100/75">
               Loading channels…
             </p>
           </div>
         ) : channels.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-blue-300/30 bg-[#173A5E]/70 px-4 py-7 text-center">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-xl text-blue-100">
+          <div className="rounded-xl border border-dashed border-white/25 bg-[#365F86]/80 px-4 py-7 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-[#214B73] text-xl text-blue-100">
               #
             </div>
             <p className="mt-3 text-sm font-semibold text-white">
@@ -280,8 +269,8 @@ export default function CommunityChannels({
                   key={id}
                   className={`min-w-0 rounded-xl border p-3 transition ${
                     active
-                      ? "border-blue-300/50 bg-[#173A5E]/70"
-                      : "border-white/20 bg-[#173A5E]/70 hover:border-blue-300/50 hover:bg-[#214B73]/80"
+                      ? "border-[#8CC4FF] bg-[#0068FF]"
+                      : "border-white/20 bg-[#365F86]/80 hover:border-[#8CC4FF] hover:bg-[#426F98]"
                   }`}
                 >
                   {editing === id ? (
@@ -322,7 +311,7 @@ export default function CommunityChannels({
                         <button
                           type="button"
                           onClick={() => setEditing(null)}
-                          className="rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm text-blue-50 transition hover:bg-white/20"
+                          className="rounded-xl border border-white/25 bg-[#214B73] px-4 py-2.5 text-sm text-blue-50 transition hover:bg-[#365F86]"
                         >
                           Cancel
                         </button>
@@ -345,7 +334,7 @@ export default function CommunityChannels({
                               {channel.name ?? "Untitled"}
                             </span>
                             {general && (
-                              <span className="rounded-full border border-blue-200/30 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-blue-100">
+                              <span className="rounded-full border border-blue-200/30 bg-[#214B73] px-2 py-0.5 text-[10px] font-semibold text-blue-100">
                                 DEFAULT
                               </span>
                             )}
@@ -377,7 +366,7 @@ export default function CommunityChannels({
                         <button
                           type="button"
                           onClick={() => startEditing(channel)}
-                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-white/10 hover:text-white"
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-[#214B73] hover:text-white"
                         >
                           Edit
                         </button>
@@ -399,13 +388,13 @@ export default function CommunityChannels({
         {canManageChannels && (
           <form
             onSubmit={handleCreate}
-            className="space-y-3 border-t border-white/35 pt-4"
+            className="space-y-3 border-t border-white/20 pt-4"
           >
             <div>
-              <h3 className="text-sm font-bold text-blue-950 sm:text-base">
+              <h3 className="text-sm font-bold text-white sm:text-base">
                 Create a channel
               </h3>
-              <p className="mt-1 text-xs leading-5 text-blue-900/70">
+              <p className="mt-1 text-xs leading-5 text-blue-100/75">
                 Give your community a dedicated discussion space.
               </p>
             </div>

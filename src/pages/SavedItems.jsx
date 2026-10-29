@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
 import {
   FiBookmark,
   FiMessageCircle,
@@ -81,7 +82,7 @@ export default function SavedItems() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [selectedType, setSelectedType] = useState("");
   const [selectedCollectionId, setSelectedCollectionId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,13 +236,7 @@ export default function SavedItems() {
   };
 
   const handleDeleteCollection = async (colId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this collection? Saved items in it will remain unassigned."
-      )
-    ) {
-      return;
-    }
+
 
     try {
       await deleteCollection(colId);
@@ -291,8 +286,6 @@ export default function SavedItems() {
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (!window.confirm("Remove this bookmark?")) return;
-
     try {
       await deleteSavedItem(itemId);
       setItems((prev) => prev.filter((i) => i.id !== itemId));
@@ -304,7 +297,19 @@ export default function SavedItems() {
       );
     }
   };
-
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+  
+    const target = deleteTarget;
+  
+    if (target.type === "collection") {
+      await handleDeleteCollection(target.id);
+    } else if (target.type === "item") {
+      await handleDeleteItem(target.id);
+    }
+  
+    setDeleteTarget(null);
+  };
   const handleItemClick = (item) => {
     if (!item.isAccessible) return;
 
@@ -535,7 +540,13 @@ export default function SavedItems() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteCollection(col.id)}
+                              onClick={() =>
+                                setDeleteTarget({
+                                  type: "collection",
+                                  id: col.id,
+                                  name: col.name,
+                                })
+                              }
                               className="hidden rounded p-1 text-red-300 hover:text-red-100 group-hover:block"
                               title="Delete Collection"
                             >
@@ -788,7 +799,13 @@ export default function SavedItems() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteItem(item.id)}
+                              onClick={() =>
+                                setDeleteTarget({
+                                  type: "item",
+                                  id: item.id,
+                                  name: item.title || "this bookmark",
+                                })
+                              }
                               className="flex items-center gap-1 rounded px-2 py-1 text-xs text-red-300 transition hover:bg-red-500/20 hover:text-red-100"
                               title="Delete bookmark"
                             >
@@ -993,7 +1010,30 @@ export default function SavedItems() {
           </div>
         </form>
       </div>
-    )}
-  </div>
-);
-}
+      )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        type="delete"
+        title={
+          deleteTarget?.type === "collection"
+            ? "Delete collection?"
+            : "Remove bookmark?"
+        }
+        message={
+          deleteTarget?.type === "collection"
+            ? `Delete "${deleteTarget?.name}"? Saved items in this collection will remain unassigned.`
+            : `Are you sure you want to remove "${deleteTarget?.name}" from saved items?`
+        }
+        confirmText={
+          deleteTarget?.type === "collection"
+            ? "Delete collection"
+            : "Remove bookmark"
+        }
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  );
+  }

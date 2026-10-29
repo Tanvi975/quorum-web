@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -11,7 +12,7 @@ function CommunityInvite() {
     const { token: pathToken } = useParams();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    
+
     const token = searchParams.get("token") || pathToken;
 
     const [inviteInfo, setInviteInfo] = useState(null);
@@ -22,7 +23,12 @@ function CommunityInvite() {
 
     useEffect(() => {
         async function fetchPreview() {
-            if (!token) return;
+            if (!token) {
+                setLoadingPreview(false);
+                setError("Invalid invitation link. Please check the link.");
+                return;
+            }
+
             setLoadingPreview(true);
             setError("");
 
@@ -31,12 +37,18 @@ function CommunityInvite() {
                 const data = response?.data?.data ?? response?.data ?? response;
                 setInviteInfo(data);
             } catch (err) {
-                console.warn("Could not load preview, link may be expired or direct token:", err);
+                console.warn("Could not load invitation preview:", err);
                 const msg = err.response?.data?.message || "";
+
                 if (msg.toLowerCase().includes("already a member")) {
                     setMessage("You are already a member of this community.");
-                } else if (msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("revoked")) {
-                    setError("This invitation link has expired or has been revoked.");
+                } else if (
+                    msg.toLowerCase().includes("expired") ||
+                    msg.toLowerCase().includes("revoked")
+                ) {
+                    setError("This invitation link has expired.");
+                } else {
+                    setError("Could not load invitation. Please try again.");
                 }
             } finally {
                 setLoadingPreview(false);
@@ -47,7 +59,8 @@ function CommunityInvite() {
     }, [token]);
 
     async function handleAccept() {
-        if (actionLoading) return;
+        if (actionLoading || !token) return;
+
         setActionLoading(true);
         setError("");
         setMessage("");
@@ -70,28 +83,31 @@ function CommunityInvite() {
             }
         } catch (err) {
             const errorMsg = err.response?.data?.message || err.message || "";
+
             if (errorMsg.toLowerCase().includes("already a member")) {
                 navigate("/communities", { replace: true });
                 return;
             }
-            setError(errorMsg || "Could not accept this community invitation.");
+
+            setError("Could not accept invitation. Please try again.");
         } finally {
             setActionLoading(false);
         }
     }
 
     async function handleDecline() {
-        if (actionLoading) return;
+        if (actionLoading || !token) return;
+
         setActionLoading(true);
         setError("");
+        setMessage("");
 
         try {
             await declineCommunityInvite(token);
             setMessage("Invitation declined.");
             setTimeout(() => navigate("/communities", { replace: true }), 1500);
-        } catch (err) {
-
-            navigate("/communities", { replace: true });
+        } catch {
+            setError("Could not decline invitation. Please try again.");
         } finally {
             setActionLoading(false);
         }
@@ -101,57 +117,60 @@ function CommunityInvite() {
         inviteInfo?.community?.name ??
         inviteInfo?.name ??
         "Community";
+
     const communityDesc =
         inviteInfo?.community?.description ??
         inviteInfo?.description ??
         "You have been invited to join this collaborative workspace on Quorum.";
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#061B38] via-[#062C5F] to-[#04152D] p-6 text-white">
-            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#8BB9E8]/25 bg-[#123B6A]/50 shadow-2xl backdrop-blur-xl">
-                <div className="border-b border-[#8BB9E8]/15 bg-[#315A83]/20 p-6 text-center">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-200">
-                        <FiUsers size={32} />
+        <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#061B38] via-[#102A46] to-[#04152D] px-4 py-8 text-white sm:px-6">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/20 bg-[#2A4F74]/95 shadow-2xl shadow-black/30">
+                <div className="border-b border-white/15 bg-[#365F86]/70 p-5 text-center sm:p-6">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-[#214B73] text-white">
+                        <FiUsers size={30} aria-hidden="true" />
                     </div>
-                    <h1 className="mt-4 text-2xl font-bold tracking-tight">
-                        {loadingPreview ? "Loading invitation…" : communityName}
+
+                    <h1 className="mt-4 break-words text-xl font-bold tracking-tight text-white sm:text-2xl">
+                        {loadingPreview ? "Loading invitation..." : communityName}
                     </h1>
-                    <p className="mt-2 text-sm leading-relaxed text-blue-100/70">
+
+                    <p className="mt-2 break-words text-sm leading-relaxed text-blue-100/80">
                         {communityDesc}
                     </p>
                 </div>
 
-                <div className="p-6">
+                <div className="p-5 sm:p-6">
                     {error && (
-                        <div role="alert" className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+                        <p role="alert" className="mb-4 text-sm text-red-300">
                             {error}
-                        </div>
+                        </p>
                     )}
 
                     {message && (
-                        <div role="status" className="mb-4 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                        <p role="status" className="mb-4 text-sm text-emerald-200">
                             {message}
-                        </div>
+                        </p>
                     )}
 
                     <div className="space-y-3">
                         <button
                             type="button"
                             onClick={handleAccept}
-                            disabled={actionLoading}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3.5 text-sm font-bold shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:opacity-50"
+                            disabled={actionLoading || loadingPreview || !token || Boolean(error)}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-[#1678FF] focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-[#2A4F74] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
                         >
-                            <FiCheck size={18} />
-                            {actionLoading ? "Joining…" : "Accept & Join Community"}
+                            <FiCheck size={18} aria-hidden="true" />
+                            {actionLoading ? "Please wait..." : "Accept & Join Community"}
                         </button>
 
                         <button
                             type="button"
                             onClick={handleDecline}
-                            disabled={actionLoading}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+                            disabled={actionLoading || loadingPreview || !token}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-[#365F86]/70 px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#426F98] focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
                         >
-                            <FiX size={18} />
+                            <FiX size={18} aria-hidden="true" />
                             Decline invitation
                         </button>
                     </div>
@@ -160,9 +179,10 @@ function CommunityInvite() {
                         <button
                             type="button"
                             onClick={() => navigate("/communities")}
-                            className="inline-flex items-center gap-1.5 text-xs text-blue-100/60 transition hover:text-white"
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs text-blue-100/80 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-300"
                         >
-                            <FiArrowLeft size={14} /> Back to Communities
+                            <FiArrowLeft size={14} aria-hidden="true" />
+                            Back to Communities
                         </button>
                     </div>
                 </div>

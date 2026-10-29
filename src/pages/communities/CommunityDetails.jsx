@@ -51,16 +51,16 @@ const tabs = [
 ];
 
 const glassCard =
-    "rounded-2xl border border-white/25 bg-white/15 shadow-lg backdrop-blur-xl";
+    "rounded-2xl border border-white/15 bg-[#2A4F74]/95 shadow-lg";
 
 const glassInput =
-    "w-full rounded-xl border border-white/30 bg-white/15 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/60 focus:border-white/70 focus:ring-2 focus:ring-white/20";
+    "w-full rounded-xl border border-white/15 bg-[#214B73] px-3 py-2.5 text-sm text-white outline-none placeholder:text-blue-100/65 focus:border-[#0068FF] focus:ring-2 focus:ring-[#0068FF]/30";
 
 const primaryButton =
-    "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#213F70] shadow-md transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#1678FF] disabled:cursor-not-allowed disabled:opacity-50";
 
 const secondaryButton =
-    "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20";
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-[#365F86]/70 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#426F98]";
 
 function CommunityDetails() {
     const navigate = useNavigate();
@@ -100,6 +100,8 @@ function CommunityDetails() {
     const [savingCommunity, setSavingCommunity] = useState(false);
     const [openMemberActionsId, setOpenMemberActionsId] = useState(null);
     const [pendingInvites, setPendingInvites] = useState([]);
+    const [confirmDialog, setConfirmDialog] = useState(null);
+    const [confirmingAction, setConfirmingAction] = useState(false);
 
     const currentUserId = user?.id ?? user?._id;
 
@@ -214,8 +216,7 @@ function CommunityDetails() {
         } catch (err) {
             console.error("Failed to load community:", err);
             setError(
-                err.response?.data?.message ||
-                    "Could not load community details. Please retry."
+                "Could not load community details. Please retry."
             );
         } finally {
             setLoading(false);
@@ -266,20 +267,26 @@ function CommunityDetails() {
             setNotice("Post updated successfully.");
             await loadPosts();
         } catch (err) {
-            setError(err.response?.data?.message || "Could not update post.");
+            setError("Could not update post.");
         }
     }
 
-    async function handleDeletePost(postId) {
-        if (!window.confirm("Delete this post permanently?")) return;
-
-        try {
-            await deleteCommunityPost(postId);
-            setNotice("Post deleted.");
-            await loadPosts();
-        } catch (err) {
-            setError(err.response?.data?.message || "Could not delete post.");
-        }
+    function handleDeletePost(postId) {
+        setConfirmDialog({
+            title: "Delete post?",
+            message: "Are you sure you want to delete this post permanently?",
+            confirmLabel: "Delete post",
+            onConfirm: async () => {
+                try {
+                    await deleteCommunityPost(postId);
+                    setNotice("Post deleted.");
+                    setConfirmDialog(null);
+                    await loadPosts();
+                } catch (err) {
+                    setError("Could not delete post.");
+                }
+            },
+        });
     }
 
     async function fetchPostComments(postId) {
@@ -330,7 +337,7 @@ function CommunityDetails() {
             setNotice("Comment added.");
             await fetchPostComments(postId);
         } catch (err) {
-            setError(err.response?.data?.message || "Could not add comment.");
+            setError("Could not add comment.");
         }
     }
 
@@ -346,21 +353,26 @@ function CommunityDetails() {
 
             if (postId) await fetchPostComments(postId);
         } catch (err) {
-            setError(err.response?.data?.message || "Could not update comment.");
+            setError("Could not update comment.");
         }
     }
 
-    async function handleDeleteComment(commentId, postId) {
-        if (!window.confirm("Delete this comment?")) return;
-
-        try {
-            await deletePostComment(commentId);
-            setNotice("Comment deleted.");
-
-            if (postId) await fetchPostComments(postId);
-        } catch (err) {
-            setError(err.response?.data?.message || "Could not delete comment.");
-        }
+    function handleDeleteComment(commentId, postId) {
+        setConfirmDialog({
+            title: "Delete comment?",
+            message: "Are you sure you want to delete this comment?",
+            confirmLabel: "Delete comment",
+            onConfirm: async () => {
+                try {
+                    await deletePostComment(commentId);
+                    setNotice("Comment deleted.");
+                    setConfirmDialog(null);
+                    if (postId) await fetchPostComments(postId);
+                } catch (err) {
+                    setError("Could not delete comment.");
+                }
+            },
+        });
     }
 
     async function handleSearchMembers(query) {
@@ -398,18 +410,21 @@ function CommunityDetails() {
         }
     }
 
-    async function handleLeaveCommunity() {
-        if (!window.confirm("Are you sure you want to leave this community?"))
-            return;
-
-        try {
-            await leaveCommunity(communityId);
-            navigate("/communities", { replace: true });
-        } catch (err) {
-            setError(
-                err.response?.data?.message || "Could not leave community."
-            );
-        }
+    function handleLeaveCommunity() {
+        setConfirmDialog({
+            title: "Leave community?",
+            message: "Are you sure you want to leave this community?",
+            confirmLabel: "Leave community",
+            onConfirm: async () => {
+                try {
+                    await leaveCommunity(communityId);
+                    setConfirmDialog(null);
+                    navigate("/communities", { replace: true });
+                } catch (err) {
+                    setError("Could not leave community.");
+                }
+            },
+        });
     }
 
     async function handleUpdateCommunity(event) {
@@ -433,30 +448,28 @@ function CommunityDetails() {
             await loadCommunityData();
         } catch (err) {
             setError(
-                err.response?.data?.message || "Could not update community."
+                "Could not update community."
             );
         } finally {
             setSavingCommunity(false);
         }
     }
 
-    async function handleDeleteCommunity() {
-        if (
-            !window.confirm(
-                "Delete this community permanently? All channels, posts and data will be removed."
-            )
-        ) {
-            return;
-        }
-
-        try {
-            await deleteCommunity(communityId);
-            navigate("/communities", { replace: true });
-        } catch (err) {
-            setError(
-                err.response?.data?.message || "Could not delete community."
-            );
-        }
+    function handleDeleteCommunity() {
+        setConfirmDialog({
+            title: "Delete community?",
+            message: "Delete this community permanently? All channels, posts and data will be removed.",
+            confirmLabel: "Delete community",
+            onConfirm: async () => {
+                try {
+                    await deleteCommunity(communityId);
+                    setConfirmDialog(null);
+                    navigate("/communities", { replace: true });
+                } catch (err) {
+                    setError("Could not delete community.");
+                }
+            },
+        });
     }
 
     async function handleBookmarkPost(post) {
@@ -471,7 +484,7 @@ function CommunityDetails() {
             setNotice("Post saved to bookmarks.");
         } catch (err) {
             setError(
-                err.response?.data?.message || "Could not save post."
+                "Could not save post."
             );
         }
     }
@@ -484,8 +497,8 @@ function CommunityDetails() {
         onAction,
     }) {
         return (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/40 bg-white/10 px-5 py-12 text-center shadow-lg backdrop-blur-xl sm:px-6 sm:py-14">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-white">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/40 bg-[#365F86]/50 px-5 py-12 text-center shadow-lg backdrop-blur-xl sm:px-6 sm:py-14">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-[#2A4F74]/90 text-white">
                     <Icon size={25} />
                 </div>
 
@@ -513,7 +526,7 @@ function CommunityDetails() {
 
     return (
         <div
-            className="min-h-dvh text-white"
+            className="relative isolate min-h-screen w-full min-w-0 overflow-x-hidden text-white"
             style={{
                 backgroundColor: "#062C5F",
                 backgroundImage: `linear-gradient(
@@ -525,16 +538,15 @@ function CommunityDetails() {
                 )`,
                 backgroundRepeat: "no-repeat",
                 backgroundSize: "100% 100%",
-                backgroundAttachment: "fixed",
             }}
         >
-            <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#062C5F] text-white shadow-sm">
+            <header className="sticky top-0 z-40 border-b border-white/15 bg-[#062C5F] text-white shadow-sm">
                 <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                     <button
                         type="button"
                         onClick={() => navigate("/communities")}
                         aria-label="Back to communities"
-                        className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-[#213F70] transition hover:bg-blue-50"
+                        className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-[#214B73] px-3 text-sm font-semibold text-white transition hover:bg-[#365F86]"
                     >
                         <FiArrowLeft size={18} />
                         <span className="hidden sm:inline"></span>
@@ -543,7 +555,7 @@ function CommunityDetails() {
                     <button
                         type="button"
                         onClick={() => navigate("/dashboard")}
-                        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-sans text-lg font-extrabold tracking-[0.16em] text-[#213F70] transition hover:text-[#315A8A] sm:text-2xl sm:tracking-[0.2em]"
+                        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-sans text-lg font-extrabold tracking-[0.16em] text-white transition hover:text-blue-100 sm:text-2xl sm:tracking-[0.2em]"
                     >
                         QUORUM
                     </button>
@@ -552,18 +564,18 @@ function CommunityDetails() {
                         type="button"
                         onClick={() => setActiveTab("About")}
                         aria-label="Community settings"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#213F70] transition hover:bg-blue-50"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-[#214B73] text-white transition hover:bg-[#365F86]"
                     >
                         <FiSettings size={19} />
                     </button>
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 sm:py-7 lg:px-8">
-                <section className="overflow-hidden rounded-3xl border border-white/30 bg-white/15 p-5 shadow-[0_12px_40px_rgba(15,35,75,0.12)] backdrop-blur-2xl sm:p-8">
+            <main className="relative z-10 mx-auto w-full min-w-0 max-w-7xl flex-1 px-3 pb-8 pt-4 sm:px-5 sm:pt-6 lg:px-8">
+                <section className="min-w-0 overflow-hidden rounded-3xl border border-white/15 bg-[#2A4F74]/95 p-4 shadow-[0_12px_40px_rgba(15,35,75,0.12)] sm:p-6 lg:p-8">
                     <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 text-white shadow-inner sm:h-16 sm:w-16">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-[#365F86]/70 text-white shadow-inner sm:h-16 sm:w-16">
                                 <FiUsers size={30} />
                             </div>
 
@@ -578,13 +590,13 @@ function CommunityDetails() {
                                 </p>
 
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#2A4F74]/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
                                         <FiUsers size={13} />
                                         {community?.memberCount ?? members.length}{" "}
                                         members
                                     </span>
 
-                                    <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+                                    <span className="rounded-full border border-white/15 bg-[#2A4F74]/90 px-3 py-1 text-xs font-semibold text-white">
                                         {currentUserRole || "MEMBER"}
                                     </span>
                                 </div>
@@ -607,14 +619,14 @@ function CommunityDetails() {
                 {error && (
                     <div
                         role="alert"
-                        className="mt-4 flex items-start justify-between gap-3 rounded-2xl border border-red-200/40 bg-red-500/20 p-4 text-sm text-white shadow-lg backdrop-blur-xl"
+                        className="mt-4 flex items-start justify-between gap-3 text-sm text-red-300"
                     >
                         <p>{error}</p>
                         <button
                             type="button"
                             onClick={() => setError("")}
                             aria-label="Dismiss error"
-                            className="rounded-lg px-2 text-white/80 hover:bg-white/10 hover:text-white"
+                            className="rounded-lg px-2 text-red-300 hover:text-red-200"
                         >
                             ✕
                         </button>
@@ -624,13 +636,13 @@ function CommunityDetails() {
                 {notice && (
                     <div
                         role="status"
-                        className="fixed right-4 top-20 z-50 max-w-sm rounded-2xl border border-white/30 bg-[#213F70]/95 p-4 text-sm text-white shadow-2xl backdrop-blur-xl sm:right-6"
+                        className="fixed right-4 top-20 z-50 max-w-sm rounded-xl border border-emerald-300/20 bg-[#2A4F74] px-4 py-3 text-sm text-emerald-200 shadow-xl sm:right-6"
                     >
                         {notice}
                     </div>
                 )}
 
-                <nav className="mt-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/25 bg-white/10 p-1.5 shadow-lg backdrop-blur-xl">
+                <nav className="mt-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-[#365F86]/50 p-1.5 shadow-lg backdrop-blur-xl">
                     {tabs.map(({ label, icon: Icon }) => (
                         <button
                             key={label}
@@ -641,8 +653,8 @@ function CommunityDetails() {
                             }}
                             className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
                                 activeTab === label
-                                    ? "bg-white text-[#213F70] shadow-md"
-                                    : "text-white/85 hover:bg-white/15 hover:text-white"
+                                    ? "bg-[#0068FF] text-white shadow-md"
+                                    : "text-white/85 hover:bg-[#2A4F74]/90 hover:text-white"
                             }`}
                         >
                             <Icon size={17} />
@@ -653,7 +665,7 @@ function CommunityDetails() {
 
                 <section className="mt-6 min-w-0">
                     {loading ? (
-                        <div className="flex flex-col items-center rounded-2xl border border-white/20 bg-white/10 py-20 text-white backdrop-blur-xl">
+                        <div className="flex flex-col items-center rounded-2xl border border-white/15 bg-[#365F86]/50 py-20 text-white backdrop-blur-xl">
                             <FiRefreshCw
                                 className="animate-spin"
                                 size={27}
@@ -699,7 +711,7 @@ function CommunityDetails() {
                                     />
                                 </div>
 
-                                <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/30 bg-white/15 px-4 py-3 shadow-sm backdrop-blur-xl">
+                                <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/15 bg-[#2A4F74]/90 px-4 py-3 shadow-sm backdrop-blur-xl">
                                     <FiSearch className="shrink-0 text-white/80" />
                                     <input
                                         value={feedSearch}
@@ -766,11 +778,11 @@ function CommunityDetails() {
                                             return (
                                                 <article
                                                     key={postId}
-                                                    className="overflow-hidden rounded-2xl border border-white/25 bg-white/15 p-4 shadow-lg backdrop-blur-xl transition hover:border-white/40 hover:bg-white/20 sm:p-5"
+                                                    className="overflow-hidden rounded-2xl border border-white/15 bg-[#2A4F74]/90 p-4 shadow-lg backdrop-blur-xl transition hover:border-white/40 hover:bg-[#365F86]/70 sm:p-5"
                                                 >
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex min-w-0 items-center gap-3">
-                                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/20 font-bold text-white">
+                                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-[#365F86]/70 font-bold text-white">
                                                                 {(
                                                                     post.author?.name ||
                                                                     "M"
@@ -797,7 +809,7 @@ function CommunityDetails() {
                                                         </div>
 
                                                         {post.channel && (
-                                                            <span className="max-w-[45%] shrink-0 truncate rounded-lg border border-white/30 bg-white/15 px-2.5 py-1 text-xs font-medium text-white">
+                                                            <span className="max-w-[45%] shrink-0 truncate rounded-lg border border-white/15 bg-[#2A4F74]/90 px-2.5 py-1 text-xs font-medium text-white">
                                                                 #
                                                                 {post.channel
                                                                     .name ||
@@ -835,7 +847,7 @@ function CommunityDetails() {
 
                                                                 {post.fileUrl &&
                                                                     !editingRemoveAttachment && (
-                                                                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/25 bg-white/10 p-3 text-xs">
+                                                                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#365F86]/50 p-3 text-xs">
                                                                             <span className="break-all text-white/90">
                                                                                 Attachment:{" "}
                                                                                 {post.fileName ||
@@ -912,7 +924,7 @@ function CommunityDetails() {
                                                         )}
                                                     </div>
 
-                                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-3 text-xs">
+                                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/15 pt-3 text-xs">
                                                         <div className="flex flex-wrap items-center gap-4">
                                                             <button
                                                                 type="button"
@@ -995,7 +1007,7 @@ function CommunityDetails() {
 
                                                     {openCommentsPostId ===
                                                         postId && (
-                                                        <div className="mt-4 space-y-3 rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-lg sm:p-4">
+                                                        <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-[#365F86]/50 p-3 backdrop-blur-lg sm:p-4">
                                                             <form
                                                                 onSubmit={(event) =>
                                                                     handleCreateComment(
@@ -1077,7 +1089,7 @@ function CommunityDetails() {
                                                                             key={
                                                                                 commentId
                                                                             }
-                                                                            className="rounded-xl border border-white/20 bg-white/10 p-3 text-sm"
+                                                                            className="rounded-xl border border-white/15 bg-[#365F86]/50 p-3 text-sm"
                                                                         >
                                                                             <div className="flex items-center justify-between gap-3">
                                                                                 <span className="break-words font-semibold text-white">
@@ -1148,7 +1160,7 @@ function CommunityDetails() {
                                                                                     <div className="flex flex-wrap gap-2">
                                                                                         <button
                                                                                             type="submit"
-                                                                                            className="rounded-lg bg-white px-3 py-2 text-xs font-bold text-[#213F70]"
+                                                                                            className="rounded-lg bg-[#0068FF] px-3 py-2 text-xs font-bold text-white"
                                                                                         >
                                                                                             Save
                                                                                         </button>
@@ -1163,7 +1175,7 @@ function CommunityDetails() {
                                                                                                     ""
                                                                                                 );
                                                                                             }}
-                                                                                            className="rounded-lg border border-white/30 px-3 py-2 text-xs font-semibold text-white"
+                                                                                            className="rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white"
                                                                                         >
                                                                                             Cancel
                                                                                         </button>
@@ -1231,7 +1243,7 @@ function CommunityDetails() {
                                 </button>
                             </div>
 
-                            <div className="flex max-w-xl items-center gap-3 rounded-2xl border border-white/30 bg-white/15 px-4 py-3 shadow-sm backdrop-blur-xl">
+                            <div className="flex max-w-xl items-center gap-3 rounded-2xl border border-white/15 bg-[#2A4F74]/90 px-4 py-3 shadow-sm backdrop-blur-xl">
                                 <FiSearch className="shrink-0 text-white/80" />
                                 <input
                                     value={search}
@@ -1314,11 +1326,11 @@ function CommunityDetails() {
                                             return (
                                                 <div
                                                     key={memberKey}
-                                                    className={`${glassCard} relative min-w-0 p-4 transition hover:bg-white/20`}
+                                                    className={`${glassCard} relative min-w-0 p-4 transition hover:bg-[#365F86]/70`}
                                                 >
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex min-w-0 items-center gap-3">
-                                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/20 font-bold text-white">
+                                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-[#365F86]/70 font-bold text-white">
                                                                 {memberName
                                                                     .slice(0, 1)
                                                                     .toUpperCase()}
@@ -1328,7 +1340,7 @@ function CommunityDetails() {
                                                                 <p className="break-words font-semibold text-white">
                                                                     {memberName}
                                                                 </p>
-                                                                <span className="mt-1 inline-block rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-xs font-semibold text-white">
+                                                                <span className="mt-1 inline-block rounded-full border border-white/15 bg-[#2A4F74]/90 px-2.5 py-1 text-xs font-semibold text-white">
                                                                     {role}
                                                                 </span>
                                                             </div>
@@ -1354,7 +1366,7 @@ function CommunityDetails() {
                                                                                     : memberKey
                                                                         )
                                                                     }
-                                                                    className="rounded-lg p-2 text-white/90 transition hover:bg-white/15 hover:text-white"
+                                                                    className="rounded-lg p-2 text-white/90 transition hover:bg-[#2A4F74]/90 hover:text-white"
                                                                 >
                                                                     <FiMoreVertical
                                                                         size={18}
@@ -1367,7 +1379,7 @@ function CommunityDetails() {
                                                                     String(
                                                                         memberKey
                                                                     ) && (
-                                                                    <div className="absolute right-0 top-10 z-30 w-52 rounded-xl border border-white/25 bg-[#213F70] p-1.5 shadow-2xl backdrop-blur-xl">
+                                                                    <div className="absolute right-0 top-10 z-30 w-52 rounded-xl border border-white/15 bg-[#214B73] p-1.5 shadow-2xl backdrop-blur-xl">
                                                                         {canChangeRole && (
                                                                             <button
                                                                                 type="button"
@@ -1406,7 +1418,7 @@ function CommunityDetails() {
                                                                                         );
                                                                                     }
                                                                                 }}
-                                                                                className="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-white hover:bg-white/15"
+                                                                                className="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-white hover:bg-[#2A4F74]/90"
                                                                             >
                                                                                 {role ===
                                                                                 "ADMIN"
@@ -1418,43 +1430,25 @@ function CommunityDetails() {
                                                                         {canTransferOwnership && (
                                                                             <button
                                                                                 type="button"
-                                                                                onClick={async () => {
-                                                                                    setOpenMemberActionsId(
-                                                                                        null
-                                                                                    );
-
-                                                                                    if (
-                                                                                        !window.confirm(
-                                                                                            `Transfer ownership to ${memberName}?`
-                                                                                        )
-                                                                                    ) {
-                                                                                        return;
-                                                                                    }
-
-                                                                                    try {
-                                                                                        await transferCommunityOwnership(
-                                                                                            communityId,
-                                                                                            userId
-                                                                                        );
-
-                                                                                        setNotice(
-                                                                                            "Ownership transferred."
-                                                                                        );
-
-                                                                                        await loadCommunityData();
-                                                                                    } catch (
-                                                                                        err
-                                                                                    ) {
-                                                                                        setError(
-                                                                                            err
-                                                                                                .response
-                                                                                                ?.data
-                                                                                                ?.message ||
-                                                                                                "Could not transfer ownership."
-                                                                                        );
-                                                                                    }
+                                                                                onClick={() => {
+                                                                                    setOpenMemberActionsId(null);
+                                                                                    setConfirmDialog({
+                                                                                        title: "Transfer ownership?",
+                                                                                        message: `Transfer community ownership to ${memberName}?`,
+                                                                                        confirmLabel: "Transfer ownership",
+                                                                                        onConfirm: async () => {
+                                                                                            try {
+                                                                                                await transferCommunityOwnership(communityId, userId);
+                                                                                                setNotice("Ownership transferred.");
+                                                                                                setConfirmDialog(null);
+                                                                                                await loadCommunityData();
+                                                                                            } catch (err) {
+                                                                                                setError("Could not transfer ownership.");
+                                                                                            }
+                                                                                        },
+                                                                                    });
                                                                                 }}
-                                                                                className="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-white hover:bg-white/15"
+                                                                                className="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-white hover:bg-[#2A4F74]/90"
                                                                             >
                                                                                 Transfer ownership
                                                                             </button>
@@ -1463,41 +1457,23 @@ function CommunityDetails() {
                                                                         {canRemove && (
                                                                             <button
                                                                                 type="button"
-                                                                                onClick={async () => {
-                                                                                    setOpenMemberActionsId(
-                                                                                        null
-                                                                                    );
-
-                                                                                    if (
-                                                                                        !window.confirm(
-                                                                                            `Remove ${memberName}?`
-                                                                                        )
-                                                                                    ) {
-                                                                                        return;
-                                                                                    }
-
-                                                                                    try {
-                                                                                        await removeCommunityMember(
-                                                                                            communityId,
-                                                                                            userId
-                                                                                        );
-
-                                                                                        setNotice(
-                                                                                            "Member removed."
-                                                                                        );
-
-                                                                                        await loadCommunityData();
-                                                                                    } catch (
-                                                                                        err
-                                                                                    ) {
-                                                                                        setError(
-                                                                                            err
-                                                                                                .response
-                                                                                                ?.data
-                                                                                                ?.message ||
-                                                                                                "Could not remove member."
-                                                                                        );
-                                                                                    }
+                                                                                onClick={() => {
+                                                                                    setOpenMemberActionsId(null);
+                                                                                    setConfirmDialog({
+                                                                                        title: "Remove member?",
+                                                                                        message: `Are you sure you want to remove ${memberName} from this community?`,
+                                                                                        confirmLabel: "Remove member",
+                                                                                        onConfirm: async () => {
+                                                                                            try {
+                                                                                                await removeCommunityMember(communityId, userId);
+                                                                                                setNotice("Member removed.");
+                                                                                                setConfirmDialog(null);
+                                                                                                await loadCommunityData();
+                                                                                            } catch (err) {
+                                                                                                setError("Could not remove member.");
+                                                                                            }
+                                                                                        },
+                                                                                    });
                                                                                 }}
                                                                                 className="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-red-100 hover:bg-red-400/20"
                                                                             >
@@ -1528,9 +1504,9 @@ function CommunityDetails() {
                             </div>
                         </div>
                     ) : (
-                        <div className={`${glassCard} w-full max-w-3xl space-y-6 p-5 sm:p-8`}>
+                        <div className={`${glassCard} w-full min-w-0 space-y-6 p-5 sm:p-8`}>
                             <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-white">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-[#2A4F74]/90 text-white">
                                     <FiInfo size={23} />
                                 </div>
 
@@ -1544,7 +1520,7 @@ function CommunityDetails() {
                                 </div>
                             </div>
 
-                            <div className="border-t border-white/25 pt-5">
+                            <div className="border-t border-white/15 pt-5">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">
                                     Description
                                 </h3>
@@ -1554,7 +1530,7 @@ function CommunityDetails() {
                                 </p>
                             </div>
 
-                            <div className="border-t border-white/25 pt-5">
+                            <div className="border-t border-white/15 pt-5">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">
                                     Community ID
                                 </h3>
@@ -1563,7 +1539,7 @@ function CommunityDetails() {
                                 </p>
                             </div>
 
-                            <div className="border-t border-white/25 pt-5">
+                            <div className="border-t border-white/15 pt-5">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-white/90">
                                     Actions
                                 </h3>
@@ -1614,7 +1590,7 @@ function CommunityDetails() {
                                 {isOwner && editingCommunity && (
                                     <form
                                         onSubmit={handleUpdateCommunity}
-                                        className="mt-5 space-y-4 rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur-xl sm:p-5"
+                                        className="mt-5 space-y-4 rounded-2xl border border-white/15 bg-[#365F86]/50 p-4 backdrop-blur-xl sm:p-5"
                                     >
                                         <div>
                                             <label className="mb-2 block text-sm font-semibold text-white/90">
@@ -1678,6 +1654,67 @@ function CommunityDetails() {
                     )}
                 </section>
             </main>
+
+            {confirmDialog && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !confirmingAction) {
+                            setConfirmDialog(null);
+                        }
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="community-confirm-title"
+                        className="w-full max-w-md rounded-2xl border border-white/15 bg-gradient-to-br from-[#2A4F74] via-[#365F86] to-[#214B73] p-5 text-white shadow-2xl sm:p-6"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200/30 bg-red-400/15 text-red-100">
+                                <FiTrash2 size={21} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h2 id="community-confirm-title" className="text-lg font-extrabold">
+                                    {confirmDialog.title}
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-white/80">
+                                    {confirmDialog.message}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex flex-wrap justify-end gap-2">
+                            <button
+                                type="button"
+                                disabled={confirmingAction}
+                                onClick={() => setConfirmDialog(null)}
+                                className={secondaryButton}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={confirmingAction}
+                                onClick={async () => {
+                                    if (!confirmDialog?.onConfirm) return;
+                                    setConfirmingAction(true);
+                                    try {
+                                        await confirmDialog.onConfirm();
+                                    } finally {
+                                        setConfirmingAction(false);
+                                    }
+                                }}
+                                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-200/30 bg-red-500/80 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {confirmingAction ? (
+                                    <FiRefreshCw className="animate-spin" size={16} />
+                                ) : null}
+                                {confirmingAction ? "Please wait…" : confirmDialog.confirmLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

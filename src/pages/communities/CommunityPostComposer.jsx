@@ -22,7 +22,7 @@ export default function CommunityPostComposer({
         const text = content.trim();
 
         if (!text && !attachment) {
-            setError("Write something or attach a file before publishing.");
+            setError("Please write a post or attach a file.");
             return;
         }
 
@@ -38,7 +38,7 @@ export default function CommunityPostComposer({
             let uploadedMeta = null;
 
             if (attachment?.file && !attachment.fileUrl) {
-                setStatusMessage("Uploading attachment to secure storage…");
+                setStatusMessage("Uploading attachment...");
                 uploadedMeta = await uploadAttachment(attachment.file);
             } else if (attachment?.fileUrl) {
                 uploadedMeta = {
@@ -49,11 +49,13 @@ export default function CommunityPostComposer({
                 };
             }
 
-            setStatusMessage("Publishing post…");
+            setStatusMessage("Publishing post...");
 
             await onSubmit?.({
                 content: text,
-                ...(selectedChannelId ? { channelId: selectedChannelId } : {}),
+                ...(selectedChannelId
+                    ? { channelId: selectedChannelId }
+                    : {}),
                 ...(uploadedMeta
                     ? {
                           fileUrl: uploadedMeta.fileUrl,
@@ -69,11 +71,7 @@ export default function CommunityPostComposer({
             setStatusMessage("");
         } catch (err) {
             console.error("Post creation error:", err);
-            setError(
-                err.response?.data?.message ||
-                err.message ||
-                "Could not publish your post."
-            );
+            setError("Could not publish your post. Please try again.");
         } finally {
             setSubmitting(false);
             setStatusMessage("");
@@ -81,41 +79,48 @@ export default function CommunityPostComposer({
     }
 
     return (
-        <section >
-            <div className="border-b border-white/10 px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+        <section className="overflow-hidden rounded-2xl border border-white/20 bg-[#2A4F74]/95 text-white shadow-lg">
+            <div className="border-b border-white/15 px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
                     Community feed
                 </p>
-                <h2 className="mt-1 text-lg font-bold">Start a discussion</h2>
-                <p className="mt-1 text-sm text-blue-100/60">
+
+                <h2 className="mt-1 text-lg font-bold text-white">
+                    Start a discussion
+                </h2>
+
+                <p className="mt-1 text-sm text-blue-100/80">
                     {channelName
                         ? `Publishing to #${channelName}`
                         : "Share an update, link or file with your community."}
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 p-5">
+            <form onSubmit={handleSubmit} className="space-y-4 bg-[#365F86]/60 p-5">
                 <textarea
                     value={content}
-                    onChange={(event) => setContent(event.target.value)}
+                    onChange={(event) => {
+                        setContent(event.target.value);
+                        if (error) setError("");
+                    }}
                     maxLength={20000}
                     rows={4}
                     disabled={disabled || submitting}
                     placeholder="What would you like to share with the community?"
-                    className="w-full resize-y max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#173A5E]/70 px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-blue-100/35 focus:border-blue-300/60 disabled:opacity-50"
+                    className="max-h-40 w-full resize-y overflow-y-auto rounded-xl border border-white/20 bg-[#214B73] px-4 py-4 text-sm leading-6 text-white outline-none placeholder:text-blue-100/65 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20 disabled:opacity-50"
                 />
 
-<div className="flex justify-end">
-    <span
-        className={`text-xs ${
-            content.length > 19000
-                ? "text-amber-200"
-                : "text-blue-100/45"
-        }`}
-    >
-        {content.length.toLocaleString()} / 20,000
-    </span>
-</div>
+                <div className="flex justify-end">
+                    <span
+                        className={`text-xs ${
+                            content.length > 19000
+                                ? "text-amber-200"
+                                : "text-blue-100/75"
+                        }`}
+                    >
+                        {content.length.toLocaleString()} / 20,000
+                    </span>
+                </div>
 
                 <CommunityAttachments
                     value={attachment}
@@ -124,32 +129,38 @@ export default function CommunityPostComposer({
                 />
 
                 {statusMessage && (
-                    <p className="text-xs font-medium text-blue-200 animate-pulse">
+                    <p
+                        role="status"
+                        className="animate-pulse text-xs font-medium text-blue-100"
+                    >
                         {statusMessage}
                     </p>
                 )}
 
                 {error && (
-                    <p role="alert" className="rounded-xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-200">
+                    <p role="alert" className="text-sm text-red-300">
                         {error}
                     </p>
                 )}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                    <span className="text-xs text-blue-100/50">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-4">
+                    <span className="text-xs text-blue-100/75">
                         Images, documents and files supported · Max 25 MiB
                     </span>
+
                     <button
                         type="submit"
-                        disabled={disabled || submitting || (!content.trim() && !attachment)}
-                        className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-5 py-3 text-sm font-bold shadow-lg shadow-blue-950/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                            disabled ||
+                            submitting ||
+                            (!content.trim() && !attachment)
+                        }
+                        className="rounded-xl bg-[#0068FF] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-[#1678FF] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        {submitting ? "Publishing…" : "Publish post →"}
+                        {submitting ? "Publishing..." : "Publish post →"}
                     </button>
                 </div>
             </form>
         </section>
     );
-}
-
-
+                    }

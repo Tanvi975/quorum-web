@@ -70,10 +70,7 @@ export default function CommunityInvitations({
             setUsers(list);
         } catch (err) {
             setUsers([]);
-            setError(
-                err.response?.data?.message ||
-                "Could not search users. Please try again."
-            );
+            setError("Could not search members. Try again.");
         } finally {
             setLoadingUsers(false);
         }
@@ -122,10 +119,7 @@ export default function CommunityInvitations({
             setInviteLink(url);
             setNotice("Invite link created. You can copy and share it.");
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not create invite link."
-            );
+            setError("Could not create invite link. Try again.");
         } finally {
             setCreatingLink(false);
         }
@@ -154,10 +148,7 @@ export default function CommunityInvitations({
 
             await onRefresh?.();
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not send invitation."
-            );
+            setError("Could not send invitation. Try again.");
         } finally {
             setSendingId("");
         }
@@ -184,10 +175,7 @@ export default function CommunityInvitations({
 
             await onRefresh?.();
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Could not update invitation status."
-            );
+            setError("Could not update invitation. Try again.");
         } finally {
             setSendingId("");
         }
@@ -205,13 +193,13 @@ export default function CommunityInvitations({
     }
 
     const inputClass =
-        "w-full min-w-0 rounded-xl border border-white/20 bg-[#173A5E]/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/60 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20";
+        "w-full min-w-0 rounded-xl border border-white/20 bg-[#214B73] px-4 py-3 text-sm text-white outline-none transition placeholder:text-blue-100/65 focus:border-blue-300 focus:ring-2 focus:ring-blue-300/20";
 
     const cardClass =
-        "rounded-2xl border border-white/20 bg-[#173A5E]/70 p-4 shadow-[0_12px_35px_rgba(1,16,39,0.10)] backdrop-blur-xl sm:p-5";
+        "rounded-2xl border border-white/20 bg-[#2A4F74]/95 p-4 shadow-[0_12px_35px_rgba(1,16,39,0.22)] backdrop-blur-xl sm:p-5";
 
     const primaryButtonClass =
-        "inline-flex items-center justify-center gap-2 rounded-xl bg-[#0066FF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1678FF] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50";
+        "inline-flex items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1678FF] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50";
 
     return (
         <section >
@@ -222,10 +210,10 @@ export default function CommunityInvitations({
                 <div className="flex items-start gap-3">
                    
                     <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-bold uppercase tracking-[0.24em] text-blue-950">
+                        <p className="text-[13px] font-bold uppercase tracking-[0.24em] text-white">
                             Community workspace
                         </p>
-                        <h2 className="mt-1 text-xl font-bold tracking-tight text-blue-950 sm:text-2xl">
+                        <h2 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
                             Invitations
                         </h2>
                         <p className="mt-1 text-sm leading-5 text-white">
@@ -237,23 +225,15 @@ export default function CommunityInvitations({
 
             <div className="relative space-y-5 p-4 sm:p-6">
                 {error && (
-                    <div
-                        role="alert"
-                        className="flex items-start gap-3 rounded-xl border border-red-300/40 bg-red-100/70 p-3 text-sm text-red-800"
-                    >
-                        <span className="font-bold text-red-600">!</span>
-                        <p className="break-words">{error}</p>
-                    </div>
+                    <p role="alert" className="break-words text-sm text-red-300">
+                        {error}
+                    </p>
                 )}
 
                 {notice && (
-                    <div
-                        role="status"
-                        className="flex items-start gap-3 rounded-xl border border-emerald-300/40 bg-emerald-100/70 p-3 text-sm text-emerald-800"
-                    >
-                        <span className="font-bold text-emerald-600">✓</span>
-                        <p className="break-words">{notice}</p>
-                    </div>
+                    <p role="status" className="break-words text-sm text-emerald-200">
+                        {notice}
+                    </p>
                 )}
 
                 {canManageInvites && (
@@ -292,7 +272,7 @@ export default function CommunityInvitations({
                             </button>
 
                             {inviteLink && (
-                                <div className="mt-4 rounded-xl border border-white/20 bg-[#173A5E]/70 p-3">
+                                <div className="mt-4 rounded-xl border border-white/20 bg-[#365F86]/80 p-3">
                                     <label
                                         htmlFor="community-invite-link"
                                         className="mb-2 block text-xs font-medium text-blue-100/80"
@@ -313,7 +293,7 @@ export default function CommunityInvitations({
                                     <button
                                         type="button"
                                         onClick={copyLink}
-                                        className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                                        className="mt-2 w-full rounded-xl border border-white/20 bg-[#214B73] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#426F98]"
                                     >
                                         Copy invite link
                                     </button>
@@ -354,7 +334,7 @@ export default function CommunityInvitations({
                                 query.trim() &&
                                 users.length === 0 &&
                                 !error && (
-                                    <div className="mt-4 rounded-xl border border-dashed border-white/20 bg-[#173A5E]/70 px-4 py-6 text-center">
+                                    <div className="mt-4 rounded-xl border border-dashed border-white/20 bg-[#365F86]/80 px-4 py-6 text-center">
                                         <p className="text-sm font-medium text-white">
                                             No matching members found
                                         </p>
@@ -373,9 +353,9 @@ export default function CommunityInvitations({
                                     return (
                                         <div
                                             key={id}
-                                            className="flex min-w-0 items-center gap-3 rounded-xl border border-white/20 bg-[#173A5E]/70 p-3 transition hover:border-blue-300/50 hover:bg-[#214B73]/80"
+                                            className="flex min-w-0 items-center gap-3 rounded-xl border border-white/20 bg-[#365F86]/80 p-3 transition hover:border-blue-300/50 hover:bg-[#426F98]"
                                         >
-                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-sm font-bold text-blue-100">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-[#214B73] text-sm font-bold text-blue-100">
                                                 {displayName
                                                     .slice(0, 1)
                                                     .toUpperCase()}
@@ -397,7 +377,7 @@ export default function CommunityInvitations({
                                                 onClick={() =>
                                                     handleDirectInvite(user)
                                                 }
-                                                className="shrink-0 rounded-lg border border-blue-200/25 bg-white/10 px-3 py-2 text-xs font-semibold text-blue-100 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="shrink-0 rounded-lg border border-blue-200/25 bg-[#214B73] px-3 py-2 text-xs font-semibold text-blue-100 transition hover:bg-[#426F98] disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 {sendingId === id
                                                     ? "Sending..."
@@ -423,7 +403,7 @@ export default function CommunityInvitations({
                                 </p>
                             </div>
 
-                            <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-2 text-xs font-bold text-blue-100">
+                            <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-[#214B73] px-2 text-xs font-bold text-blue-100">
                                 {pendingInvites.length}
                             </span>
                         </div>
@@ -436,7 +416,7 @@ export default function CommunityInvitations({
                                 return (
                                     <div
                                         key={id}
-                                        className="rounded-xl border border-white/20 bg-[#173A5E]/70 p-3.5"
+                                        className="rounded-xl border border-white/20 bg-[#365F86]/80 p-3.5"
                                     >
                                         <div className="flex min-w-0 items-start gap-3">
                                             
@@ -489,14 +469,14 @@ export default function CommunityInvitations({
                 )}
 
                 {!canManageInvites && pendingInvites.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-white/30 bg-white/20 px-5 py-10 text-center">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/40 bg-white/35 text-blue-700">
+                    <div className="rounded-2xl border border-dashed border-white/30 bg-[#365F86] px-5 py-10 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/40 bg-[#365F86] text-blue-700">
                           
                         </div>
-                        <h3 className="mt-4 text-sm font-semibold text-blue-950">
+                        <h3 className="mt-4 text-sm font-semibold text-white">
                             No pending invitations
                         </h3>
-                        <p className="mt-1 text-sm text-blue-900/70">
+                        <p className="mt-1 text-sm text-blue-100/75">
                             New invitations will appear here.
                         </p>
                     </div>

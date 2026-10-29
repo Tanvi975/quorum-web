@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiPlus, FiGlobe } from "react-icons/fi";
-import Sidebar from "../../components/Sidebar";
 import { createCommunity } from "../../services/communityService";
 
 function CreateCommunity() {
@@ -60,10 +59,6 @@ function CreateCommunity() {
         backgroundSize: "100% 100%",
       }}
     >
-      <div className="relative z-20 shrink-0">
-        <Sidebar />
-      </div>
-
       <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-y-auto">
         <header className="flex h-16 min-h-16 shrink-0 items-center justify-center border-b border-white/10 bg-[#062C5F]/35 px-4 backdrop-blur-xl">
           <span className="text-base font-bold tracking-[0.22em] text-white sm:text-lg">

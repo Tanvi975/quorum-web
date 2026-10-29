@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { aiService } from "../../services/aiService";
-
+import ConfirmDialog from "../../components/ConfirmDialog";
 const tabs = [
   { id: "chat", label: "AI Chat" },
   { id: "search", label: "Workspace Search" },
@@ -133,7 +133,8 @@ export default function QuorumAIAssistant() {
   const [hasMore, setHasMore] = useState(false);
   const [historyFilter, setHistoryFilter] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
-
+  const [historyDeleteTarget, setHistoryDeleteTarget] = useState(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -292,8 +293,8 @@ export default function QuorumAIAssistant() {
   }
 
   async function deleteHistoryItem(id) {
-    if (busy || !window.confirm("Delete this AI history item?")) return;
-
+    if (busy) return;
+  
     await runRequest(async () => {
       await aiService.deleteHistoryItem(id);
       setHistory((current) => current.filter((item) => item.id !== id));
@@ -301,10 +302,8 @@ export default function QuorumAIAssistant() {
   }
 
   async function clearHistory() {
-    if (busy || !window.confirm("Delete all your AI history? This cannot be undone.")) {
-      return;
-    }
-
+    if (busy) return;
+  
     await runRequest(async () => {
       await aiService.clearAllHistory();
       setHistory([]);
@@ -312,7 +311,19 @@ export default function QuorumAIAssistant() {
       setHasMore(false);
     });
   }
-
+  async function confirmHistoryDelete() {
+    if (!historyDeleteTarget || busy) return;
+  
+    const target = historyDeleteTarget;
+  
+    if (target.type === "item") {
+      await deleteHistoryItem(target.id);
+    } else if (target.type === "all") {
+      await clearHistory();
+    }
+  
+    setHistoryDeleteTarget(null);
+  }
   function copyText(text) {
     navigator.clipboard?.writeText(text).catch(() => {
       setError("Could not copy automatically. Please select and copy the text.");
@@ -343,16 +354,26 @@ export default function QuorumAIAssistant() {
     >
       <div className="mx-auto w-full max-w-7xl min-w-0">
         <header className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-4 py-4 shadow-lg backdrop-blur-md sm:px-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">
-              QOURUM
-            </p>
-            <h1 className="mt-1 text-lg font-semibold uppercase tracking-wide sm:text-xl">
-              AI Assistant
-            </h1>
-            <p className="mt-1 text-xs text-white/70 sm:text-sm">
-              Ask questions, search your workspace, and prepare project updates.
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-lg border border-white/25 px-3 py-2 text-sm text-white/90 transition hover:bg-white/10"
+              aria-label="Go back"
+            >
+              <span aria-hidden="true">←</span> 
+            </button>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-100">
+                QOURUM
+              </p>
+              <h1 className="mt-1 text-lg font-semibold uppercase tracking-wide sm:text-xl">
+                AI Assistant
+              </h1>
+              <p className="mt-1 text-xs text-white/70 sm:text-sm">
+                Ask questions, search your workspace, and prepare project updates.
+              </p>
+            </div>
           </div>
 
           {activeTab === "chat" && (
@@ -845,7 +866,7 @@ export default function QuorumAIAssistant() {
               />
               <button
                 type="button"
-                onClick={clearHistory}
+                onClick={() => setHistoryDeleteTarget({ type: "all" })}
                 disabled={busy || history.length === 0}
                 className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-950/30 disabled:opacity-50"
               >
@@ -887,48 +908,76 @@ export default function QuorumAIAssistant() {
             )}
 
             <div className="space-y-3">
-              {history.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-lg border border-white/20 bg-[#062C5F]/25 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <span className="rounded bg-slate-800 px-2 py-1 text-xs text-blue-100">
-                        {item.actionType}
-                      </span>
-                      <p className="mt-3 whitespace-pre-wrap break-words text-sm font-medium text-white">
-                        {item.prompt}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteHistoryItem(item.id)}
-                      disabled={busy}
-                      className="text-sm text-red-300 hover:text-red-200 disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                  <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
-                  {formatAIResponse(item.response)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/60">
-                    {item.createdAt && (
-                      <span>{new Date(item.createdAt).toLocaleString()}</span>
-                    )}
-                    {item.model && <span>Model: {item.model}</span>}
-                    {item.tokensUsed != null && <span>Tokens: {item.tokensUsed}</span>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyText(item.response || "")}
-                    className="mt-3 text-xs text-blue-100 hover:text-white"
+              {history.map((item) => {
+                const isExpanded = expandedHistoryId === item.id;
+
+                return (
+                  <article
+                    key={item.id}
+                    className="rounded-lg border border-white/20 bg-[#062C5F]/25 p-4"
                   >
-                    Copy response
-                  </button>
-                </article>
-              ))}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="rounded bg-slate-800 px-2 py-1 text-xs text-blue-100">
+                          {item.actionType}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedHistoryId((current) =>
+                              current === item.id ? null : item.id
+                            )
+                          }
+                          aria-expanded={isExpanded}
+                          className="mt-3 block w-full rounded break-words text-left text-sm font-medium text-white hover:text-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                        >
+                          {item.prompt || "Untitled question"}
+                          <span className="ml-2 text-xs font-normal text-blue-200">
+                            {isExpanded ? "Hide conversation ↑" : "Open conversation ↓"}
+                          </span>
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setHistoryDeleteTarget({
+                            type: "item",
+                            id: item.id,
+                          })
+                        }
+                        disabled={busy}
+                        className="shrink-0 text-sm text-red-300 hover:text-red-200 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <>
+                        <div className="mt-4 border-t border-white/15 pt-4">
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
+                            {formatAIResponse(item.response)}
+                          </p>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/60">
+                          {item.createdAt && (
+                            <span>{new Date(item.createdAt).toLocaleString()}</span>
+                          )}
+                          {item.model && <span>Model: {item.model}</span>}
+                          {item.tokensUsed != null && <span>Tokens: {item.tokensUsed}</span>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyText(item.response || "")}
+                          className="mt-3 text-xs text-blue-100 hover:text-white"
+                        >
+                          Copy response
+                        </button>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
             </div>
 
             {hasMore && nextCursor && (
@@ -943,7 +992,28 @@ export default function QuorumAIAssistant() {
             )}
           </section>
         )}
-         
+                 <ConfirmDialog
+          open={Boolean(historyDeleteTarget)}
+          type="delete"
+          title={
+            historyDeleteTarget?.type === "all"
+              ? "Clear all AI history?"
+              : "Delete history item?"
+          }
+          message={
+            historyDeleteTarget?.type === "all"
+              ? "This will permanently delete all your AI history. This action cannot be undone."
+              : "Are you sure you want to delete this AI history item?"
+          }
+          confirmText={
+            historyDeleteTarget?.type === "all"
+              ? "Clear all history"
+              : "Delete"
+          }
+          cancelText="Cancel"
+          onConfirm={confirmHistoryDelete}
+          onCancel={() => setHistoryDeleteTarget(null)}
+        />
       </div>
     </div>
   );

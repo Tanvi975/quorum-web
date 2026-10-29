@@ -287,7 +287,7 @@ export default function Communities() {
                           }
                         }
                       }}
-                      className="flex min-h-[150px] min-w-0 cursor-pointer flex-col rounded-2xl border border-white/30 bg-[#DCEBFA]/25 p-5 shadow-[0_5px_18px_rgba(5,35,75,0.08)] backdrop-blur-[3px] transition duration-200 hover:border-white/45 hover:bg-[#E7F2FF]/35 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                      className="flex min-h-[150px] min-w-0 cursor-pointer flex-col rounded-2xl border border-white/25 bg-[#2A4F74]/90 p-5 shadow-[0_5px_18px_rgba(5,35,75,0.18)] backdrop-blur-[3px] transition duration-200 hover:border-white/40 hover:bg-[#365F86] focus:outline-none focus:ring-2 focus:ring-sky-300"
                     >
                       <div className="flex w-full min-w-0 items-center gap-3 text-left">
                         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-[#EAF4FF]/25 text-blue-50">
