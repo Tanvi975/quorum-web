@@ -343,7 +343,7 @@ export default function QuorumAIAssistant() {
 
   return (
 <div
-  className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow-hidden p-3 text-white sm:p-5 lg:p-6"
+className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow-hidden p-2 text-white sm:p-3 lg:p-4"
   style={{
     backgroundColor: "#062C5F",
     backgroundImage:
@@ -353,7 +353,7 @@ export default function QuorumAIAssistant() {
   }}
 >
 <div className="mx-auto flex h-full w-full max-w-7xl min-h-0 min-w-0 flex-col">
-        <header className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-4 py-4 shadow-lg backdrop-blur-md sm:px-6">
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-3 py-3 shadow-lg backdrop-blur-md sm:px-5">
           <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
@@ -387,7 +387,7 @@ export default function QuorumAIAssistant() {
           )}
         </header>
 
-        <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-white/20 bg-[#102842]/60 p-2 shadow-sm backdrop-blur-md">
+        <div className="mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-white/20 bg-[#102842]/60 p-2 shadow-sm backdrop-blur-md">
           {tabs.map((tab) => (
             <button
               type="button"
@@ -425,9 +425,9 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "chat" && (
-          <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_280px]">
-           <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
-              <div className="border-b border-white/20 px-5 py-4">
+          <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_260px] lg:overflow-hidden">
+           <section className="flex min-h-[480px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md lg:h-full lg:min-h-0">
+              <div className="shrink-0 border-b border-white/20 px-4 py-3">
                 <h2 className="font-medium">Quorum AI</h2>
                 <p className="mt-1 text-xs text-white/70">
                   AI-generated answers may need verification.
@@ -435,10 +435,10 @@ export default function QuorumAIAssistant() {
               </div>
 
               <div
-         className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-4 [scrollbar-width:thin]"
            >
                 {messages.length === 0 && (
-                  <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
+                  <div className="flex min-h-[180px] flex-col items-center justify-center text-center">
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-xl text-blue-100">
                       AI
                     </div>
@@ -504,45 +504,58 @@ export default function QuorumAIAssistant() {
                 {busy && <Loading>Quorum AI is thinking...</Loading>}
               </div>
 
-              <form
-                onSubmit={handleChat}
-                className="border-t border-white/20 p-4"
-              >
-                <label htmlFor="ai-context" className="mb-2 block text-xs text-white/70">
-                  Optional context
-                </label>
-                <textarea
-                  id="ai-context"
-                  value={context}
-                  onChange={(event) => setContext(event.target.value)}
-                  maxLength={20000}
-                  rows={2}
-                  placeholder="Add relevant context (optional)..."
-                  className="mb-3 w-full resize-y max-h-40 overflow-y-auto w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
-                />
-                <div className="flex items-end gap-3">
-                  <textarea
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                    maxLength={20000}
-                    rows={2}
-                    required
-                    placeholder="Message Quorum AI..."
-                    aria-label="Message Quorum AI"
-                    className="min-w-0 flex-1 resize-y max-h-40 overflow-y-auto w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
-                  />
-                  <button
-                    type="submit"
-                    disabled={busy || !prompt.trim()}
-                    className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-3 text-sm font-medium hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {busy ? "..." : "Send"}
-                  </button>
-                </div>
-                <p className="mt-2 text-right text-xs text-white/60">
-                  {prompt.length}/10,000
-                </p>
-              </form>
+ 
+<form
+  onSubmit={handleChat}
+  className="shrink-0 border-t border-white/20 px-3 py-3 sm:px-4"
+>
+  <div className="mx-auto w-full max-w-[96%] space-y-2">
+    <div>
+      <label
+        htmlFor="ai-context"
+        className="mb-1 block text-xs text-white/70"
+      >
+        Optional context
+      </label>
+
+      <textarea
+        id="ai-context"
+        value={context}
+        onChange={(event) => setContext(event.target.value)}
+        maxLength={20000}
+        rows={1}
+        placeholder="Add relevant context (optional)..."
+        className="h-11 max-h-24 w-full resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-300"
+      />
+    </div>
+
+    <div className="flex items-end gap-2">
+      <textarea
+        value={prompt}
+        onChange={(event) => setPrompt(event.target.value)}
+        maxLength={20000}
+        rows={1}
+        required
+        placeholder="Message Quorum AI..."
+        aria-label="Message Quorum AI"
+        className="h-11 min-h-11 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-300"
+      />
+
+      <button
+        type="submit"
+        disabled={busy || !prompt.trim()}
+        className="max-h-[420px] min-h-0 overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md lg:h-full lg:max-h-full lg:p-4"
+      >
+        {busy ? "..." : "Send"}
+      </button>
+    </div>
+
+    <p className="text-right text-xs text-white/60">
+      {prompt.length}/10,000
+    </p>
+  </div>
+</form>
+
             </section>
 
             <aside className="h-full min-h-0 overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
@@ -707,7 +720,7 @@ export default function QuorumAIAssistant() {
         )}
 
         {(activeTab === "project" || activeTab === "update") && (
-          <section className="max-w-4xl rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
+          <section className="flex w-full max-w-4xl min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
             <SectionTitle
               title={activeTab === "project" ? "Project Assistance" : "Project Status Report"}
               subtitle="Choose exactly one workspace type and provide its ID."
@@ -860,7 +873,7 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "history" && (
-          <section className="rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
+         <section className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <SectionTitle
                 title="AI History"
