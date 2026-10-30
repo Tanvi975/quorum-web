@@ -166,7 +166,7 @@ const [groupAvatar, setGroupAvatar] = useState("");
 const fileInputRef = useRef(null);
 const [uploadingFile, setUploadingFile] = useState(false);
 const [saveMessage, setSaveMessage] = useState("");
-
+const [savedMessageIds, setSavedMessageIds] = useState(() => new Set());
   const messageEndRef = useRef(null);
   const searchRequestRef = useRef(0);
   const activeConversationRef = useRef(null);
@@ -1107,23 +1107,39 @@ const handleRenameGroup = async (event) => {
     );
   }
 };
-const handleSaveMessage = async (item) => {
-  const messageId = item.id || item._id;
-  if (!messageId) return;
-  try {
-    const isFile = Boolean(item.fileUrl);
-    await saveItem({
-      itemType: isFile ? "FILE" : "MESSAGE",
-      itemId: messageId,
-    });
-    setError("");
-  } catch (err) {
-    setError(err.response?.data?.message || "Could not save bookmark.");
-  }
-};
+  const handleSaveMessage = async (item) => {
+    const messageId = item.id || item._id;
+    if (!messageId) return;
+  
+    const id = String(messageId);
+  
+    if (savedMessageIds.has(id)) return;
+  
+    try {
+      const isFile = Boolean(item.fileUrl);
+  
+      await saveItem({
+        itemType: isFile ? "FILE" : "MESSAGE",
+        itemId: messageId,
+      });
+  
+      setSavedMessageIds((previous) => {
+        const updated = new Set(previous);
+        updated.add(id);
+        return updated;
+      });
+  
+      setSaveMessage("Message bookmarked successfully!");
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not save bookmark.");
+    }
+  };
 
 const [isChatSaved, setIsChatSaved] = useState(false);
-
+useEffect(() => {
+  setIsChatSaved(false);
+}, [activeConversation?.id]);
 
 const handleSaveConversation = async () => {
   if (!activeConversation?.id) {
@@ -1136,8 +1152,9 @@ const handleSaveConversation = async () => {
       itemType: "CHAT",
       itemId: activeConversation.id,
     });
-
-    setSaveMessage("Chat saved successfully!");
+    
+    setIsChatSaved(true);
+    setSaveMessage("Chat bookmarked successfully!");
     setError("");
   } catch (err) {
     setSaveMessage(
@@ -1458,15 +1475,16 @@ const handleSaveConversation = async () => {
                    <FiInfo size={16} />
                  </IconButton>
                                      
-                <IconButton
-                label={isChatSaved ? "Chat saved" : "Save chat"}
-                onClick={handleSaveConversation}
-                 >
-                <FiBookmark
-                size={16}
-                fill={isChatSaved ? "currentColor" : "none"}
-                 />
-                </IconButton>
+                 <IconButton
+                label={isChatSaved ? "Chat bookmarked" : "Save chat"}
+             onClick={handleSaveConversation}
+           >
+         <FiBookmark
+         size={16}
+         className={isChatSaved ? "text-[#1687F8]" : "text-white/75"}
+          fill={isChatSaved ? "currentColor" : "none"}
+          />
+           </IconButton>
                   </div>
                 </div>
 
@@ -1545,14 +1563,29 @@ const handleSaveConversation = async () => {
                               item.mine ? "text-[#D2E9FF]" : "text-[#8FA5BB]"
                             }`}
                           >
-                           <button
-                              type="button"
-                              onClick={() => handleSaveMessage(item)}
-                              title="Save bookmark"
-                              className="opacity-70 hover:opacity-100"
-                            >
-                              <FiBookmark size={11} />
-                            </button>
+                       <button
+  type="button"
+  onClick={() => handleSaveMessage(item)}
+  title={
+    savedMessageIds.has(String(item.id || item._id))
+      ? "Bookmarked"
+      : "Save bookmark"
+  }
+  className={`transition ${
+    savedMessageIds.has(String(item.id || item._id))
+      ? "text-[#1687F8]"
+      : "text-white/60 hover:text-[#1687F8]"
+  }`}
+>
+  <FiBookmark
+    size={13}
+    fill={
+      savedMessageIds.has(String(item.id || item._id))
+        ? "currentColor"
+        : "none"
+    }
+  />
+</button>
                             <span>{item.time}</span>
                           </div>
                         </div>
