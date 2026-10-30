@@ -866,7 +866,8 @@ function OrganizationWorkspace() {
       member._id ||
       member.id ||
       email;
-
+      const isCurrentUser =
+      Boolean(currentUserId) && String(id) === String(currentUserId);
     const currentMemberRole =
       member.role || member.user?.role || "MEMBER";
 
@@ -904,24 +905,25 @@ function OrganizationWorkspace() {
             {roleLabel(currentMemberRole)}
           </span>
 
-          {menu(`member-${id}`, [
-            {
-              label: "Edit member",
-              icon: <FaEdit />,
-              onClick: () => {
-                setSelectedMember(member);
-                setMemberRole(currentMemberRole);
-                setOpenMenu("");
-                setModal("edit-member");
-              },
-            },
-            {
-              label: "Remove member",
-              icon: <FaTrash />,
-              danger: true,
-              onClick: () => removeMember(member),
-            },
-          ])}
+          {!isCurrentUser &&
+  menu(`member-${id}`, [
+    {
+      label: "Edit member",
+      icon: <FaEdit />,
+      onClick: () => {
+        setSelectedMember(member);
+        setMemberRole(currentMemberRole);
+        setOpenMenu("");
+        setModal("edit-member");
+      },
+    },
+    {
+      label: "Remove member",
+      icon: <FaTrash />,
+      danger: true,
+      onClick: () => removeMember(member),
+    },
+  ])}
         </div>
       </div>
     );
