@@ -141,72 +141,65 @@ function Dashboard() {
       <DashboardBackground />
 
       <div className="relative z-10 flex h-dvh min-h-0 flex-col">
-        {/* Top navigation */}
-        <header className="sticky top-0 z-50 flex h-16 min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-[#294766] bg-[#102A46] px-3 shadow-lg shadow-black/20 sm:px-5 lg:px-8">
-          <h1 className="font-bold tracking-[0.18em] text-white">
-            QUORUM
-          </h1>
 
-          <div className="hidden h-[38px] w-[280px] items-center rounded-lg border border-[#355574] bg-[#172F4B] px-4 md:flex lg:w-[360px]">
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#91A9C4]"
-            />
-          </div>
+      <header className="sticky top-0 z-50 relative flex h-16 min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-[#294766] bg-[#102A46] px-3 shadow-lg shadow-black/20 sm:px-5 lg:px-8">
 
-          <div className="flex items-center gap-4">
-            {meetingError && (
-              <p className="text-sm text-red-300">{meetingError}</p>
-            )}
+<h1 className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl">
+  QUORUM
+</h1>
 
-            <NotificationBell />
+<div className="ml-auto flex items-center gap-4">
+  {meetingError && (
+    <p className="text-sm text-red-300">{meetingError}</p>
+  )}
 
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                type="button"
-                onClick={() => setProfileMenuOpen((open) => !open)}
-                aria-label="Open profile menu"
-                aria-expanded={profileMenuOpen}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#65A7FF]/50 bg-[#2878D5] text-sm font-semibold text-white transition hover:ring-4 hover:ring-[#2878D5]/25"
-              >
-                {userName.charAt(0).toUpperCase()}
-              </button>
+  <NotificationBell />
 
-              {profileMenuOpen && (
-                <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-[#355574] bg-[#142B45] py-2 shadow-2xl shadow-black/40">
-                  <div className="border-b border-[#355574] px-4 py-3">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {userName}
-                    </p>
-                    <p className="mt-1 text-xs text-[#A9BED6]">
-                      My account
-                    </p>
-                  </div>
+  <div className="relative" ref={profileMenuRef}>
+    <button
+      type="button"
+      onClick={() => setProfileMenuOpen((open) => !open)}
+      aria-label="Open profile menu"
+      aria-expanded={profileMenuOpen}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-[#65A7FF]/50 bg-[#2878D5] text-sm font-semibold text-white transition hover:ring-4 hover:ring-[#2878D5]/25"
+    >
+      {userName.charAt(0).toUpperCase()}
+    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      navigate("/dashboard");
-                    }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-[#D8E7F8] transition hover:bg-[#24476B]"
-                  >
-                    Profile
-                  </button>
+    {profileMenuOpen && (
+      <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-[#355574] bg-[#142B45] py-2 shadow-2xl shadow-black/40">
+        <div className="border-b border-[#355574] px-4 py-3">
+          <p className="truncate text-sm font-semibold text-white">
+            {userName}
+          </p>
+          <p className="mt-1 text-xs text-[#A9BED6]">
+            My account
+          </p>
+        </div>
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
+        <button
+          type="button"
+          onClick={() => {
+            setProfileMenuOpen(false);
+            navigate("/dashboard");
+          }}
+          className="w-full px-4 py-2.5 text-left text-sm text-[#D8E7F8] transition hover:bg-[#24476B]"
+        >
+          Profile
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10"
+        >
+          Logout
+        </button>
+      </div>
+    )}
+  </div>
+</div>
+</header>
 
         <div className="flex min-h-0 min-w-0 flex-1">
           <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">

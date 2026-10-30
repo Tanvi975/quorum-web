@@ -954,10 +954,11 @@ function Calendar() {
                     }))
                   }
                   className={`${inputClass} [color-scheme:dark]`}
+                  style={{ backgroundColor: "#1E3A5F", color: "#FFFFFF" }}
                 >
-                  <option value="PERSONAL">Personal</option>
-                  <option value="ORGANIZATION">Organization</option>
-                  <option value="TEAM">Team</option>
+                  <option value="PERSONAL" className="bg-[#1E3A5F] text-white">Personal</option>
+                  <option value="ORGANIZATION" className="bg-[#1E3A5F] text-white">Organization</option>
+                 <option value="TEAM" className="bg-[#1E3A5F] text-white">Team</option>
                 </select>
               </div>
 

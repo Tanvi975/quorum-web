@@ -306,6 +306,12 @@ function NotificationBell() {
   className="relative flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:bg-white/10 hover:text-blue-200"
 >
   <FiBell className="h-5 w-5 text-white" />
+
+  {unreadCount > 0 && (
+    <span className="absolute -right-1 -top-1 flex h-[19px] min-w-[19px] items-center justify-center rounded-full border-2 border-[#102A46] bg-red-500 px-1 text-[10px] font-extrabold leading-none text-white shadow-lg">
+      {unreadCount > 99 ? "99+" : unreadCount}
+    </span>
+  )}
 </button>
 
 
