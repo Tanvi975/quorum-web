@@ -461,36 +461,42 @@ function Calendar() {
       setSavingEvent(false);
     }
   }
-
   async function deleteEvent(eventId) {
     if (!eventId) return;
-
+  
     setDeletingEventId(eventId);
     setCalendarError("");
-
+  
     try {
       const targetEvent = events.find(
         (event) => String(event.id) === String(eventId)
       );
-      const meetingLink = targetEvent?.meetingLink || "";
+  
+      if (!targetEvent) {
+        throw new Error("Event not found.");
+      }
+  
+      const meetingLink = targetEvent.meetingLink || "";
       const meetingCode =
-        targetEvent?.meetingCode ||
+        targetEvent.meetingCode ||
         meetingLink.match(/\/meet\/([^/?#]+)/i)?.[1];
-
+  
+      await deleteCalendarEvent(eventId);
       if (meetingCode) {
         await cancelMeeting(meetingCode);
-      } else {
-        await deleteCalendarEvent(eventId);
       }
-
       await Promise.all([
         loadUpcomingEvents(),
         loadCalendarEvents(year, month),
       ]);
+  
     } catch (error) {
+      console.error("Delete event failed:", error);
+  
       setCalendarError(
         error.response?.data?.message ||
-          "Unable to cancel or delete this event. Please try again."
+          error.message ||
+          "Unable to delete this event. Please try again."
       );
     } finally {
       setDeletingEventId(null);
