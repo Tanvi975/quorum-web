@@ -146,11 +146,46 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 }
             };
 
-            socket.emit("sfu:join", {
-                roomCode: meetingCode,
-                peerId: user.id,
-                name: user.name,
+            await new Promise((resolve, reject) => {
+                let timeout;
+
+                const cleanup = () => {
+                    clearTimeout(timeout);
+                    socket.off("sfu:joined", handleJoined);
+                    socket.off("sfu:error", handleSfuError);
+                };
+
+                const handleJoined = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+
+                const handleSfuError = (data) => {
+                    cleanup();
+                    reject(new Error(data ?.message || "SFU room join failed."));
+                };
+
+                socket.once("sfu:joined", handleJoined);
+                socket.once("sfu:error", handleSfuError);
+
+                timeout = setTimeout(() => {
+                    cleanup();
+                    reject(new Error("SFU room join timed out. Please try again."));
+                }, 15000);
+
+                socket.emit("sfu:join", {
+                    roomCode: meetingCode,
+                    peerId: user.id,
+                    name: user.name,
+                });
             });
+            if (
+                sfuAccessDeniedRef.current ||
+                !socket.connected ||
+                socketRef.current !== socket
+            ) {
+                throw new Error("Meeting connection was interrupted.");
+            }
 
             const offer = await pc.createOffer();
 
@@ -192,11 +227,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             console.error("Starting meeting media failed:", err);
 
             if (mountedRef.current) {
-                setError(
-                    "Camera/microphone or WebRTC setup failed. Check permissions and try again."
-                );
+                setError(err.message || "Camera/microphone or WebRTC setup failed.");
             }
         }
+
     }, [meetingCode, user]);
 
     const replaceVideoTrack = useCallback(async(newTrack) => {
@@ -431,8 +465,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.on("meeting:participant-cam-status", ({ userId, isVideoOff }) => {
             setParticipants((previous) =>
                 previous.map((person) =>
-                    person.userId === userId ?
-                    {...person, isVideoOff } :
+                    person.userId === userId ? {...person, isVideoOff } :
                     person
                 )
             );
