@@ -175,7 +175,13 @@ export default function TeamChat({
       team?.head ??
       team?.createdBy
   );
-
+  const conversationId = getId(
+    team?.conversationId ??
+    team?.chatConversationId ??
+    team?.conversation?._id ??
+    team?.conversation?.id ??
+    teamId
+);
   const currentRole = String(
     currentUser?.role ?? currentUser?.designation ?? ""
   ).toLowerCase();
@@ -242,45 +248,68 @@ export default function TeamChat({
 
   useEffect(() => {
     loadMessages(true);
+}, [loadMessages]);
+useEffect(() => {
+  if (!socket || !connected || !conversationId) return;
 
-    const interval = window.setInterval(() => {
-      loadMessages(false);
-    }, 5000);
+  socket.emit(
+      "conversation:join",
+      { conversationId },
+      (res) => {
+          if (res?.success) {
+              console.log("Joined live team chat");
+          }
+      }
+  );
 
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [loadMessages]);
+  const handleNewMessage = (incoming) => {
+      if (!incoming) return;
 
-  useEffect(() => {
-    if (!socket || !teamId) return;
-
-    socket.emit("conversation:join", teamId);
-
-    const handleNewMessage = (incoming) => {
-      const incomingTeamId = getId(
-        incoming?.teamId ??
-          incoming?.conversationId ??
-          incoming?.team?._id
+      const incomingConversationId = getId(
+          incoming.conversationId
       );
 
       if (
-        incomingTeamId &&
-        incomingTeamId !== teamId
+          incomingConversationId &&
+          incomingConversationId !== conversationId
       ) {
-        return;
+          return;
       }
 
-      loadMessages(false);
-    };
+      setMessages((previous) => {
+          const incomingId = getMessageId(incoming);
+          const incomingClientId = incoming.clientMessageId;
 
-    socket.on("message:new", handleNewMessage);
+          const duplicate = previous.some((message) => {
+              const existingId = getMessageId(message);
 
-    return () => {
-      socket.off("message:new", handleNewMessage);
-      socket.emit("conversation:leave", teamId);
-    };
-  }, [socket, teamId, loadMessages]);
+              return (
+                  (incomingId && existingId === incomingId) ||
+                  (
+                      incomingClientId &&
+                      message.clientMessageId === incomingClientId
+                  )
+              );
+          });
+
+          if (duplicate) return previous;
+
+          return [...previous, incoming];
+      });
+  };
+
+  socket.on("chat:message:new", handleNewMessage);
+
+  return () => {
+      socket.off("chat:message:new", handleNewMessage);
+
+      socket.emit(
+          "conversation:leave",
+          { conversationId }
+      );
+  };
+
+}, [socket, connected, conversationId]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -632,7 +661,7 @@ export default function TeamChat({
       <section className="flex min-w-0 flex-1 flex-col">
         {connectionError && (
           <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
-            Real-time updates are unavailable. Messages will continue refreshing periodically.
+            Real-time updates are unavailable. Please check your connection.
           </p>
         )}
 

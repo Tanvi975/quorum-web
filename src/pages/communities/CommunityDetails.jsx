@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import CommunityChannels from "./CommunityChannels";
 import CommunityPostComposer from "./CommunityPostComposer";
 import CommunityInvitations from "./CommunityInvitations";
+import useChatSocket from "../../hooks/useChatSocket";
 import { PostAttachment } from "./CommunityAttachments";
 import {
     getCommunityDetails,
@@ -66,7 +67,7 @@ function CommunityDetails() {
     const navigate = useNavigate();
     const { communityId } = useParams();
     const { user } = useAuth();
-
+    const { socket, connected } = useChatSocket();
     const [activeTab, setActiveTab] = useState("Posts");
     const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
@@ -228,15 +229,58 @@ function CommunityDetails() {
     }, [loadCommunityData]);
 
     useEffect(() => {
+        if (!communityId) return
         loadPosts();
-
-        const refreshInterval = setInterval(() => {
-            loadPosts({ silent: true });
-        }, 5000);
-
-        return () => clearInterval(refreshInterval);
+    
     }, [loadPosts]);
-
+    useEffect(() => {
+        if (!socket || !connected || !communityId) return;
+    
+        const isChannelFeed = Boolean(selectedChannelId);
+    
+        const joinEvent = isChannelFeed
+            ? "community:channel:join"
+            : "community:join";
+    
+        const leaveEvent = isChannelFeed
+            ? "community:channel:leave"
+            : "community:leave";
+    
+        const roomPayload = isChannelFeed
+            ? { channelId: selectedChannelId }
+            : { communityId };
+    
+        socket.emit(joinEvent, roomPayload, (res) => {
+            if (res?.success) {
+                console.log("Joined community real-time feed");
+            }
+        });
+    
+        const handleNewPost = ({ post }) => {
+            if (!post) return;
+    
+            setPosts((previous) => {
+                const newPostId = String(post.id ?? post._id);
+    
+                const alreadyExists = previous.some(
+                    (item) =>
+                        String(item.id ?? item._id) === newPostId
+                );
+    
+                if (alreadyExists) return previous;
+    
+                return [post, ...previous];
+            });
+        };
+    
+        socket.on("community:post:new", handleNewPost);
+    
+        return () => {
+            socket.off("community:post:new", handleNewPost);
+            socket.emit(leaveEvent, roomPayload);
+        };
+    
+    }, [socket, connected, communityId, selectedChannelId]);
     useEffect(() => {
         if (!notice) return undefined;
 
