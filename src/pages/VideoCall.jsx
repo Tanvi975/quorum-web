@@ -53,6 +53,7 @@ function VideoCall() {
   const [searchParams] = useSearchParams();
 
   const meetingCode = searchParams.get("code");
+  const meetingLink = window.location.href;
   const isHostFromUrl = searchParams.get("host") === "1";
   const organizationId = searchParams.get("organizationId");
 
@@ -436,19 +437,21 @@ function VideoCall() {
             showSidePanel ? "block" : "hidden"
           }`}
         >
-          <ParticipantPanel
-            isOpen={showSidePanel}
-            activeTab={activeSideTab}
-            onTabChange={openMeetingPanel}
-            onClose={() => setShowSidePanel(false)}
-            participants={participants}
-            messages={messages}
-            user={user}
-            isHost={isHost}
-            chatInput={chatInput}
-            setChatInput={setChatInput}
-            onSendMessage={(content) => sendMessage(content)}
-          />
+        <ParticipantPanel
+  isOpen={showSidePanel}
+  activeTab={activeSideTab}
+  onTabChange={openMeetingPanel}
+  onClose={() => setShowSidePanel(false)}
+  participants={participants}
+  messages={messages}
+  user={user}
+  isHost={isHost}
+  chatInput={chatInput}
+  setChatInput={setChatInput}
+  onSendMessage={(content) => sendMessage(content)}
+  meetingCode={meetingCode}
+  meetingLink={meetingLink}
+/>
         </div>
       </main>
 

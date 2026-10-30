@@ -15,6 +15,7 @@ import {
   FaSpinner,
   FaArrowLeft,
   FaVideo,
+  FaCopy,
 } from "react-icons/fa";
 
 import api from "../../services/api";
@@ -150,7 +151,9 @@ function OrganizationWorkspace() {
     scheduledStartTime: "",
   });
   const [joinMeetingCode, setJoinMeetingCode] = useState("");
-
+  const [organizationInviteLink, setOrganizationInviteLink] = useState("");
+  const [generatingInviteLink, setGeneratingInviteLink] = useState(false);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [teamForm, setTeamForm] = useState({
     name: "",
     description: "",
@@ -487,7 +490,110 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
+  async function generateOrganizationInviteLink() {
+    if (generatingInviteLink) return;
+  
+    setGeneratingInviteLink(true);
+    setNotice("");
+  
+    try {
+      const response = await api.post(
+        `/api/organizations/${organizationId}/invites`,
+        {
+          role: "MEMBER",
+          expiresInDays: 30,
+          maxUses: 100,
+        }
+      );
+  
+      const result = response?.data?.data ?? response?.data ?? response;
+      const token =
+        result?.token ||
+        result?.invite?.token ||
+        result?.data?.token;
+  
+      if (!token) {
+        throw new Error(
+          "Invitation was created, but the server did not return an invite token."
+        );
+      }
+  
+      const inviteLink = `${window.location.origin}/join/${token}`;
+  
+      setOrganizationInviteLink(inviteLink);
+      setInviteLinkCopied(false);
+      setNotice("Organization invite link generated successfully.");
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setGeneratingInviteLink(false);
+    }
+  }
+  
+  async function copyOrganizationInviteLink() {
+    if (!organizationInviteLink) return;
+  
+    try {
+      await navigator.clipboard.writeText(organizationInviteLink);
+      setInviteLinkCopied(true);
+      setNotice("Invite link copied successfully.");
+    } catch {
+      setNotice("Unable to copy automatically. Please copy the link manually.");
+    }
+  }
+<div className="sm:col-span-2 rounded-xl border border-[#38BDF8]/20 bg-white/[0.04] p-4">
+  <div className="mb-3">
+    <p className="text-sm font-semibold text-white">
+      Organization Invite Link
+    </p>
+    <p className="mt-1 text-xs text-[#B6C6D9]">
+      Generate and share this link with people you want to invite.
+      It can be used up to 100 times and expires in 30 days.
+    </p>
+  </div>
 
+  {organizationInviteLink ? (
+    <>
+      <div className="mb-3 break-all rounded-lg border border-white/10 bg-[#0B1F39]/60 p-3 text-sm text-[#C6EAFF]">
+        {organizationInviteLink}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={copyOrganizationInviteLink}
+          className={primary}
+        >
+          {inviteLinkCopied ? <FaCheck /> : <FaCopy />}
+          {inviteLinkCopied ? "Copied" : "Copy Invite Link"}
+        </button>
+
+        <button
+          type="button"
+          onClick={generateOrganizationInviteLink}
+          disabled={generatingInviteLink}
+          className={secondary}
+        >
+          Generate New Link
+        </button>
+      </div>
+    </>
+  ) : (
+    <button
+      type="button"
+      onClick={generateOrganizationInviteLink}
+      disabled={generatingInviteLink}
+      className={primary}
+    >
+      {generatingInviteLink ? (
+        <FaSpinner className="animate-spin" />
+      ) : (
+        <FaPlus />
+      )}
+      {generatingInviteLink ? "Generating..." : "Generate Invite Link"}
+    </button>
+  )}
+</div>
   async function editOrganization(event) {
     event.preventDefault();
     setSaving(true);
@@ -1643,7 +1749,6 @@ function OrganizationWorkspace() {
                 >
                   <option value="MEMBER">Member</option>
                   <option value="TEAM_HEAD">Team Head</option>
-                  <option value="ORG_ADMIN">Organization Admin</option>
                 </select>
               </div>
 

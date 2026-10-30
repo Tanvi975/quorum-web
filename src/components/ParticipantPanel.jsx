@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiMic,
   FiMicOff,
@@ -7,6 +7,9 @@ import {
   FiVideoOff,
   FiX,
   FiSend,
+  FiCopy,
+  FiCheck,
+  FiLink,
 } from "react-icons/fi";
 
 function statusValue(item, keys) {
@@ -15,7 +18,6 @@ function statusValue(item, keys) {
       return item[key];
     }
   }
-
   return null;
 }
 
@@ -67,8 +69,11 @@ export default function ParticipantPanel({
   chatInput = "",
   setChatInput = () => {},
   onSendMessage = () => {},
+  meetingCode = "",
+  meetingLink = "",
 }) {
   const endRef = useRef(null);
+  const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
     if (isOpen && activeTab === "chat") {
@@ -76,24 +81,49 @@ export default function ParticipantPanel({
     }
   }, [messages, isOpen, activeTab]);
 
+  useEffect(() => {
+    setCopyStatus("");
+  }, [activeTab]);
+
   if (!isOpen) return null;
 
   const selfId = String(user?.id || user?._id || user?.userId || "");
+
+  async function copyText(value, label) {
+    if (!value) {
+      setCopyStatus(`${label} is unavailable.`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyStatus(`${label} copied successfully.`);
+    } catch {
+      setCopyStatus(
+        "Unable to copy automatically. Please copy the text manually."
+      );
+    }
+  }
 
   function send(event) {
     event.preventDefault();
 
     const content = chatInput.trim();
-
     if (!content) return;
 
     onSendMessage(content);
     setChatInput("");
   }
 
+  const tabs = [
+    { id: "participants", label: "People" },
+    { id: "chat", label: "Chat" },
+    { id: "info", label: "Meeting Info" },
+  ];
+
   return (
-    <aside className="flex h-full max-h-full min-h-0 w-[min(340px,calc(100vw-1rem))] shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0B2344] shadow-xl">
-      <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-3 py-3">
+    <aside className="flex h-full max-h-full min-h-0 w-[min(380px,calc(100vw-1rem))] shrink-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0B2344] shadow-xl max-sm:w-[calc(100vw-1rem)]">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold">Meeting panel</h2>
 
@@ -102,7 +132,9 @@ export default function ParticipantPanel({
               ? `${participants.length} participant${
                   participants.length === 1 ? "" : "s"
                 }`
-              : "Messages in this meeting"}
+              : activeTab === "chat"
+                ? "Messages in this meeting"
+                : "Share meeting details"}
           </p>
         </div>
 
@@ -116,41 +148,32 @@ export default function ParticipantPanel({
         </button>
       </header>
 
+      {/* Meeting panel tabs */}
       <div
-        className="flex shrink-0 gap-1 border-b border-white/10 p-2"
+        className="grid shrink-0 grid-cols-3 gap-1 border-b border-white/10 p-2"
         role="tablist"
         aria-label="Meeting panel tabs"
       >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "participants"}
-          onClick={() => onTabChange("participants")}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            activeTab === "participants"
-              ? "bg-[#0066FF] text-white"
-              : "text-white/65 hover:bg-white/5"
-          }`}
-        >
-          Participants
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "chat"}
-          onClick={() => onTabChange("chat")}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            activeTab === "chat"
-              ? "bg-[#0066FF] text-white"
-              : "text-white/65 hover:bg-white/5"
-          }`}
-        >
-          Chat
-        </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`min-w-0 rounded-lg px-1.5 py-2 text-xs font-medium transition sm:px-2 sm:text-sm ${
+              activeTab === tab.id
+                ? "bg-[#0066FF] text-white"
+                : "text-white/65 hover:bg-white/5"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {activeTab === "participants" ? (
+      {/* Participants */}
+      {activeTab === "participants" && (
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {participants.length === 0 ? (
             <p className="py-8 text-center text-xs text-white/50">
@@ -239,7 +262,10 @@ export default function ParticipantPanel({
             })
           )}
         </div>
-      ) : (
+      )}
+
+      {/* Chat */}
+      {activeTab === "chat" && (
         <>
           <div
             className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3"
@@ -296,6 +322,77 @@ export default function ParticipantPanel({
             </button>
           </form>
         </>
+      )}
+
+      {/* Meeting Info */}
+      {activeTab === "info" && (
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <FiLink className="text-blue-300" size={18} />
+              <h3 className="text-sm font-semibold">Invite people</h3>
+            </div>
+
+            <p className="text-xs leading-relaxed text-white/55">
+              Share the meeting code or invitation link with people you want
+              to invite to this meeting.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="mb-2 text-xs font-medium text-white/55">
+              MEETING CODE
+            </p>
+
+            <p className="mb-3 break-all text-lg font-semibold tracking-wider text-white">
+              {meetingCode || "Not available"}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => copyText(meetingCode, "Meeting code")}
+              disabled={!meetingCode}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2.5 text-sm font-medium transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FiCopy size={15} />
+              Copy meeting code
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="mb-2 text-xs font-medium text-white/55">
+              INVITATION LINK
+            </p>
+
+            <p className="mb-3 break-all text-sm leading-relaxed text-blue-200">
+              {meetingLink || "Meeting link unavailable"}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => copyText(meetingLink, "Invitation link")}
+              disabled={!meetingLink}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0066FF] px-3 py-2.5 text-sm font-medium text-white transition hover:bg-[#0057DB] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FiCopy size={15} />
+              Copy invitation link
+            </button>
+          </div>
+
+          {copyStatus && (
+            <p
+              role="status"
+              className="break-words rounded-lg bg-white/5 p-3 text-xs text-emerald-300"
+            >
+              {copyStatus}
+            </p>
+          )}
+
+          <p className="text-[11px] leading-relaxed text-white/40">
+            Anyone with this invitation link may be able to request to join
+            the meeting. The host may need to admit them.
+          </p>
+        </div>
       )}
     </aside>
   );

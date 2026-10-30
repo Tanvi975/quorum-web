@@ -11,13 +11,12 @@ function AddTeamMember({
 }) {
   const [teamId, setTeamId] = useState("");
   const [userId, setUserId] = useState("");
+  const [selectedRole, setSelectedRole] = useState("MEMBER");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const getUserId = (member) =>
-    member.userId ||
-    member.user?.id ||
-    member.user?._id;
+    member.userId || member.user?.id || member.user?._id;
 
   const getUserName = (member) =>
     member.user?.name ||
@@ -40,7 +39,10 @@ function AddTeamMember({
 
       await api.post(
         `/api/organizations/${organizationId}/teams/${teamId}/members`,
-        { userId }
+        {
+          userId,
+          role: selectedRole === "TEAM_HEAD" ? "LEAD" : "MEMBER",
+        }
       );
 
       await onSuccess?.();
@@ -130,6 +132,25 @@ function AddTeamMember({
                   </option>
                 );
               })}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="teamRole"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Select Team Role
+            </label>
+
+            <select
+              id="teamRole"
+              value={selectedRole}
+              onChange={(event) => setSelectedRole(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 p-3"
+            >
+              <option value="MEMBER">Team Member</option>
+              <option value="TEAM_HEAD">Team Head</option>
             </select>
           </div>
 

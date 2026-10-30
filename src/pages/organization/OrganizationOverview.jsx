@@ -251,23 +251,22 @@ export default function OrganizationOverview({
                         </p>
                       </div>
 
-                      {typeof onChangeRole === "function" ? (
-                        <select
-                          aria-label={`Change role for ${name}`}
-                          value={memberRole}
-                          onChange={(event) => onChangeRole(id, event.target.value)}
-                          className="hidden max-w-40 rounded-lg border border-[#B6C6D9]/25 bg-[#212F44] px-2 py-1.5 text-xs text-white outline-none focus:border-[#38BDF8] sm:block"
-                        >
-                          <option value="ORG_ADMIN">Organization admin</option>
-                          <option value="ADMIN">Admin</option>
-                          <option value="TEAM_HEAD">Team head</option>
-                          <option value="MEMBER">Member</option>
-                        </select>
-                      ) : (
-                        <span className={`${rolePill} hidden sm:inline-flex`}>
-                          {roleLabel(memberRole)}
-                        </span>
-                      )}
+                      {typeof onChangeRole === "function" && memberRole !== "ORG_ADMIN" ? (
+  <select
+    aria-label={`Change role for ${name}`}
+    value={memberRole}
+    onChange={(event) => onChangeRole(id, event.target.value)}
+    className="hidden max-w-40 rounded-lg border border-[#B6C6D9]/25 bg-[#212F44] px-2 py-1.5 text-xs text-white outline-none focus:border-[#38BDF8] sm:block"
+  >
+    <option value="ADMIN">Admin</option>
+    <option value="TEAM_HEAD">Team head</option>
+    <option value="MEMBER">Member</option>
+  </select>
+) : (
+  <span className={`${rolePill} hidden sm:inline-flex`}>
+    {roleLabel(memberRole)}
+  </span>
+)}
 
                       {hasMemberMenu && (
                         <div className="relative shrink-0">

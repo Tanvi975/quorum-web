@@ -8,7 +8,6 @@ import {
   FiMessageCircle,
   FiCpu,
   FiGlobe,
-  FiSettings,
 } from "react-icons/fi";
 
 const navigationItems = [
@@ -19,11 +18,6 @@ const navigationItems = [
   { label: "Organizations", icon: FiUsers, path: "/organization" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
-  {
-    label: "Settings",
-    icon: FiSettings,
-    path: "/settings/integrations/jira",
-  },
 ];
 
 export default function Sidebar() {
