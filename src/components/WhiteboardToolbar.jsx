@@ -202,26 +202,26 @@ export default function WhiteboardToolbar({
                 </div>
 
                 {openGroup === group && (
-                    <div className="absolute bottom-12 left-0 z-50 flex min-w-max flex-col gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
-                        {toolGroups[group].map((item) => (
-                            <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => selectTool(item.id)}
-                                className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                                    tool === item.id
-                                        ? "bg-blue-50 text-blue-600"
-                                        : "text-gray-700 hover:bg-gray-100"
-                                }`}
-                            >
-                                <span className="flex h-5 w-5 items-center justify-center">
-                                    {item.icon}
-                                </span>
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
+    <div className="absolute left-0 top-12 z-[100] flex min-w-40 flex-col gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-2xl">
+        {toolGroups[group].map((item) => (
+            <button
+                key={item.id}
+                type="button"
+                onClick={() => selectTool(item.id)}
+                className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    tool === item.id
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-100"
+                }`}
+            >
+                <span className="flex h-5 w-5 items-center justify-center">
+                    {item.icon}
+                </span>
+                {item.label}
+            </button>
+        ))}
+    </div>
+)}
             </div>
         );
     };
@@ -242,9 +242,9 @@ export default function WhiteboardToolbar({
     return (
         <div
             ref={toolbarRef}
-            className="relative flex w-full flex-col border-b border-gray-200 bg-white"
+            className="relative flex w-full flex-wrap items-center gap-2 overflow-visible border-b border-gray-200 bg-white px-3 py-2"
         >
-            <div className="flex w-full items-center gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-full items-center gap-2 px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="flex shrink-0 items-center gap-1">
                 <ToolButton
                     title="Select"

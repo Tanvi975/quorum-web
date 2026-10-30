@@ -403,7 +403,22 @@ export default function WhiteboardCanvas({
         3,
         Math.max(0.25, Number(viewState?.zoom) || 1)
     );
-
+    const changeZoom = (direction) => {
+        const nextZoom = Math.min(
+            3,
+            Math.max(0.25, zoom + direction * 0.25)
+        );
+    
+        updateViewState({ zoom: nextZoom });
+    };
+    
+    const fitCanvas = () => {
+        updateViewState({
+            zoom: 1,
+            scrollX: 0,
+            scrollY: 0,
+        });
+    };
     const scrollX = Number(viewState?.scrollX) || 0;
     const scrollY = Number(viewState?.scrollY) || 0;
 
@@ -515,12 +530,8 @@ export default function WhiteboardCanvas({
             }
 
             if (tool === "text") return;
-
-            // Place an emoji as a regular whiteboard text element.
-            // It therefore uses the existing draw-element Socket.IO event.
             if (tool === "emoji") {
-                // Reuse the Width slider for emoji size as well.
-                // Slider range 1-20 maps to an emoji font size of 24-100px.
+              
                 const emojiSize = 20 + (Number(strokeWidth) || 1) * 4;
 
                 drawElement({
@@ -815,6 +826,39 @@ export default function WhiteboardCanvas({
 
     return (
         <div className="relative h-full min-h-[220px] w-full overflow-hidden rounded-md">
+            <div className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+    <button
+        type="button"
+        onClick={() => changeZoom(-1)}
+        disabled={zoom <= 0.25}
+        className="flex h-8 w-8 items-center justify-center rounded text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+        title="Zoom out"
+    >
+        −
+    </button>
+
+    <span className="min-w-12 text-center text-xs font-semibold text-gray-700">
+        {Math.round(zoom * 100)}%
+    </span>
+
+    <button
+        type="button"
+        onClick={() => changeZoom(1)}
+        disabled={zoom >= 3}
+        className="flex h-8 w-8 items-center justify-center rounded text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+        title="Zoom in"
+    >
+        +
+    </button>
+
+    <button
+        type="button"
+        onClick={fitCanvas}
+        className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+    >
+        Fit
+    </button>
+</div>
             <svg
                 ref={svgRef}
                 viewBox={`${scrollX} ${scrollY} ${viewWidth} ${viewHeight}`}

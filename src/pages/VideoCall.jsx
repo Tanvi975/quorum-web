@@ -335,7 +335,11 @@ function VideoCall() {
         </div>
       )}
 
-      <main className="relative min-h-0 flex-1 overflow-hidden p-2 sm:p-4 md:p-6">
+<main
+  className={`relative min-h-0 flex-1 overflow-hidden ${
+    showWhiteboard ? "p-1" : "p-2 sm:p-4 md:p-6"
+  }`}
+>
         {showWhiteboard && meetingCode ? (
           <WhiteboardWorkspace
             meetingCode={meetingCode}
@@ -455,7 +459,9 @@ function VideoCall() {
         </div>
       </main>
 
-      <footer className="flex min-h-20 shrink-0 flex-wrap items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 py-3 sm:gap-3">
+      <footer className={`flex shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 sm:gap-3 ${
+  showWhiteboard ? "h-16" : "min-h-20 flex-wrap py-3"
+}`}>
         <button
           type="button"
           onClick={toggleMic}
