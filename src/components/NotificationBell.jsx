@@ -8,6 +8,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { notificationService } from "../services/notificationService";
+import useChatSocket from "../hooks/useChatSocket";
 
 function getNotificationTarget(notification) {
   const data = notification.data || {};
@@ -34,10 +35,17 @@ function getNotificationTarget(notification) {
             : data.communityId
               ? `/communities/${data.communityId}`
               : null;     
-    case "MEETING_STARTED":
-      return data.meetingId
-        ? `/meetings/${data.meetingId}`
+    case "MEETING_SCHEDULED":
+    case "MEETING_REMINDER":
+    case "MEETING_UPDATED":
+    case "MEETING_CANCELLED":
+    case "MEETING_STARTED": {
+      const meetingId = data.meetingId || data.meetingCode || data.code;
+
+      return meetingId
+        ? `/meetings/${encodeURIComponent(meetingId)}`
         : null;
+    }
 
     case "DIRECT_MESSAGE":
       return data.conversationId
@@ -63,6 +71,7 @@ function formatTime(dateString) {
 
 function NotificationBell() {
   const navigate = useNavigate();
+  const { socket } = useChatSocket();
   const panelRef = useRef(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -80,7 +89,6 @@ function NotificationBell() {
       const response = await notificationService.getUnreadCount();
       setUnreadCount(response.data?.data?.unreadCount ?? 0);
     } catch {
-      // Keep the dashboard usable if notifications are unavailable.
     }
   }
 
@@ -113,6 +121,24 @@ function NotificationBell() {
   useEffect(() => {
     loadUnreadCount();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = () => {
+      loadUnreadCount();
+
+      if (isOpen) {
+        loadNotifications(1, unreadOnly);
+      }
+    };
+
+    socket.on("notification:new", handleNewNotification);
+
+    return () => {
+      socket.off("notification:new", handleNewNotification);
+    };
+  }, [socket, isOpen, unreadOnly]);
 
   useEffect(() => {
     function handleOutsideClick(event) {

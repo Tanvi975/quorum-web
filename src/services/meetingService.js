@@ -1,13 +1,14 @@
 import api from "./api";
 
 const unwrap = (response) =>
-    response?.data?.data ?? response?.data ?? response;
+    response ?.data ?.data ?? response ?.data ?? response;
 
 export async function createMeeting({ organizationId } = {}) {
     const payload = organizationId ? { organizationId } : {};
 
     const response = await api.post("/api/meetings", payload);
-    return response.data.data;
+
+    return unwrap(response);
 }
 
 export async function createScopedMeeting(payload) {
@@ -24,7 +25,7 @@ export async function validateMeeting(code) {
         `/api/meetings/${encodeURIComponent(code)}`
     );
 
-    return response.data.data;
+    return unwrap(response);
 }
 
 export async function getUpcomingMeetings() {
@@ -40,8 +41,10 @@ export async function getOrganizationMeetings(organizationId) {
     );
 
     const data = unwrap(response);
+
     return Array.isArray(data) ? data : [];
 }
+
 
 export async function getTeamMeetings(teamId) {
     const response = await api.get(
@@ -49,6 +52,7 @@ export async function getTeamMeetings(teamId) {
     );
 
     const data = unwrap(response);
+
     return Array.isArray(data) ? data : [];
 }
 
@@ -59,11 +63,10 @@ export async function cancelMeeting(code) {
 
     return unwrap(response);
 }
-
 export async function endMeeting(code) {
     const response = await api.post(
         `/api/meetings/${encodeURIComponent(code)}/end`, {}
     );
 
-    return response.data;
+    return unwrap(response);
 }

@@ -18,7 +18,7 @@ import {
 } from "react-icons/fa";
 
 import api from "../../services/api";
-import { createMeeting } from "../../services/meetingService";
+import { createMeeting, createScopedMeeting } from "../../services/meetingService";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
 import TeamChat from "./TeamChat";
@@ -141,6 +141,14 @@ function OrganizationWorkspace() {
   const [selectedMeetingMembers, setSelectedMeetingMembers] = useState([]);
   const [meetingMemberSearch, setMeetingMemberSearch] = useState("");
   const [startingMeeting, setStartingMeeting] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedulingMeeting, setSchedulingMeeting] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    title: "",
+    scopeType: "ORGANIZATION",
+    teamId: "",
+    scheduledStartTime: "",
+  });
   const [joinMeetingCode, setJoinMeetingCode] = useState("");
 
   const [teamForm, setTeamForm] = useState({
@@ -312,6 +320,66 @@ function OrganizationWorkspace() {
       setNotice(errorMessage(err));
     } finally {
       setStartingMeeting(false);
+    }
+  }
+
+  function openScheduleMeetingDialog() {
+    setScheduleForm({
+      title: "",
+      scopeType: "ORGANIZATION",
+      teamId: "",
+      scheduledStartTime: "",
+    });
+    setShowScheduleModal(true);
+    setOpenMenu("");
+  }
+
+  async function scheduleOrganizationMeeting(event) {
+    event.preventDefault();
+    if (schedulingMeeting) return;
+
+    if (!scheduleForm.scheduledStartTime) {
+      setNotice("Please select a meeting date and time.");
+      return;
+    }
+
+    const startTime = new Date(scheduleForm.scheduledStartTime);
+    if (Number.isNaN(startTime.getTime()) || startTime <= new Date()) {
+      setNotice("Please choose a future date and time.");
+      return;
+    }
+
+    if (scheduleForm.scopeType === "TEAM" && !scheduleForm.teamId) {
+      setNotice("Please select a team.");
+      return;
+    }
+
+    setSchedulingMeeting(true);
+    setNotice("");
+
+    try {
+      const payload = {
+        title: scheduleForm.title.trim() || undefined,
+        scopeType: scheduleForm.scopeType,
+        organizationId,
+        scheduledStartTime: startTime.toISOString(),
+        ...(scheduleForm.scopeType === "TEAM" ? { teamId: scheduleForm.teamId } : {}),
+      };
+
+      const result = await createScopedMeeting(payload);
+      const meeting = result?.meeting || result?.data?.meeting || result?.data || result;
+      const code = meeting?.code || result?.code;
+
+      setShowScheduleModal(false);
+      setNotice(
+        code
+          ? `Meeting scheduled successfully. Meeting code: ${code}`
+          : "Meeting scheduled successfully. Members will receive calendar events and notifications."
+      );
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setSchedulingMeeting(false);
     }
   }
 
@@ -854,6 +922,17 @@ function OrganizationWorkspace() {
               Invite members
             </button>
 
+            {(role === "ORG_ADMIN" || isOrganizationOwner) && (
+              <button
+                type="button"
+                onClick={openScheduleMeetingDialog}
+                className={secondary}
+              >
+                <FaVideo />
+                <span>Schedule meeting</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={openMeetingDialog}
@@ -1091,6 +1170,80 @@ function OrganizationWorkspace() {
                {activeTab === "Whiteboards" && (
           <OrganizationWhiteboards organizationId={organizationId} />
         )}
+        {showScheduleModal && (
+          <Modal
+            title="Schedule a meeting"
+            description="Choose whether this meeting is for the entire organization or one specific team."
+            close={() => !schedulingMeeting && setShowScheduleModal(false)}
+          >
+            <form onSubmit={scheduleOrganizationMeeting} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">Meeting title</label>
+                <input
+                  value={scheduleForm.title}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, title: event.target.value }))}
+                  maxLength={120}
+                  placeholder="e.g. Weekly organization sync"
+                  className={input}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">Meeting audience</label>
+                <select
+                  value={scheduleForm.scopeType}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, scopeType: event.target.value, teamId: "" }))}
+                  className={input}
+                >
+                  <option value="ORGANIZATION">Entire organization</option>
+                  <option value="TEAM">Specific team</option>
+                </select>
+              </div>
+
+              {scheduleForm.scopeType === "TEAM" && (
+                <div>
+                  <label className="mb-2 block text-sm text-[#B6C6D9]">Select team</label>
+                  <select
+                    required
+                    value={scheduleForm.teamId}
+                    onChange={(event) => setScheduleForm((current) => ({ ...current, teamId: event.target.value }))}
+                    className={input}
+                  >
+                    <option value="">Choose a team</option>
+                    {teams.map((team) => {
+                      const id = team._id || team.id;
+                      return <option key={id} value={id}>{team.name || "Unnamed team"}</option>;
+                    })}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm text-[#B6C6D9]">Date and time</label>
+                <input
+                  required
+                  type="datetime-local"
+                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                  value={scheduleForm.scheduledStartTime}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, scheduledStartTime: event.target.value }))}
+                  className={input}
+                />
+                <p className="mt-1 text-xs text-[#B6C6D9]">All selected members will receive the meeting through their calendar and notifications.</p>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-white/10 pt-3">
+                <button type="button" onClick={() => setShowScheduleModal(false)} className={secondary} disabled={schedulingMeeting}>
+                  Cancel
+                </button>
+                <button type="submit" className={primary} disabled={schedulingMeeting || !scheduleForm.scheduledStartTime || (scheduleForm.scopeType === "TEAM" && !scheduleForm.teamId)}>
+                  {schedulingMeeting ? <FaSpinner className="animate-spin" /> : <FaVideo />}
+                  {schedulingMeeting ? "Scheduling..." : "Schedule meeting"}
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+
         {showMeetingInviteModal && (
           <Modal
             title="Video call"

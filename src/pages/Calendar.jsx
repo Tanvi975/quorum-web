@@ -329,14 +329,17 @@ function Calendar() {
     const title = form.title.trim();
     const description = form.description.trim();
 
-    const attendeeEmails = [
-      ...new Set(
-        form.attendeeEmails
-          .split(",")
-          .map((email) => email.trim().toLowerCase())
-          .filter(Boolean)
-      ),
-    ];
+    const attendeeEmails =
+      form.scopeType === "PERSONAL"
+        ? [
+            ...new Set(
+              form.attendeeEmails
+                .split(",")
+                .map((email) => email.trim().toLowerCase())
+                .filter(Boolean)
+            ),
+          ]
+        : [];
 
     const invalidEmail = attendeeEmails.find(
       (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -558,7 +561,6 @@ function Calendar() {
         }}
       >
         <div className="mx-auto w-full max-w-[1400px]">
-          {/* Intro strip */}
           <div
             className="mb-4 flex flex-col gap-3 rounded-2xl p-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between"
             style={GLASS}
@@ -1094,27 +1096,37 @@ function Calendar() {
                 </p>
               </div>
 
-              <div>
-                <label htmlFor="attendee-emails" className={labelClass}>
-                  Invite attendees{" "}
-                  <span className="text-xs text-white/50">(optional)</span>
-                </label>
+              {form.scopeType === "PERSONAL" && (
+                <div>
+                  <label htmlFor="attendee-emails" className={labelClass}>
+                    Invite attendees{" "}
+                    <span className="text-xs text-white/50">(optional)</span>
+                  </label>
 
-                <textarea
-                  id="attendee-emails"
-                  rows={2}
-                  value={form.attendeeEmails}
-                  onChange={(e) =>
-                    updateField("attendeeEmails", e.target.value)
-                  }
-                  placeholder="person1@example.com, person2@example.com"
-                  className={`${inputClass} resize-y`}
-                />
+                  <textarea
+                    id="attendee-emails"
+                    rows={2}
+                    value={form.attendeeEmails}
+                    onChange={(e) =>
+                      updateField("attendeeEmails", e.target.value)
+                    }
+                    placeholder="person1@example.com, person2@example.com"
+                    className={`${inputClass} resize-y`}
+                  />
 
-                <p className="mt-1 text-xs text-white/50">
-                  Enter email addresses separated by commas.
-                </p>
-              </div>
+                  <p className="mt-1 text-xs text-white/50">
+                    Enter email addresses separated by commas.
+                  </p>
+                </div>
+              )}
+
+              {form.scopeType !== "PERSONAL" && (
+                <div className="rounded-xl border border-sky-300/20 bg-sky-400/10 px-3 py-3 text-xs leading-5 text-sky-100">
+                  All members in the selected {form.scopeType.toLowerCase()} will
+                  automatically receive this meeting in their calendar and
+                  notifications.
+                </div>
+              )}
 
               {formError && (
                 <p

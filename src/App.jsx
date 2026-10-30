@@ -6,7 +6,6 @@ import {
   useParams,
 } from "react-router-dom";
 
-
 import DashboardBackground from "./components/DashboardBackground";
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -51,6 +50,16 @@ function MeetRedirect() {
   );
 }
 
+function MeetingNotificationRedirect() {
+  const { code } = useParams();
+
+  return (
+    <Navigate
+      to={`/video-call?code=${encodeURIComponent(code || "")}`}
+      replace
+    />
+  );
+}
 
 function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -61,7 +70,6 @@ function HomeRedirect() {
 
   return <Navigate to={user ? "/dashboard" : "/landing"} replace />;
 }
-
 
 function App() {
   useEffect(() => {
@@ -76,29 +84,27 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          
-       
-        <Route
-  path="/background-preview"
-  element={
-    <div
-      className="relative min-h-screen overflow-hidden"
-      style={{ backgroundColor: "#062C5F" }}
-    >
-      <DashboardBackground />
+          <Route
+            path="/background-preview"
+            element={
+              <div
+                className="relative min-h-screen overflow-hidden"
+                style={{ backgroundColor: "#062C5F" }}
+              >
+                <DashboardBackground />
 
-      <div className="relative z-10 p-6 text-white">
-        <h1 className="text-2xl font-bold">
-          Dashboard Background Preview
-        </h1>
-      </div>
-    </div>
-  }
-/>
-           
-<Route path="/" element={<HomeRedirect />} />
-<Route path="/landing" element={<LandingPage />} />
-    
+                <div className="relative z-10 p-6 text-white">
+                  <h1 className="text-2xl font-bold">
+                    Dashboard Background Preview
+                  </h1>
+                </div>
+              </div>
+            }
+          />
+
+          <Route path="/" element={<HomeRedirect />} />
+          <Route path="/landing" element={<LandingPage />} />
+
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -108,25 +114,161 @@ function App() {
 
           <Route path="/join/:token" element={<InvitePreview />} />
           <Route path="/invites/organization" element={<InvitePreview />} />
-          <Route path="/communities/invites/:token" element={<CommunityInvite />} /> <Route
-            path="/dashboard" element={ <ProtectedRoute> <Dashboard /> </ProtectedRoute> }/>
-           <Route path="/video-call" element={ <ProtectedRoute><VideoCall /></ProtectedRoute> } />
-           <Route path="/whiteboards/:boardId" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
-           <Route path="/meet/:code"element={ <ProtectedRoute><MeetRedirect /> </ProtectedRoute>  } />
-           <Route path="/chat" element={<ProtectedRoute><Chat /> </ProtectedRoute> }/>
-           <Route path="/organizations" element={ <ProtectedRoute><OrganizationsList /></ProtectedRoute> }/>
-          <Route path="/organizations/:organizationId" element={ <ProtectedRoute> <OrganizationWorkspace /> </ProtectedRoute> } />
-          <Route path="/organization" element={<ProtectedRoute><Organization /></ProtectedRoute>} />
-          <Route path="/organization/create" element={<ProtectedRoute><CreateOrganization /></ProtectedRoute>} />
-          <Route path="/organization/join" element={<ProtectedRoute><JoinOrganization /></ProtectedRoute>} />
-          <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
-          <Route path="/communities/create" element={<ProtectedRoute><CreateCommunity /></ProtectedRoute>} />
-          <Route path="/communities/:communityId" element={<ProtectedRoute><CommunityDetails /></ProtectedRoute>} />
-          <Route path="/communities/:communityId/posts/:postId" element={<ProtectedRoute><CommunityDetails /></ProtectedRoute>} />
-          <Route path="/onboarding/step-1" element={<ProtectedRoute><OnboardingStep1 /></ProtectedRoute>} />
-          <Route path="/ai-assistant" element={<ProtectedRoute><QuorumAIAssistant /></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-          <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
+          <Route path="/communities/invites/:token" element={<CommunityInvite />} />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/video-call"
+            element={
+              <ProtectedRoute>
+                <VideoCall />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/whiteboards/:boardId"
+            element={
+              <ProtectedRoute>
+                <WhiteboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meet/:code"
+            element={
+              <ProtectedRoute>
+                <MeetRedirect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meetings/:code"
+            element={
+              <ProtectedRoute>
+                <MeetingNotificationRedirect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizations"
+            element={
+              <ProtectedRoute>
+                <OrganizationsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizations/:organizationId"
+            element={
+              <ProtectedRoute>
+                <OrganizationWorkspace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organization"
+            element={
+              <ProtectedRoute>
+                <Organization />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organization/create"
+            element={
+              <ProtectedRoute>
+                <CreateOrganization />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organization/join"
+            element={
+              <ProtectedRoute>
+                <JoinOrganization />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities"
+            element={
+              <ProtectedRoute>
+                <Communities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities/create"
+            element={
+              <ProtectedRoute>
+                <CreateCommunity />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities/:communityId"
+            element={
+              <ProtectedRoute>
+                <CommunityDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities/:communityId/posts/:postId"
+            element={
+              <ProtectedRoute>
+                <CommunityDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding/step-1"
+            element={
+              <ProtectedRoute>
+                <OnboardingStep1 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-assistant"
+            element={
+              <ProtectedRoute>
+                <QuorumAIAssistant />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <Calendar />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/saved-items"
+            element={
+              <ProtectedRoute>
+                <SavedItems />
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>

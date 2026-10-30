@@ -1,14 +1,15 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FaArrowLeft,
   FaPaperPlane,
-  FaPaperclip,
   FaThumbtack,
   FaTrash,
   FaSpinner,
   FaFileAlt,
   FaUsers,
+  FaVideo,
+  FaTimes,
+  FaInfoCircle,
 } from "react-icons/fa";
 
 import {
@@ -19,6 +20,7 @@ import {
 } from "../../services/chatService";
 
 import useChatSocket from "../../hooks/useChatSocket";
+import { createScopedMeeting } from "../../services/meetingService";
 
 function getStoredUser() {
   for (const key of ["user", "currentUser", "authUser", "auth"]) {
@@ -73,6 +75,39 @@ function getTeamHeadId(team) {
   );
 }
 
+function getMemberName(member) {
+  if (typeof member === "string") return member;
+
+  return (
+    member?.name ??
+    member?.fullName ??
+    member?.username ??
+    member?.user?.name ??
+    member?.email ??
+    "Member"
+  );
+}
+
+function getMemberRole(member) {
+  if (typeof member === "string") return "Member";
+
+  return (
+    member?.role ??
+    member?.position ??
+    member?.designation ??
+    member?.user?.role ??
+    "Member"
+  );
+}
+
+function getLocalDateTimeMin() {
+  const date = new Date(Date.now() + 60000);
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 function getMessageTime(message) {
   if (!message?.createdAt) return "";
 
@@ -87,13 +122,14 @@ function getMessageTime(message) {
 }
 
 const iconButton =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sky-100/80 transition hover:bg-sky-300/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300";
 
 export default function TeamChat({
   organizationId,
   team,
   onClose,
   currentUser: currentUserProp,
+  onAddMembers,
 }) {
   const {
     socket,
@@ -107,14 +143,19 @@ export default function TeamChat({
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [workspaceTab, setWorkspaceTab] = useState("chat");
+  const [showTeamPanel, setShowTeamPanel] = useState(true);
+  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleTitle, setScheduleTitle] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleNotice, setScheduleNotice] = useState("");
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const teamId = getId(team?._id ?? team?.id);
 
@@ -124,14 +165,42 @@ export default function TeamChat({
       currentUser?.userId
   );
 
-  const teamHeadId = getTeamHeadId(team);
+  const teamHeadId = getId(
+    team?.teamHeadId ??
+      team?.teamLeadId ??
+      team?.leaderId ??
+      team?.teamHead ??
+      team?.teamLead ??
+      team?.leader ??
+      team?.head ??
+      team?.createdBy
+  );
+
+  const currentRole = String(
+    currentUser?.role ?? currentUser?.designation ?? ""
+  ).toLowerCase();
 
   const isTeamHead =
-    Boolean(currentUserId && teamHeadId) &&
-    currentUserId === teamHeadId;
+    (Boolean(currentUserId && teamHeadId) && currentUserId === teamHeadId) ||
+    ["team_head", "teamhead", "team_lead", "teamlead"].includes(currentRole) ||
+    team?.isTeamHead === true;
 
   const teamName =
     team?.name ?? team?.teamName ?? "Team Chat";
+
+  const teamMembers = Array.isArray(team?.members)
+    ? team.members
+    : Array.isArray(team?.users)
+      ? team.users
+      : Array.isArray(team?.participants)
+        ? team.participants
+        : [];
+
+  const organizationName =
+    team?.organization?.name ??
+    team?.organizationName ??
+    team?.organization?.organizationName ??
+    "Organization";
 
   const loadMessages = useCallback(
     async (showLoader = false) => {
@@ -170,6 +239,7 @@ export default function TeamChat({
     },
     [organizationId, teamId]
   );
+
   useEffect(() => {
     loadMessages(true);
 
@@ -181,6 +251,7 @@ export default function TeamChat({
       window.clearInterval(interval);
     };
   }, [loadMessages]);
+
   useEffect(() => {
     if (!socket || !teamId) return;
 
@@ -210,6 +281,7 @@ export default function TeamChat({
       socket.emit("conversation:leave", teamId);
     };
   }, [socket, teamId, loadMessages]);
+
   useEffect(() => {
     const container = messagesContainerRef.current;
 
@@ -231,7 +303,7 @@ export default function TeamChat({
   async function handleSend(event) {
     event.preventDefault();
 
-    if ((!text.trim() && !attachment) || sending) {
+    if (!text.trim() || sending) {
       return;
     }
 
@@ -240,12 +312,7 @@ export default function TeamChat({
 
     try {
       const formData = new FormData();
-
       formData.append("content", text.trim());
-
-      if (attachment) {
-        formData.append("file", attachment);
-      }
 
       await sendTeamMessage(
         organizationId,
@@ -254,12 +321,6 @@ export default function TeamChat({
       );
 
       setText("");
-      setAttachment(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
       await loadMessages(false);
     } catch (err) {
       setError(
@@ -333,365 +394,582 @@ export default function TeamChat({
     }
   }
 
-  function handleAttachmentChange(event) {
-    setAttachment(event.target.files?.[0] ?? null);
-  }
+  async function handleScheduleMeeting(event) {
+    event.preventDefault();
 
-  function removeAttachment() {
-    setAttachment(null);
+    if (!organizationId || !teamId || !scheduleTime || scheduling) return;
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    const scheduledStartTime = new Date(scheduleTime);
+
+    if (
+      Number.isNaN(scheduledStartTime.getTime()) ||
+      scheduledStartTime <= new Date()
+    ) {
+      setError("Please select a future date and time.");
+      return;
+    }
+
+    setScheduling(true);
+    setError("");
+    setScheduleNotice("");
+
+    try {
+      const meeting = await createScopedMeeting({
+        title: scheduleTitle.trim() || `${teamName} Meeting`,
+        scopeType: "TEAM",
+        organizationId,
+        teamId,
+        scheduledStartTime: scheduledStartTime.toISOString(),
+      });
+
+      setShowScheduleModal(false);
+      setScheduleTitle("");
+      setScheduleTime("");
+
+      setScheduleNotice(
+        meeting?.code
+          ? `Meeting scheduled successfully. Meeting code: ${meeting.code}`
+          : "Meeting scheduled successfully. Team members will be notified."
+      );
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Unable to schedule the team meeting."
+      );
+    } finally {
+      setScheduling(false);
     }
   }
 
   return (
-    <main className="flex h-[min(78dvh,820px)] min-h-[420px] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-[#102541]/55 text-[#EDEFF7] shadow-2xl shadow-blue-950/25 backdrop-blur-xl">
-      <header className="flex shrink-0 items-center gap-3 border-b border-white/15 bg-[#102541]/65 px-3 py-3 backdrop-blur-xl sm:px-5 sm:py-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className={iconButton}
-          aria-label="Back to organization workspace"
-          title="Back"
-        >
-          <FaArrowLeft />
-        </button>
+    <main className="relative flex h-[calc(100dvh-96px)] min-h-[560px] w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md"
+    style={{
+      backgroundImage: "linear-gradient(to bottom, #213F70 0%, #315A8A 45%, #506D9A 100%)"
+    }}>
+    <header className="flex shrink-0 items-center gap-3 border-b border-white/20 bg-[#102842]/90 px-3 py-3 text-white backdrop-blur-md sm:px-5 sm:py-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className={iconButton}
+        aria-label="Back to organization workspace"
+        title="Back"
+      >
+        <FaArrowLeft />
+      </button>
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-300/25 bg-sky-400/10 text-sky-200">
-          <FaUsers />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold text-white sm:text-lg">
-            {teamName}
-          </h2>
-
-          <p className="mt-0.5 text-xs text-slate-300">
-            Team conversation
-          </p>
-        </div>
-
-        <span
-          title={
-            connectionError ||
-            (connected ? "Connected" : "Connecting")
-          }
-          className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs ${
-            connectionError
-              ? "border-red-300/20 bg-red-400/10 text-red-200"
-              : connected
-                ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
-                : "border-amber-300/20 bg-amber-400/10 text-amber-200"
-          }`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              connectionError
-                ? "bg-red-300"
-                : connected
-                  ? "bg-emerald-300"
-                  : "bg-amber-300"
-            }`}
-          />
-
-          {connectionError
-            ? "Offline"
-            : connected
-              ? "Connected"
-              : "Connecting"}
-        </span>
-      </header>
-      <div className="flex gap-2 border-b border-sky-900 bg-[#081F3A] px-4 py-2">
-  <button
-    type="button"
-    onClick={() => setWorkspaceTab("chat")}
-    className={`rounded-lg px-4 py-2 text-sm ${
-      workspaceTab === "chat"
-        ? "bg-blue-600 text-white"
-        : "text-slate-300 hover:bg-white/5"
-    }`}
-  >
-    Chat
-  </button>
-
-  <button
-    type="button"
-    onClick={() => setWorkspaceTab("jira")}
-    className={`rounded-lg px-4 py-2 text-sm ${
-      workspaceTab === "jira"
-        ? "bg-blue-600 text-white"
-        : "text-slate-300 hover:bg-white/5"
-    }`}
-  >
-    Jira Tickets
-  </button>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white">
+  <FaUsers />
 </div>
 
-{workspaceTab === "jira" ? (
-  <JiraTicketsPanel
-    organizationId={organizationId}
-    teamId={teamId}
-  />
-) : (
-  <>
-
-      {connectionError && (
-        <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
-          Real-time updates are unavailable. Messages will
-          continue refreshing periodically.
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-base font-semibold text-white sm:text-lg">
+          {teamName}
+        </h2>
+        <p className="mt-0.5 text-xs text-sky-100/65">
+          Team conversation
         </p>
-      )}
-      {error && (
-        <div
-          role="alert"
-          className="mx-3 mt-3 flex shrink-0 items-start justify-between gap-3 rounded-xl border border-red-300/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-100 sm:mx-5"
-        >
-          <p className="min-w-0 break-words">{error}</p>
-
-          <button
-            type="button"
-            onClick={() => setError("")}
-            className="shrink-0 rounded px-1 text-lg leading-none hover:bg-white/10"
-            aria-label="Dismiss error"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      <div
-        ref={messagesContainerRef}
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-5 sm:px-5 sm:py-6"
-        aria-live="polite"
-      >
-        {loading ? (
-          <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 text-sm text-slate-300">
-            <FaSpinner className="animate-spin text-xl text-sky-300" />
-            Loading messages...
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex h-full min-h-40 flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-300/20 bg-sky-400/10 text-xl text-sky-200">
-              <FaPaperPlane />
-            </div>
-
-            <h3 className="text-base font-semibold text-white">
-              Start the conversation
-            </h3>
-
-            <p className="mt-2 max-w-xs text-sm text-slate-300">
-              Send the first message to your team.
-            </p>
-          </div>
-        ) : (
-          messages.map((message, index) => {
-            const messageId = getMessageId(message);
-            const senderId = getMessageSender(message);
-
-            const isOwnMessage =
-              Boolean(currentUserId) &&
-              senderId === currentUserId;
-
-            const canDelete =
-              isOwnMessage || isTeamHead;
-
-            const senderName =
-              message.sender?.name ??
-              message.sender?.username ??
-              message.senderName ??
-              message.sender?.email ??
-              (isOwnMessage ? "You" : "Team member");
-
-            const fileUrl =
-              message.fileUrl ?? message.attachmentUrl;
-
-            const fileName =
-              message.fileName ?? message.attachmentName;
-
-            return (
-              <article
-                key={
-                  messageId ||
-                  `${message.createdAt ?? "message"}-${senderId}-${index}`
-                }
-                className={`group flex w-full ${
-                  isOwnMessage
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
-                <div
-                  className={`flex max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[82%] ${
-                    isOwnMessage ? "flex-row-reverse" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    {!isOwnMessage && (
-                      <p className="mb-1.5 ml-1 break-words text-xs font-medium text-sky-200">
-                        {senderName}
-                      </p>
-                    )}
-
-                    <div
-                      className={`min-w-0 rounded-2xl border px-3.5 py-3 shadow-md shadow-black/10 sm:px-4 ${
-                        isOwnMessage
-                          ? "rounded-br-md border-blue-300/20 bg-gradient-to-br from-[#1557A8] to-[#123B72] text-white"
-                          : "rounded-bl-md border-white/15 bg-[#192F4B]/90 text-slate-100"
-                      }`}
-                    >
-                      {message.isPinned && (
-                        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-200">
-                          <FaThumbtack />
-                          Pinned message
-                        </div>
-                      )}
-
-                      {getMessageText(message) && (
-                        <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                          {getMessageText(message)}
-                        </p>
-                      )}
-
-                      {fileUrl && (
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-white/15 bg-black/15 p-2.5 text-sm text-sky-100 transition hover:bg-black/25 hover:text-white"
-                        >
-                          <FaFileAlt className="shrink-0" />
-
-                          <span className="break-all">
-                            {fileName || "Open attachment"}
-                          </span>
-                        </a>
-                      )}
-
-                      <div className="mt-2 flex items-center justify-end gap-2">
-                        <span className="text-[10px] text-slate-300/80">
-                          {getMessageTime(message)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mb-1 flex shrink-0 flex-col gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                    {isTeamHead && (
-                      <button
-                        type="button"
-                        onClick={() => handlePin(message)}
-                        className={iconButton}
-                        title="Pin message"
-                        aria-label={`Pin message from ${senderName}`}
-                      >
-                        <FaThumbtack className="text-xs" />
-                      </button>
-                    )}
-
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(message)}
-                        className={`${iconButton} hover:bg-red-500/15 hover:text-red-200`}
-                        title="Delete message"
-                        aria-label={`Delete message from ${senderName}`}
-                      >
-                        <FaTrash className="text-xs" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            );
-          })
-        )}
-
-        <div ref={messagesEndRef} />
       </div>
-      <form
-        onSubmit={handleSend}
-        className="shrink-0 border-t border-white/15 bg-[#102541]/75 px-3 py-3 backdrop-blur-xl sm:px-5 sm:py-4"
-      >
-        {attachment && (
-          <div className="mb-3 flex min-w-0 items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-sm text-sky-100">
-            <FaPaperclip className="shrink-0" />
 
-            <span className="min-w-0 flex-1 truncate">
-              {attachment.name}
-            </span>
+      <button
+        type="button"
+        onClick={() => {
+          setError("");
+          setScheduleNotice("");
+          setShowScheduleModal(true);
+        }}
+        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-sky-300/30 bg-[#1B4B7A] px-3 py-2 text-xs font-semibold text-sky-50 transition hover:bg-[#245D91] sm:text-sm"
+      >
+        <FaVideo />
+        <span className="hidden sm:inline">Schedule meeting</span>
+        <span className="sm:hidden">Schedule</span>
+      </button>
+
+      <button
+  type="button"
+  onClick={() => setShowTeamPanel((value) => !value)}
+  className={iconButton}
+  aria-label={showTeamPanel ? "Close team details" : "Show team details"}
+  title={showTeamPanel ? "Close team details" : "Team details"}
+>
+  {showTeamPanel ? <FaTimes /> : <FaInfoCircle />}
+</button>
+
+      <span
+        title={
+          connectionError ||
+          (connected ? "Connected" : "Connecting")
+        }
+        className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1 text-xs ${
+          connectionError
+            ? "border-red-300/25 bg-red-400/10 text-red-200"
+            : connected
+              ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-200"
+              : "border-amber-300/25 bg-amber-400/10 text-amber-200"
+        }`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            connectionError
+              ? "bg-red-300"
+              : connected
+                ? "bg-emerald-300"
+                : "bg-amber-300"
+          }`}
+        />
+
+        {connectionError
+          ? "Offline"
+          : connected
+            ? "Connected"
+            : "Connecting"}
+      </span>
+    </header>
+
+    {scheduleNotice && (
+      <div className="mx-3 mt-3 flex items-start justify-between gap-3 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2.5 text-sm text-emerald-100 sm:mx-5">
+        <p className="min-w-0 break-words">{scheduleNotice}</p>
+        <button
+          type="button"
+          onClick={() => setScheduleNotice("")}
+          className="shrink-0 rounded px-1 text-lg leading-none hover:bg-white/10"
+          aria-label="Dismiss message"
+        >
+          ×
+        </button>
+      </div>
+    )}
+
+    {showScheduleModal && (
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !scheduling) {
+            setShowScheduleModal(false);
+          }
+        }}
+      >
+        <section className="w-full max-w-md rounded-2xl border border-[#426B96] bg-[#153656] p-5 text-slate-100 shadow-2xl shadow-black/40">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                Schedule team meeting
+              </h3>
+              <p className="mt-1 text-sm text-sky-100/70">
+                All members of {teamName} will be invited automatically.
+              </p>
+            </div>
 
             <button
               type="button"
-              onClick={removeAttachment}
-              className="rounded px-2 text-lg hover:bg-white/10"
-              aria-label="Remove attachment"
+              onClick={() => setShowScheduleModal(false)}
+              disabled={scheduling}
+              className={iconButton}
+              aria-label="Close schedule meeting"
+            >
+              <FaTimes />
+            </button>
+          </div>
+
+          <form onSubmit={handleScheduleMeeting} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-sky-100">
+                Meeting title
+              </label>
+              <input
+                type="text"
+                value={scheduleTitle}
+                onChange={(event) => setScheduleTitle(event.target.value)}
+                maxLength={120}
+                placeholder={`${teamName} Meeting`}
+                className="w-full rounded-xl border border-[#52789F] bg-[#0D2743] px-3.5 py-3 text-sm text-white outline-none placeholder:text-sky-100/45 focus:border-sky-300"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-sky-100">
+                Date and time
+              </label>
+              <input
+                type="datetime-local"
+                required
+                min={getLocalDateTimeMin()}
+                value={scheduleTime}
+                onChange={(event) => setScheduleTime(event.target.value)}
+                className="w-full rounded-xl border border-[#52789F] bg-[#0D2743] px-3.5 py-3 text-sm text-white outline-none focus:border-sky-300 [color-scheme:dark]"
+              />
+            </div>
+
+            <div className="rounded-xl border border-sky-300/20 bg-[#1B426A] px-3 py-2.5 text-xs leading-5 text-sky-100">
+              Meeting scope: <strong>{teamName}</strong>. Other teams and organization members will not be invited.
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowScheduleModal(false)}
+                disabled={scheduling}
+                className="rounded-xl border border-[#52789F] px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={scheduling || !scheduleTime}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0878F9] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {scheduling && <FaSpinner className="animate-spin" />}
+                {scheduling ? "Scheduling..." : "Schedule meeting"}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    )}
+
+    <div className="flex min-h-0 flex-1">
+      <section className="flex min-w-0 flex-1 flex-col">
+        {connectionError && (
+          <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
+            Real-time updates are unavailable. Messages will continue refreshing periodically.
+          </p>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            className="mx-3 mt-3 flex shrink-0 items-start justify-between gap-3 rounded-xl border border-red-300/25 bg-red-400/10 px-3 py-2.5 text-sm text-red-100 sm:mx-5"
+          >
+            <p className="min-w-0 break-words">{error}</p>
+
+            <button
+              type="button"
+              onClick={() => setError("")}
+              className="shrink-0 rounded px-1 text-lg leading-none hover:bg-white/10"
+              aria-label="Dismiss error"
             >
               ×
             </button>
           </div>
         )}
 
-        <div className="flex min-w-0 items-end gap-2 rounded-2xl border border-white/20 bg-[#071A31]/70 p-2 transition focus-within:border-sky-300/50">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={handleAttachmentChange}
-            aria-label="Choose an attachment"
-          />
+        <div
+          ref={messagesContainerRef}
+          className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain bg-white/5 px-3 py-4 sm:px-5 sm:py-5"
+          aria-live="polite"
+        >
+          {loading ? (
+            <div className="flex h-full min-h-40 flex-col items-center justify-center gap-3 text-sm text-sky-100/65">
+              <FaSpinner className="animate-spin text-xl text-sky-200" />
+              Loading messages...
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex h-full min-h-40 flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-300/25 bg-[#1B426A] text-xl text-sky-200">
+                <FaPaperPlane />
+              </div>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={iconButton}
-            aria-label="Attach file"
-            title="Attach file"
-          >
-            <FaPaperclip />
-          </button>
+              <h3 className="text-base font-semibold text-white">
+                Start the conversation
+              </h3>
 
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            placeholder="Write a message..."
-            rows={1}
-            className="max-h-32 min-h-9 min-w-0 flex-1 resize-y bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-slate-400"
-          />
+              <p className="mt-2 max-w-xs text-sm text-sky-100/65">
+                Send the first message to your team.
+              </p>
+            </div>
+          ) : (
+            messages.map((message, index) => {
+              const messageId = getMessageId(message);
+              const senderId = getMessageSender(message);
 
-          <button
-            type="submit"
-            disabled={
-              sending ||
-              (!text.trim() && !attachment)
-            }
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#1680FF] to-[#0057D9] text-white shadow-md shadow-blue-950/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Send message"
-            title="Send message"
-          >
-            {sending ? (
-              <FaSpinner className="animate-spin" />
-            ) : (
-              <FaPaperPlane />
-            )}
-          </button>
+              const isOwnMessage =
+                Boolean(currentUserId) &&
+                senderId === currentUserId;
+
+              const canDelete =
+                isOwnMessage || isTeamHead;
+
+              const senderName =
+                message.sender?.name ??
+                message.sender?.username ??
+                message.senderName ??
+                message.sender?.email ??
+                (isOwnMessage ? "You" : "Team member");
+
+              const fileUrl =
+                message.fileUrl ?? message.attachmentUrl;
+
+              const fileName =
+                message.fileName ?? message.attachmentName;
+
+              return (
+                <article
+                  key={
+                    messageId ||
+                    `${message.createdAt ?? "message"}-${senderId}-${index}`
+                  }
+                  className={`group flex w-full ${
+                    isOwnMessage
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`flex max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[82%] ${
+                      isOwnMessage ? "flex-row-reverse" : ""
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      {!isOwnMessage && (
+                        <p className="mb-1.5 ml-1 break-words text-xs font-medium text-white/75">
+                          {senderName}
+                        </p>
+                      )}
+
+                      <div
+                       className={`min-w-0 rounded-md border px-3 py-2 shadow-sm ${
+                        isOwnMessage
+                          ? "rounded-br-sm border-[#1267B6] bg-[#1A3048] text-white"
+                          : "rounded-bl-sm border-white/25 bg-[#1A3048] text-[#E4ECF5]"
+                      }`}
+                      >
+                        {message.isPinned && (
+                          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-200">
+                            <FaThumbtack />
+                            Pinned message
+                          </div>
+                        )}
+
+                        {getMessageText(message) && (
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                            {getMessageText(message)}
+                          </p>
+                        )}
+
+                        {fileUrl && (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-[#52789F] bg-[#0D2B49] p-2.5 text-sm text-sky-100 transition hover:bg-[#173D62] hover:text-white"
+                          >
+                            <FaFileAlt className="shrink-0" />
+                            <span className="break-all">
+                              {fileName || "Open attachment"}
+                            </span>
+                          </a>
+                        )}
+
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          <span className="text-[10px] text-[#8FA5BB]">
+                            {getMessageTime(message)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-1 flex shrink-0 flex-col gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                      {isTeamHead && (
+                        <button
+                          type="button"
+                          onClick={() => handlePin(message)}
+                          className={iconButton}
+                          title="Pin message"
+                          aria-label={`Pin message from ${senderName}`}
+                        >
+                          <FaThumbtack className="text-xs" />
+                        </button>
+                      )}
+
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(message)}
+                          className={`${iconButton} hover:bg-red-500/15 hover:text-red-200`}
+                          title="Delete message"
+                          aria-label={`Delete message from ${senderName}`}
+                        >
+                          <FaTrash className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
+        <form
+            onSubmit={handleSend}
+            className="shrink-0 border-t border-white/20 bg-white/5 p-3 sm:px-4 sm:py-3.5"
+          >
+            <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-white/30 bg-transparent px-2.5 focus-within:border-[#85B6FF]">
+              <textarea
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                placeholder="Write a message..."
+                rows={1}
+                className="max-h-32 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-white/50"
+              />
 
-        <p className="mt-2 px-1 text-[11px] text-slate-400">
-          Enter to send · Shift + Enter for a new line
-        </p>
-      </form>
+              <button
+                type="submit"
+                disabled={sending || !text.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Send message"
+                title="Send message"
+              >
+                {sending ? (
+                  <FaSpinner className="animate-spin" />
+                ) : (
+                  <FaPaperPlane />
+                )}
+              </button>
+            </div>
 
-  </>
-)}
+            <p className="mt-2 px-1 text-[11px] text-sky-100/50">
+              Enter to send · Shift + Enter for a new line
+            </p>
+          </form>
+        </section>
+
+        {showTeamPanel && (
+          <aside className="hidden w-[280px] shrink-0 flex-col rounded-lg border border-white/20 bg-[#102842]/55 p-3 shadow-sm backdrop-blur-md lg:flex">
+            <div className="flex items-center justify-between border-b border-white/20 px-1 pb-4">
+              <h3 className="space-y-3 rounded-md border border-white/20 bg-white/10 p-3">
+                Team details
+              </h3>
+
+              <button
+                type="button"
+                onClick={() => setShowTeamPanel(false)}
+                className={iconButton}
+                aria-label="Hide team details"
+                title="Hide team details"
+              >
+                <FaInfoCircle className="text-lg" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1D4770] text-sky-100">
+                  <FaUsers />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {teamName}
+                  </p>
+                  <p className="text-xs text-sky-100/60">
+                    {teamMembers.length} members
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-[#416B98] bg-[#153656] p-3">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-sky-200/55">
+                    Team ID
+                  </p>
+                  <p className="mt-1 break-all text-xs font-medium text-sky-100">
+                    {teamId || "Not available"}
+                  </p>
+                </div>
+
+                <div className="border-t border-[#416B98]/60 pt-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-sky-200/55">
+                    Organization
+                  </p>
+                  <p className="mt-1 text-sm text-sky-100/85">
+                    {organizationName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-white">
+                    Members
+                  </h4>
+                  <span className="text-xs text-sky-100/60">
+                    {teamMembers.length}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {(showAllMembers
+                    ? teamMembers
+                    : teamMembers.slice(0, 3)
+                  ).map((member, index) => {
+                    const memberId =
+                      getId(member?._id ?? member?.id ?? member?.userId) ||
+                      `${getMemberName(member)}-${index}`;
+
+                    const memberName = getMemberName(member);
+
+                    const initials = memberName
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase();
+
+                    return (
+                      <div
+                        key={memberId}
+                        className="flex min-w-0 items-center gap-2.5"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-sky-100">
+                          {initials || "M"}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-white">
+                            {memberName}
+                          </p>
+                          <p className="truncate text-xs capitalize text-sky-100/60">
+                            {getMemberRole(member)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {teamMembers.length === 0 && (
+                    <p className="text-xs leading-5 text-sky-100/60">
+                      Member details are not available in the team data.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={teamMembers.length <= 3}
+                  onClick={() => setShowAllMembers((value) => !value)}
+                  className="mt-4 w-full rounded-lg border border-[#52789F] px-3 py-2 text-xs font-semibold text-sky-100 transition hover:bg-[#1B426A] disabled:cursor-default disabled:opacity-50"
+                >
+                  {showAllMembers ? "Show less" : "View all members"}
+                </button>
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
     </main>
   );
 }

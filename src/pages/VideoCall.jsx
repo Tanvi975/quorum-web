@@ -53,7 +53,7 @@ function VideoCall() {
   const [searchParams] = useSearchParams();
 
   const meetingCode = searchParams.get("code");
-  const isHost = searchParams.get("host") === "1";
+  const isHostFromUrl = searchParams.get("host") === "1";
   const organizationId = searchParams.get("organizationId");
 
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -81,7 +81,12 @@ function VideoCall() {
     admitGuest,
     rejectGuest,
     leaveMeeting,
-  } = useQuorumMeeting({ meetingCode, user, isHost });
+    isHost,
+  } = useQuorumMeeting({
+    meetingCode,
+    user,
+    isHost: isHostFromUrl,
+  });
 
   const videoRef = useRef(null);
   const screenStreamRef = useRef(null);

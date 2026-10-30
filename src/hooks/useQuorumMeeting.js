@@ -25,6 +25,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const mountedRef = useRef(false);
 
     const [status, setStatus] = useState("Connecting");
+    const [isMeetingHost, setIsMeetingHost] = useState(false);
     const [error, setError] = useState("");
     const [participants, setParticipants] = useState([]);
     const [waitingList, setWaitingList] = useState([]);
@@ -333,11 +334,12 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                     return;
                 }
 
-                setParticipants(ack.data ?.participants || []);
-
                 if (ack.data ?.status === "waiting_room") {
+                    setIsMeetingHost(false);
                     setStatus("Waiting for host approval");
                 } else {
+                    setIsMeetingHost(ack.data ?.role === "host");
+                    setParticipants(ack.data ?.participants || []);
                     setStatus("In call");
                     startMedia();
                 }
@@ -353,7 +355,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.on("meeting:error", ({ message } = {}) => {
             sfuAccessDeniedRef.current = true;
             setStatus("Unable to join");
-            setError(message || "You do not have permission to join this meeting.");
+            setError(
+                message || "You do not have permission to join this meeting."
+            );
             stopMedia();
         });
 
@@ -427,7 +431,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.on("meeting:participant-cam-status", ({ userId, isVideoOff }) => {
             setParticipants((previous) =>
                 previous.map((person) =>
-                    person.userId === userId ? {...person, isVideoOff } : person
+                    person.userId === userId ?
+                    {...person, isVideoOff } :
+                    person
                 )
             );
         });
@@ -631,7 +637,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         const socket = socketRef.current;
 
         if (socket ?.connected) {
-            if (isHost) {
+            if (isMeetingHost) {
                 socket.emit("meeting:end", { meetingCode });
             } else {
                 socket.emit("meeting:leave", { meetingCode });
@@ -661,5 +667,6 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         admitGuest,
         rejectGuest,
         leaveMeeting,
+        isHost: isMeetingHost,
     };
 }
