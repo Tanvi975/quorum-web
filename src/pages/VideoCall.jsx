@@ -276,24 +276,24 @@ function VideoCall() {
             <FiInfo size={19} />
           </button>
 
-          {meetingCode && (
-            <button
-              type="button"
-              onClick={() => setShowWhiteboard((open) => !open)}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
-                showWhiteboard
-                  ? "bg-[#0066FF] hover:bg-[#0057DB]"
-                  : "bg-white/10 hover:bg-white/20"
-              }`}
-              title={showWhiteboard ? "Back to video call" : "Open whiteboard"}
-              aria-label={
-                showWhiteboard ? "Back to video call" : "Open whiteboard"
-              }
-              aria-pressed={showWhiteboard}
-            >
-              <FiEdit3 size={18} />
-            </button>
-          )}
+  {meetingCode && organizationId && (
+  <button
+    type="button"
+    onClick={() => setShowWhiteboard((open) => !open)}
+    className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${
+      showWhiteboard
+        ? "bg-[#0066FF] hover:bg-[#0057DB]"
+        : "bg-white/10 hover:bg-white/20"
+    }`}
+    title={showWhiteboard ? "Back to video call" : "Open whiteboard"}
+    aria-label={
+      showWhiteboard ? "Back to video call" : "Open whiteboard"
+    }
+    aria-pressed={showWhiteboard}
+  >
+    <FiEdit3 size={18} />
+  </button>
+)}
         </div>
       </header>
 
