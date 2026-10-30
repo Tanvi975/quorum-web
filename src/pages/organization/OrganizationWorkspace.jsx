@@ -23,6 +23,7 @@ import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
 import TeamChat from "./TeamChat";
 import OrganizationOverview from "./OrganizationOverview";
+import OrganizationWhiteboards from "../../components/OrganizationWhiteboards";
 
 const btn =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-50";
@@ -119,7 +120,7 @@ function OrganizationWorkspace() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const requestedTeamId = searchParams.get("teamId");
-
+  const requestedTab = searchParams.get("tab");
   const [organization, setOrganization] = useState(null);
   const [teams, setTeams] = useState([]);
   const [members, setMembers] = useState([]);
@@ -127,7 +128,7 @@ function OrganizationWorkspace() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState(["Overview", "Teams", "Members", "About", "Whiteboards"].includes(requestedTab) ? requestedTab : "Overview");
   const [search, setSearch] = useState("");
   const [openMenu, setOpenMenu] = useState("");
   const [modal, setModal] = useState("");
@@ -881,7 +882,7 @@ function OrganizationWorkspace() {
           </div>
         </section>
         <nav className="mb-4 flex w-full min-w-0 flex-wrap gap-2">
-          {["Overview", "Teams", "Members", "About"].map((tab) => (
+        {["Overview", "Teams", "Members", "Whiteboards", "About"].map((tab) => (
             <button
               key={tab}
               type="button"
@@ -1087,7 +1088,9 @@ function OrganizationWorkspace() {
             </div>
           </section>
         )}
-
+               {activeTab === "Whiteboards" && (
+          <OrganizationWhiteboards organizationId={organizationId} />
+        )}
         {showMeetingInviteModal && (
           <Modal
             title="Video call"

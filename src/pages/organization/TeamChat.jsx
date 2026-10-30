@@ -19,6 +19,7 @@ import {
 } from "../../services/chatService";
 
 import useChatSocket from "../../hooks/useChatSocket";
+import JiraTicketsPanel from "./JiraTicketsPanel";
 
 function getStoredUser() {
   for (const key of ["user", "currentUser", "authUser", "auth"]) {
@@ -30,7 +31,6 @@ function getStoredUser() {
         return user;
       }
     } catch {
-      // Continue checking the other supported storage keys.
     }
   }
 
@@ -112,7 +112,7 @@ export default function TeamChat({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-
+  const [workspaceTab, setWorkspaceTab] = useState("chat");
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -171,8 +171,6 @@ export default function TeamChat({
     },
     [organizationId, teamId]
   );
-
-  // Load messages initially and refresh them every five seconds.
   useEffect(() => {
     loadMessages(true);
 
@@ -184,8 +182,6 @@ export default function TeamChat({
       window.clearInterval(interval);
     };
   }, [loadMessages]);
-
-  // Join the existing Socket.IO room and listen for new messages.
   useEffect(() => {
     if (!socket || !teamId) return;
 
@@ -215,8 +211,6 @@ export default function TeamChat({
       socket.emit("conversation:leave", teamId);
     };
   }, [socket, teamId, loadMessages]);
-
-  // Keep the conversation near the bottom when appropriate.
   useEffect(() => {
     const container = messagesContainerRef.current;
 
@@ -354,7 +348,6 @@ export default function TeamChat({
 
   return (
     <main className="flex h-[min(78dvh,820px)] min-h-[420px] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-[#102541]/55 text-[#EDEFF7] shadow-2xl shadow-blue-950/25 backdrop-blur-xl">
-      {/* Chat header */}
       <header className="flex shrink-0 items-center gap-3 border-b border-white/15 bg-[#102541]/65 px-3 py-3 backdrop-blur-xl sm:px-5 sm:py-4">
         <button
           type="button"
@@ -410,6 +403,39 @@ export default function TeamChat({
               : "Connecting"}
         </span>
       </header>
+      <div className="flex gap-2 border-b border-sky-900 bg-[#081F3A] px-4 py-2">
+  <button
+    type="button"
+    onClick={() => setWorkspaceTab("chat")}
+    className={`rounded-lg px-4 py-2 text-sm ${
+      workspaceTab === "chat"
+        ? "bg-blue-600 text-white"
+        : "text-slate-300 hover:bg-white/5"
+    }`}
+  >
+    Chat
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setWorkspaceTab("jira")}
+    className={`rounded-lg px-4 py-2 text-sm ${
+      workspaceTab === "jira"
+        ? "bg-blue-600 text-white"
+        : "text-slate-300 hover:bg-white/5"
+    }`}
+  >
+    Jira Tickets
+  </button>
+</div>
+
+{workspaceTab === "jira" ? (
+  <JiraTicketsPanel
+    organizationId={organizationId}
+    teamId={teamId}
+  />
+) : (
+  <>
 
       {connectionError && (
         <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
@@ -664,6 +690,9 @@ export default function TeamChat({
           Enter to send · Shift + Enter for a new line
         </p>
       </form>
+
+  </>
+)}
     </main>
   );
 }

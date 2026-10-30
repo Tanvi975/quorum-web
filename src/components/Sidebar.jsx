@@ -1,3 +1,4 @@
+
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiHome,
@@ -7,16 +8,22 @@ import {
   FiMessageCircle,
   FiCpu,
   FiGlobe,
+  FiSettings,
 } from "react-icons/fi";
 
 const navigationItems = [
   { label: "Home", icon: FiHome, path: "/dashboard" },
-  { label: "Calender", icon: FiCalendar, path: "/calendar" },
+  { label: "Calendar", icon: FiCalendar, path: "/calendar" },
   { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
+  {
+    label: "Settings",
+    icon: FiSettings,
+    path: "/settings/integrations/jira",
+  },
 ];
 
 export default function Sidebar() {
@@ -32,7 +39,7 @@ export default function Sidebar() {
           className="mb-10 w-full text-center lg:text-left"
         >
           <span className="text-xl font-extrabold tracking-wide text-white lg:text-2xl">
-            Qourum
+            Quorum
           </span>
         </button>
 

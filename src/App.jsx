@@ -37,7 +37,8 @@ import SavedItems from "./pages/SavedItems";
 import MobileBottomNav from "./components/MobileBottomNav";
 import CreateCommunity from "./pages/communities/CreateCommunity";
 import LandingPage from "./pages/LandingPage";
-
+import JiraIntegrationSettings from "./pages/JiraIntegrationSettings";
+import WhiteboardPage from "./pages/WhiteboardPage";
 import { initCsrf } from "./services/api";
 
 function MeetRedirect() {
@@ -111,6 +112,7 @@ function App() {
           <Route path="/communities/invites/:token" element={<CommunityInvite />} /> <Route
             path="/dashboard" element={ <ProtectedRoute> <Dashboard /> </ProtectedRoute> }/>
            <Route path="/video-call" element={ <ProtectedRoute><VideoCall /></ProtectedRoute> } />
+           <Route path="/whiteboards/:boardId" element={<ProtectedRoute><WhiteboardPage /></ProtectedRoute>} />
            <Route path="/meet/:code"element={ <ProtectedRoute><MeetRedirect /> </ProtectedRoute>  } />
            <Route path="/chat" element={<ProtectedRoute><Chat /> </ProtectedRoute> }/>
            <Route path="/organizations" element={ <ProtectedRoute><OrganizationsList /></ProtectedRoute> }/>
@@ -126,6 +128,7 @@ function App() {
           <Route path="/ai-assistant" element={<ProtectedRoute><QuorumAIAssistant /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
+          <Route path="/settings/integrations/jira" element={ <ProtectedRoute> <JiraIntegrationSettings /> </ProtectedRoute> }/>
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>

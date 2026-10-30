@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createMeeting } from "../services/meetingService";
+import {
+  createScopedMeeting,
+  cancelMeeting,
+} from "../services/meetingService";
+import {
+  getOrganizations,
+  getOrganizationTeams,
+} from "../services/organizationService";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {
   FiArrowLeft,
@@ -33,6 +40,9 @@ const emptyForm = {
   endTime: "10:30",
   description: "",
   attendeeEmails: "",
+  scopeType: "PERSONAL",
+  organizationId: "",
+  teamId: "",
 };
 const GLASS = {
   background: "rgba(42, 79, 116, 0.92)",
@@ -118,6 +128,10 @@ function Calendar() {
   const [savingEvent, setSavingEvent] = useState(false);
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({ ...emptyForm, date: todayKey });
+  const [organizations, setOrganizations] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
@@ -132,7 +146,7 @@ function Calendar() {
     } catch (error) {
       setCalendarError(
         error.response?.data?.message ||
-          "Calendar events load nahi ho paaye. Please try again."
+          "Unable to load calendar events. Please try again."
       );
     } finally {
       setLoadingEvents(false);
@@ -162,6 +176,69 @@ function Calendar() {
   useEffect(() => {
     loadUpcomingEvents();
   }, []);
+
+  useEffect(() => {
+    if (!showModal || form.scopeType === "PERSONAL") return;
+
+    let active = true;
+    setLoadingOrganizations(true);
+
+    getOrganizations()
+      .then((response) => {
+        const payload = response?.data?.data ?? response?.data ?? response;
+        const list = Array.isArray(payload)
+          ? payload
+          : payload?.organizations ?? [];
+        if (active) setOrganizations(list);
+      })
+      .catch((error) => {
+        if (active) {
+          setFormError(
+            error.response?.data?.message ||
+              "Unable to load organizations. Please try again."
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingOrganizations(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showModal, form.scopeType]);
+
+  useEffect(() => {
+    if (!showModal || form.scopeType !== "TEAM" || !form.organizationId) {
+      setTeams([]);
+      return;
+    }
+
+    let active = true;
+    setLoadingTeams(true);
+
+    getOrganizationTeams(form.organizationId)
+      .then((response) => {
+        const payload = response?.data?.data ?? response?.data ?? response;
+        const list = Array.isArray(payload) ? payload : payload?.teams ?? [];
+        if (active) setTeams(list);
+      })
+      .catch((error) => {
+        if (active) {
+          setFormError(
+            error.response?.data?.message ||
+              "Unable to load teams. Please try again."
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingTeams(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showModal, form.scopeType, form.organizationId]);
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
     const mondayOffset = (firstDay.getDay() + 6) % 7;
@@ -307,31 +384,58 @@ function Calendar() {
       return;
     }
 
+    if (form.scopeType !== "PERSONAL" && !form.organizationId) {
+      setFormError("Please select an organization.");
+      return;
+    }
+
+    if (form.scopeType === "TEAM" && !form.teamId) {
+      setFormError("Please select a team.");
+      return;
+    }
+
     const startDate = new Date(`${form.date}T${form.startTime}:00`);
     const endDate = new Date(`${form.date}T${form.endTime}:00`);
+
+    if (startDate <= new Date()) {
+      setFormError("Please select a future meeting start time.");
+      return;
+    }
 
     setSavingEvent(true);
     setFormError("");
 
     try {
-      const meeting = await createMeeting();
+      const meetingPayload = {
+        title,
+        scopeType: form.scopeType,
+        scheduledStartTime: startDate.toISOString(),
+        ...(form.scopeType !== "PERSONAL"
+          ? { organizationId: form.organizationId }
+          : {}),
+        ...(form.scopeType === "TEAM" ? { teamId: form.teamId } : {}),
+      };
+
+      const meeting = await createScopedMeeting(meetingPayload);
 
       if (!meeting?.code || !meeting?.link) {
         throw new Error("Meeting API did not return a valid meeting link.");
       }
 
-      await createCalendarEvent({
-        title,
-        description,
-        eventType: "MEETING",
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        isAllDay: false,
-        meetingLink: meeting.link,
-        attendeeEmails,
-        hasReminder: true,
-        reminderMinutes: 15,
-      });
+      if (form.scopeType === "PERSONAL") {
+        await createCalendarEvent({
+          title,
+          description,
+          eventType: "MEETING",
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          isAllDay: false,
+          meetingLink: meeting.link,
+          attendeeEmails,
+          hasReminder: true,
+          reminderMinutes: 15,
+        });
+      }
 
       setSelectedDate(form.date);
 
@@ -348,7 +452,7 @@ function Calendar() {
       setFormError(
         error.response?.data?.message ||
           error.message ||
-          "Event save nahi hua. Please try again."
+          "Unable to create the meeting. Please try again."
       );
     } finally {
       setSavingEvent(false);
@@ -362,11 +466,19 @@ function Calendar() {
     setCalendarError("");
 
     try {
-      await deleteCalendarEvent(eventId);
-
-      setEvents((previous) =>
-        previous.filter((event) => String(event.id) !== String(eventId))
+      const targetEvent = events.find(
+        (event) => String(event.id) === String(eventId)
       );
+      const meetingLink = targetEvent?.meetingLink || "";
+      const meetingCode =
+        targetEvent?.meetingCode ||
+        meetingLink.match(/\/meet\/([^/?#]+)/i)?.[1];
+
+      if (meetingCode) {
+        await cancelMeeting(meetingCode);
+      } else {
+        await deleteCalendarEvent(eventId);
+      }
 
       await Promise.all([
         loadUpcomingEvents(),
@@ -375,7 +487,7 @@ function Calendar() {
     } catch (error) {
       setCalendarError(
         error.response?.data?.message ||
-          "Event delete nahi ho paaya. Please try again."
+          "Unable to cancel or delete this event. Please try again."
       );
     } finally {
       setDeletingEventId(null);
@@ -823,6 +935,95 @@ function Calendar() {
                   {form.title.length}/{MAX_TITLE}
                 </p>
               </div>
+
+              <div>
+                <label htmlFor="meeting-scope" className={labelClass}>
+                  Meeting scope <span className="text-red-300">*</span>
+                </label>
+                <select
+                  id="meeting-scope"
+                  value={form.scopeType}
+                  onChange={(e) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      scopeType: e.target.value,
+                      organizationId: "",
+                      teamId: "",
+                    }))
+                  }
+                  className={`${inputClass} [color-scheme:dark]`}
+                >
+                  <option value="PERSONAL">Personal</option>
+                  <option value="ORGANIZATION">Organization</option>
+                  <option value="TEAM">Team</option>
+                </select>
+              </div>
+
+              {form.scopeType !== "PERSONAL" && (
+                <div>
+                  <label htmlFor="meeting-organization" className={labelClass}>
+                    Organization <span className="text-red-300">*</span>
+                  </label>
+                  <select
+                    id="meeting-organization"
+                    required
+                    value={form.organizationId}
+                    disabled={loadingOrganizations}
+                    onChange={(e) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        organizationId: e.target.value,
+                        teamId: "",
+                      }))
+                    }
+                    className={`${inputClass} [color-scheme:dark]`}
+                  >
+                    <option value="">
+                      {loadingOrganizations ? "Loading organizations..." : "Select organization"}
+                    </option>
+                    {organizations.map((organization) => {
+                      const id = organization.id || organization._id;
+                      return (
+                        <option key={id} value={id}>
+                          {organization.name || organization.title || id}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {form.scopeType === "TEAM" && (
+                <div>
+                  <label htmlFor="meeting-team" className={labelClass}>
+                    Team <span className="text-red-300">*</span>
+                  </label>
+                  <select
+                    id="meeting-team"
+                    required
+                    value={form.teamId}
+                    disabled={!form.organizationId || loadingTeams}
+                    onChange={(e) => updateField("teamId", e.target.value)}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  >
+                    <option value="">
+                      {!form.organizationId
+                        ? "Select an organization first"
+                        : loadingTeams
+                          ? "Loading teams..."
+                          : "Select team"}
+                    </option>
+                    {teams.map((team) => {
+                      const id = team.id || team._id;
+                      return (
+                        <option key={id} value={id}>
+                          {team.name || team.title || id}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label htmlFor="event-date" className={labelClass}>
