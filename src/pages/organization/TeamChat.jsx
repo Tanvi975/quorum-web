@@ -146,7 +146,9 @@ export default function TeamChat({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [showTeamPanel, setShowTeamPanel] = useState(true);
+  const [showTeamPanel, setShowTeamPanel] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024
+  );
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleTitle, setScheduleTitle] = useState("");
@@ -472,11 +474,11 @@ useEffect(() => {
   }
 
   return (
-    <main className="relative flex h-[calc(100dvh-96px)] min-h-[560px] w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md"
+    <main className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md"
     style={{
       backgroundImage: "linear-gradient(to bottom, #213F70 0%, #315A8A 45%, #506D9A 100%)"
     }}>
-    <header className="flex shrink-0 items-center gap-3 border-b border-white/20 bg-[#102842]/90 px-3 py-3 text-white backdrop-blur-md sm:px-5 sm:py-4">
+    <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/20 bg-[#102842]/90 px-2 py-2.5 text-white backdrop-blur-md sm:gap-3 sm:px-5 sm:py-4">
       <button
         type="button"
         onClick={onClose}
@@ -507,7 +509,7 @@ useEffect(() => {
           setScheduleNotice("");
           setShowScheduleModal(true);
         }}
-        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-sky-300/30 bg-[#1B4B7A] px-3 py-2 text-xs font-semibold text-sky-50 transition hover:bg-[#245D91] sm:text-sm"
+        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-sky-300/30 bg-[#1B4B7A] px-2.5 py-2 text-xs font-semibold text-sky-50 transition hover:bg-[#245D91] sm:px-3 sm:text-sm"
       >
         <FaVideo />
         <span className="hidden sm:inline">Schedule meeting</span>
@@ -547,11 +549,13 @@ useEffect(() => {
           }`}
         />
 
-        {connectionError
-          ? "Offline"
-          : connected
-            ? "Connected"
-            : "Connecting"}
+        <span className="hidden sm:inline">
+          {connectionError
+            ? "Offline"
+            : connected
+              ? "Connected"
+              : "Connecting"}
+        </span>
       </span>
     </header>
 
@@ -578,7 +582,7 @@ useEffect(() => {
           }
         }}
       >
-        <section className="w-full max-w-md rounded-2xl border border-[#426B96] bg-[#153656] p-5 text-slate-100 shadow-2xl shadow-black/40">
+        <section className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#426B96] bg-[#153656] p-4 text-slate-100 shadow-2xl shadow-black/40 sm:p-5">
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-white">
@@ -657,7 +661,7 @@ useEffect(() => {
       </div>
     )}
 
-    <div className="flex min-h-0 flex-1">
+<div className="relative flex h-full min-h-0 flex-1 items-stretch overflow-hidden">
       <section className="flex min-w-0 flex-1 flex-col">
         {connectionError && (
           <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
@@ -685,7 +689,7 @@ useEffect(() => {
 
         <div
           ref={messagesContainerRef}
-          className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain bg-white/5 px-3 py-4 sm:px-5 sm:py-5"
+          className="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain bg-white/5 px-2 py-3 sm:px-5 sm:py-5"
           aria-live="polite"
         >
           {loading ? (
@@ -745,7 +749,7 @@ useEffect(() => {
                   }`}
                 >
                   <div
-                    className={`flex max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[82%] ${
+                    className={`flex max-w-[92%] min-w-0 items-end gap-1.5 sm:max-w-[82%] ${
                       isOwnMessage ? "flex-row-reverse" : ""
                     }`}
                   >
@@ -832,10 +836,10 @@ useEffect(() => {
           <div ref={messagesEndRef} />
         </div>
         <form
-            onSubmit={handleSend}
-            className="shrink-0 border-t border-white/20 bg-white/5 p-3 sm:px-4 sm:py-3.5"
-          >
-            <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-white/30 bg-transparent px-2.5 focus-within:border-[#85B6FF]">
+    onSubmit={handleSend}
+    className="shrink-0 border-t border-[#173B60] bg-[#102842]/80 p-2.5 sm:px-4 sm:py-3.5"
+>
+<div className="flex min-h-[44px] min-w-0 items-center gap-2 rounded-lg border-2 border-[#173B60] bg-[#0B2344] px-2 transition focus-within:border-[#0066FF] sm:min-h-[46px] sm:px-2.5">
               <textarea
                 value={text}
                 onChange={(event) => setText(event.target.value)}
@@ -851,7 +855,7 @@ useEffect(() => {
                 }}
                 placeholder="Write a message..."
                 rows={1}
-                className="max-h-32 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-white/50"
+                className="max-h-32 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-5 text-white outline-none placeholder:text-sky-100/50"
               />
 
               <button
@@ -876,7 +880,14 @@ useEffect(() => {
         </section>
 
         {showTeamPanel && (
-          <aside className="hidden w-[280px] shrink-0 flex-col rounded-lg border border-white/20 bg-[#102842]/55 p-3 shadow-sm backdrop-blur-md lg:flex">
+          <>
+            <button
+              type="button"
+              aria-label="Close team details"
+              onClick={() => setShowTeamPanel(false)}
+              className="fixed inset-0 z-40 cursor-default bg-black/50 backdrop-blur-sm lg:hidden"
+            />
+            <aside className="fixed inset-y-0 right-0 z-50 flex h-full w-[min(88vw,340px)] min-h-0 flex-col border-l border-white/20 bg-[#102842] p-3 shadow-2xl lg:relative lg:inset-auto lg:z-auto lg:h-full lg:w-[290px] lg:shrink-0 lg:bg-[#102842]/75 lg:shadow-sm">
             <div className="flex items-center justify-between border-b border-white/20 px-1 pb-4">
               <h3 className="space-y-3 rounded-md border border-white/20 bg-white/10 p-3">
                 Team details
@@ -889,7 +900,7 @@ useEffect(() => {
                 aria-label="Hide team details"
                 title="Hide team details"
               >
-                <FaInfoCircle className="text-lg" />
+                <FaTimes className="text-lg" />
               </button>
             </div>
 
@@ -997,6 +1008,7 @@ useEffect(() => {
               </div>
             </div>
           </aside>
+          </>
         )}
       </div>
     </main>
