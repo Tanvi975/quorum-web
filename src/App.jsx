@@ -37,7 +37,6 @@ import SavedItems from "./pages/SavedItems";
 import MobileBottomNav from "./components/MobileBottomNav";
 import CreateCommunity from "./pages/communities/CreateCommunity";
 import LandingPage from "./pages/LandingPage";
-import JiraIntegrationSettings from "./pages/JiraIntegrationSettings";
 import WhiteboardPage from "./pages/WhiteboardPage";
 import { initCsrf } from "./services/api";
 
@@ -128,7 +127,6 @@ function App() {
           <Route path="/ai-assistant" element={<ProtectedRoute><QuorumAIAssistant /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/saved-items" element={<ProtectedRoute><SavedItems /></ProtectedRoute>} />
-          <Route path="/settings/integrations/jira" element={ <ProtectedRoute> <JiraIntegrationSettings /> </ProtectedRoute> }/>
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>
