@@ -342,17 +342,17 @@ export default function QuorumAIAssistant() {
   const statusProject = statusResult?.project;
 
   return (
-    <div
-      className="relative isolate min-h-screen overflow-x-hidden p-3 text-white sm:p-5 lg:p-6"
-      style={{
-        backgroundColor: "#062C5F",
-        backgroundImage:
-          "linear-gradient(to bottom, #213F70 0%, #315A8A 35%, #506D9A 65%, #7698C5 100%)",
-        backgroundRepeat: "no-repeat",
-        backgroundSize: "100% 100%",
-      }}
-    >
-      <div className="mx-auto w-full max-w-7xl min-w-0">
+<div
+  className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow-hidden p-3 text-white sm:p-5 lg:p-6"
+  style={{
+    backgroundColor: "#062C5F",
+    backgroundImage:
+      "linear-gradient(to bottom, #213F70 0%, #315A8A 35%, #506D9A 65%, #7698C5 100%)",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "100% 100%",
+  }}
+>
+<div className="mx-auto flex h-full w-full max-w-7xl min-h-0 min-w-0 flex-col">
         <header className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-4 py-4 shadow-lg backdrop-blur-md sm:px-6">
           <div className="flex min-w-0 items-start gap-3">
             <button
@@ -425,8 +425,8 @@ export default function QuorumAIAssistant() {
         )}
 
         {activeTab === "chat" && (
-          <div className="grid min-h-[620px] min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <section className="flex min-h-[620px] flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
+          <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_280px]">
+           <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
               <div className="border-b border-white/20 px-5 py-4">
                 <h2 className="font-medium">Quorum AI</h2>
                 <p className="mt-1 text-xs text-white/70">
@@ -434,7 +434,9 @@ export default function QuorumAIAssistant() {
                 </p>
               </div>
 
-              <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+              <div
+         className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+           >
                 {messages.length === 0 && (
                   <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-xl text-blue-100">
@@ -543,7 +545,7 @@ export default function QuorumAIAssistant() {
               </form>
             </section>
 
-            <aside className="h-fit rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
+            <aside className="h-full min-h-0 overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
               <h3 className="font-medium">Message assistant</h3>
               <p className="mt-1 text-sm text-white/70">
                 Generate suggestions for a draft. Review before using them.
