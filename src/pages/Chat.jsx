@@ -1497,7 +1497,7 @@ const handleSaveConversation = async () => {
                   </div>
                 )}
 
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+             <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   <div className="mb-1 flex justify-center">
                     <span className="rounded-full border border-white/25 bg-[#315A8A]/45 px-3 py-1 text-[9px] text-white/75">
                       Messages
