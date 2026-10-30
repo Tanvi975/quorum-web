@@ -518,17 +518,32 @@ function Calendar() {
 
     setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
   }
-
   function openMeeting(event) {
     if (!event.meetingLink) {
       selectEventDate(event);
       return;
     }
-
-    if (/^https?:\/\//i.test(event.meetingLink)) {
-      window.open(event.meetingLink, "_blank", "noopener,noreferrer");
+  
+    let meetingUrl = event.meetingLink;
+  
+    // Add organizationId only for organization-scoped meetings
+    if (event.scopeType === "ORGANIZATION") {
+      const organizationId =
+        event.organizationId ||
+        event.organization?._id ||
+        event.organization?.id;
+  
+      if (organizationId) {
+        const url = new URL(meetingUrl, window.location.origin);
+        url.searchParams.set("organizationId", organizationId);
+        meetingUrl = url.toString();
+      }
+    }
+  
+    if (/^https?:\/\//i.test(meetingUrl)) {
+      window.open(meetingUrl, "_blank", "noopener,noreferrer");
     } else {
-      navigate(event.meetingLink);
+      navigate(meetingUrl);
     }
   }
   return (
