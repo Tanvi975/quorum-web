@@ -96,6 +96,7 @@ export default function WhiteboardWorkspace({
     const [tool, setTool] = useState("pen");
     const [color, setColor] = useState("#0066FF");
     const [strokeWidth, setStrokeWidth] = useState(3);
+    const [selectedEmoji, setSelectedEmoji] = useState("😀");
     const [showBoardPicker, setShowBoardPicker] = useState(!initialBoardId);
     const [boardNameInput, setBoardNameInput] = useState(
         isMeetingMode ? "Meeting whiteboard" : "New whiteboard"
@@ -470,7 +471,7 @@ export default function WhiteboardWorkspace({
         )}
     </div>
 
-    <div className="z-20 mb-2 flex w-full shrink-0 justify-center overflow-x-auto rounded-xl border border-white/30 bg-[#0B2344] p-2 shadow-2xl">
+    <div className="relative z-20 mb-2 flex w-full shrink-0 justify-center rounded-xl border border-white/30 bg-[#0B2344] p-2 shadow-2xl">
         <WhiteboardToolbar
             tool={tool}
             setTool={setTool}
@@ -479,6 +480,8 @@ export default function WhiteboardWorkspace({
             strokeWidth={strokeWidth}
             setStrokeWidth={setStrokeWidth}
             onClear={handleClear}
+            selectedEmoji={selectedEmoji}
+            setSelectedEmoji={setSelectedEmoji}
             disabled={!socketConnected}
         />
     </div>
@@ -504,6 +507,7 @@ export default function WhiteboardWorkspace({
                 tool={tool}
                 color={color}
                 strokeWidth={strokeWidth}
+                selectedEmoji={selectedEmoji}
                 backgroundColor={viewState.backgroundColor || "#FFFFFF"}
                 viewState={viewState}
                 updateViewState={updateViewState}

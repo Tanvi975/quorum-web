@@ -11,6 +11,7 @@ import {
     FiChevronDown,
     FiArrowUpRight,
     FiDroplet,
+    FiSmile,
 } from "react-icons/fi";
 
 const toolGroups = {
@@ -25,6 +26,45 @@ const toolGroups = {
         { id: "arrow", label: "Arrow", icon: <FiArrowUpRight /> },
     ],
 };
+
+const emojiCategories = [
+    {
+        name: "Smileys",
+        emojis: [
+            "😀", "😃", "😄", "😁", "😆", "😂",
+            "🤣", "😊", "😍", "🥰", "😘", "😎",
+            "🤔", "😴", "😭", "😡", "🥳", "🤩",
+        ],
+    },
+    {
+        name: "Gestures",
+        emojis: [
+            "👍", "👎", "👏", "🙌", "🙏", "👌",
+            "✌️", "🤝", "💪", "👋", "🫶", "👆",
+        ],
+    },
+    {
+        name: "Objects",
+        emojis: [
+            "💻", "📱", "⌨️", "🖥️", "📚", "📖",
+            "✏️", "📝", "💡", "🔔", "🎯", "🚀",
+        ],
+    },
+    {
+        name: "Nature",
+        emojis: [
+            "🌸", "🌻", "🌈", "🔥", "⭐", "☀️",
+            "🌙", "🌍", "🌳", "🍀", "🌊", "❄️",
+        ],
+    },
+    {
+        name: "Symbols",
+        emojis: [
+            "❤️", "💯", "✅", "❌", "⚡", "💬",
+            "🎉", "🏆", "🔴", "🟢", "🔵", "💎",
+        ],
+    },
+];
 
 function ToolButton({
     active,
@@ -60,9 +100,13 @@ export default function WhiteboardToolbar({
     strokeWidth,
     setStrokeWidth,
     onClear,
+    selectedEmoji = "😀",
+    setSelectedEmoji = () => {},
     disabled = false,
 }) {
     const [openGroup, setOpenGroup] = useState(null);
+    const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const [activeEmojiCategory, setActiveEmojiCategory] = useState("Smileys");
     const toolbarRef = useRef(null);
 
     useEffect(() => {
@@ -72,12 +116,14 @@ export default function WhiteboardToolbar({
                 !toolbarRef.current.contains(event.target)
             ) {
                 setOpenGroup(null);
+                setEmojiPickerOpen(false);
             }
         };
 
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
                 setOpenGroup(null);
+                setEmojiPickerOpen(false);
             }
         };
 
@@ -96,6 +142,7 @@ export default function WhiteboardToolbar({
     const selectTool = (toolId) => {
         setTool(toolId);
         setOpenGroup(null);
+        setEmojiPickerOpen(false);
     };
 
     const renderGroup = (group, label) => {
@@ -181,6 +228,7 @@ export default function WhiteboardToolbar({
 
     const handleClear = () => {
         setOpenGroup(null);
+        setEmojiPickerOpen(false);
 
         const confirmed = window.confirm(
             "Are you sure you want to clear the entire whiteboard? This action cannot be undone."
@@ -194,9 +242,10 @@ export default function WhiteboardToolbar({
     return (
         <div
             ref={toolbarRef}
-            className="relative flex w-full items-center gap-2 overflow-x-auto border-b border-gray-200 bg-white px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="relative flex w-full flex-col border-b border-gray-200 bg-white"
         >
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex w-full items-center gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex shrink-0 items-center gap-1">
                 <ToolButton
                     title="Select"
                     active={tool === "select"}
@@ -225,6 +274,18 @@ export default function WhiteboardToolbar({
                     onClick={() => selectTool("text")}
                 >
                     <FiType size={18} />
+                </ToolButton>
+
+                <ToolButton
+                    title="Emoji"
+                    active={tool === "emoji" || emojiPickerOpen}
+                    disabled={disabled}
+                    onClick={() => {
+                        setOpenGroup(null);
+                        setEmojiPickerOpen((previous) => !previous);
+                    }}
+                >
+                    <FiSmile size={18} />
                 </ToolButton>
 
                 <ToolButton
@@ -295,6 +356,70 @@ export default function WhiteboardToolbar({
             >
                 <FiTrash2 size={18} />
             </ToolButton>
+            </div>
+
+            {emojiPickerOpen && (
+                <div className="absolute top-full left-2 z-[100] mt-2 w-[min(340px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white p-3 shadow-2xl">
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-800">
+                            Choose an Emoji
+                        </h3>
+
+                        <button
+                            type="button"
+                            onClick={() => setEmojiPickerOpen(false)}
+                            className="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                        >
+                            Close
+                        </button>
+                    </div>
+
+                    <div className="mb-3 flex gap-1 overflow-x-auto">
+                        {emojiCategories.map((category) => (
+                            <button
+                                key={category.name}
+                                type="button"
+                                onClick={() => setActiveEmojiCategory(category.name)}
+                                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                                    activeEmojiCategory === category.name
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                }`}
+                            >
+                                {category.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="grid max-h-48 grid-cols-6 gap-1 overflow-y-auto">
+                        {emojiCategories
+                            .find((category) => category.name === activeEmojiCategory)
+                            ?.emojis.map((emoji) => (
+                                <button
+                                    key={emoji}
+                                    type="button"
+                                    title={emoji}
+                                    onClick={() => {
+                                        setSelectedEmoji(emoji);
+                                        setTool("emoji");
+                                        setEmojiPickerOpen(false);
+                                    }}
+                                    className={`flex h-10 w-10 items-center justify-center rounded-lg text-2xl transition hover:bg-blue-50 ${
+                                        selectedEmoji === emoji
+                                            ? "bg-blue-100 ring-1 ring-blue-500"
+                                            : "bg-transparent"
+                                    }`}
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                    </div>
+
+                    <p className="mt-3 text-[11px] text-gray-500">
+                        Select an emoji, then click anywhere on the whiteboard to place it.
+                    </p>
+                </div>
+            )}
         </div>
     );
 }

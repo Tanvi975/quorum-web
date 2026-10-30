@@ -386,6 +386,7 @@ export default function WhiteboardCanvas({
     tool = "pen",
     color = "#0066FF",
     strokeWidth = 3,
+    selectedEmoji = "😀",
     backgroundColor = "#FFFFFF",
     viewState,
     updateViewState = () => {},
@@ -515,6 +516,31 @@ export default function WhiteboardCanvas({
 
             if (tool === "text") return;
 
+            // Place an emoji as a regular whiteboard text element.
+            // It therefore uses the existing draw-element Socket.IO event.
+            if (tool === "emoji") {
+                // Reuse the Width slider for emoji size as well.
+                // Slider range 1-20 maps to an emoji font size of 24-100px.
+                const emojiSize = 20 + (Number(strokeWidth) || 1) * 4;
+
+                drawElement({
+                    id: makeId(),
+                    type: "text",
+                    x: point.x,
+                    y: point.y + emojiSize,
+                    width: emojiSize * 1.4,
+                    height: emojiSize * 1.4,
+                    text: selectedEmoji || "😀",
+                    fontSize: emojiSize,
+                    fontFamily:
+                        '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+                    color: "#111827",
+                    isEmoji: true,
+                });
+
+                return;
+            }
+
             if (tool === "eraser") {
                 drawingRef.current = { type: "eraser" };
 
@@ -579,6 +605,8 @@ export default function WhiteboardCanvas({
             color,
             strokeWidth,
             changeElements,
+            selectedEmoji,
+            drawElement,
         ]
     );
 
