@@ -158,7 +158,7 @@ function OrganizationWorkspace() {
     name: "",
     description: "",
   });
-
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const [inviteForm, setInviteForm] = useState({
     email: "",
     role: "MEMBER",
@@ -182,9 +182,6 @@ function OrganizationWorkspace() {
 
   const currentUserId =
     currentUser?.id || currentUser?._id || currentUser?.userId;
-
-  // The meeting creator joins as host, so they should not appear in the
-  // optional organization-member selection list.
   const meetingSelectableMembers = members.filter((member) => {
     const id =
       member.userId ||
@@ -443,7 +440,55 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
-
+  function openEditTeam(team) {
+    setSelectedTeam(team);
+  
+    setTeamForm({
+      name: team.name || "",
+      description: team.description || "",
+    });
+  
+    setOpenMenu("");
+    setModal("edit-team");
+  }
+  
+  async function updateTeam(event) {
+    event.preventDefault();
+  
+    if (!selectedTeam) return;
+  
+    const teamId = selectedTeam._id || selectedTeam.id;
+  
+    if (!teamId) {
+      setNotice("Team ID is missing.");
+      return;
+    }
+  
+    setSaving(true);
+    setNotice("");
+  
+    try {
+      await api.patch(
+        `/api/organizations/${organizationId}/teams/${teamId}`,
+        {
+          name: teamForm.name.trim(),
+          description: teamForm.description.trim(),
+        }
+      );
+  
+      closeModal();
+      setSelectedTeam(null);
+      setTeamForm({ name: "", description: "" });
+  
+      setNotice("Team updated successfully.");
+  
+      await loadWorkspace(false);
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
   async function inviteMember(event) {
     event.preventDefault();
 
@@ -792,12 +837,7 @@ function OrganizationWorkspace() {
             {
               label: "Edit team",
               icon: <FaEdit />,
-              onClick: () => {
-                setOpenMenu("");
-                setNotice(
-                  "Edit team UI is ready; connect the backend endpoint to save changes."
-                );
-              },
+              onClick: () => openEditTeam(team),
             },
             {
               label: "Delete team",
@@ -1552,7 +1592,82 @@ function OrganizationWorkspace() {
             </form>
           </Modal>
         )}
+{modal === "edit-team" && (
+  <Modal
+    title="Edit team"
+    description="Update your team's information."
+    close={closeModal}
+  >
+    <form onSubmit={updateTeam} className="space-y-4">
+      <div>
+        <label className="mb-2 block text-sm text-[#B6C6D9]">
+          Team name
+        </label>
 
+        <input
+          required
+          maxLength={80}
+          value={teamForm.name}
+          onChange={(event) =>
+            setTeamForm({
+              ...teamForm,
+              name: event.target.value,
+            })
+          }
+          className={input}
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm text-[#B6C6D9]">
+          Description
+        </label>
+
+        <textarea
+          rows={3}
+          maxLength={300}
+          value={teamForm.description}
+          onChange={(event) =>
+            setTeamForm({
+              ...teamForm,
+              description: event.target.value,
+            })
+          }
+          className={`${input} resize-none`}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          onClick={closeModal}
+          className={secondary}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          disabled={saving || !teamForm.name.trim()}
+          className={primary}
+        >
+          {saving ? (
+            <>
+              <FaSpinner className="animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <FaCheck />
+              Save Changes
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  </Modal>
+)}
         {modal === "invite" && (
           <Modal
             title="Invite a member"
