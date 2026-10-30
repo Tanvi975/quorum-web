@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   FaBuilding,
   FaUserPlus,
@@ -150,6 +150,7 @@ function OrganizationWorkspace() {
     teamId: "",
     scheduledStartTime: "",
   });
+  const location = useLocation();
   const [joinMeetingCode, setJoinMeetingCode] = useState("");
   const [organizationInviteLink, setOrganizationInviteLink] = useState("");
   const [generatingInviteLink, setGeneratingInviteLink] = useState(false);
@@ -1695,7 +1696,59 @@ function OrganizationWorkspace() {
                   className={input}
                 />
               </div>
+              <div className="rounded-xl border border-[#38BDF8]/20 bg-white/[0.04] p-4">
+  <div className="mb-3">
+    <p className="text-sm font-semibold text-white">
+      Organization Invite Link
+    </p>
+    <p className="mt-1 text-xs text-[#B6C6D9]">
+      Share this link with people you want to invite.
+      It expires in 30 days and can be used up to 100 times.
+    </p>
+  </div>
 
+  {organizationInviteLink ? (
+    <>
+      <div className="mb-3 break-all rounded-lg border border-white/10 bg-[#0B1F39]/60 p-3 text-sm text-[#C6EAFF]">
+        {organizationInviteLink}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={copyOrganizationInviteLink}
+          className={primary}
+        >
+          {inviteLinkCopied ? <FaCheck /> : <FaCopy />}
+          {inviteLinkCopied ? "Copied" : "Copy Invite Link"}
+        </button>
+
+        <button
+          type="button"
+          onClick={generateOrganizationInviteLink}
+          disabled={generatingInviteLink}
+          className={secondary}
+        >
+          Generate New Link
+        </button>
+      </div>
+    </>
+  ) : (
+    <button
+      type="button"
+      onClick={generateOrganizationInviteLink}
+      disabled={generatingInviteLink}
+      className={primary}
+    >
+      {generatingInviteLink ? (
+        <FaSpinner className="animate-spin" />
+      ) : (
+        <FaPlus />
+      )}
+      {generatingInviteLink ? "Generating..." : "Generate Invite Link"}
+    </button>
+  )}
+</div>
               <div>
                 <label className="mb-2 block text-sm text-[#B6C6D9]">
                   Team (Optional)

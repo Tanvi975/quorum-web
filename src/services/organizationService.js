@@ -17,12 +17,6 @@ export async function previewOrganizationInvite(token) {
     return response.data;
 }
 
-export async function joinOrganization(token) {
-    const response = await api.post(
-        `/api/organizations/join/${encodeURIComponent(token)}`
-    );
-    return response.data;
-}
 export const getOrganizationTeams = async(organizationId) => {
     const response = await api.get(
         `/api/organizations/${organizationId}/teams`
@@ -50,3 +44,10 @@ export const acceptOrganizationInvite = async(token) => {
 
     return response.data.data;
 };
+export async function joinOrganization(token) {
+    const response = await api.post(
+        `/api/organizations/join/${encodeURIComponent(token)}`
+    );
+
+    return response.data;
+}
