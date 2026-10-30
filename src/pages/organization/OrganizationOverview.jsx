@@ -267,8 +267,11 @@ export default function OrganizationOverview({
     {roleLabel(memberRole)}
   </span>
 )}
-
-                      {hasMemberMenu && (
+                          
+                       {hasMemberMenu &&
+                      !isYou &&
+                       memberRole !== "ORG_ADMIN" &&
+                        currentRole === "ORG_ADMIN" && ( 
                         <div className="relative shrink-0">
                           <button
                             type="button"

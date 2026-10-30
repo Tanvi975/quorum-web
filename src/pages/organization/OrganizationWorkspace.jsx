@@ -869,8 +869,10 @@ function OrganizationWorkspace() {
       const isCurrentUser =
       Boolean(currentUserId) && String(id) === String(currentUserId);
     const currentMemberRole =
-      member.role || member.user?.role || "MEMBER";
 
+      member.role || member.user?.role || "MEMBER";
+      const isOrganizationAdmin =
+      String(currentMemberRole).toUpperCase() === "ORG_ADMIN";
     const avatar = member.avatar || member.user?.avatar;
 
     return (
@@ -904,8 +906,9 @@ function OrganizationWorkspace() {
           <span className="hidden rounded-lg border border-[#B6C6D9]/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-[#EDEFF7] sm:inline-flex">
             {roleLabel(currentMemberRole)}
           </span>
-
-          {!isCurrentUser &&
+{!isCurrentUser &&
+  !isOrganizationAdmin &&
+  role === "ORG_ADMIN" &&
   menu(`member-${id}`, [
     {
       label: "Edit member",
