@@ -19,7 +19,6 @@ import {
 } from "../../services/chatService";
 
 import useChatSocket from "../../hooks/useChatSocket";
-import JiraTicketsPanel from "./JiraTicketsPanel";
 
 function getStoredUser() {
   for (const key of ["user", "currentUser", "authUser", "auth"]) {
