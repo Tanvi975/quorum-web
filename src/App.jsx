@@ -4,6 +4,7 @@ import {
   Route,
   Navigate,
   useParams,
+  useNavigate,
 } from "react-router-dom";
 
 import DashboardBackground from "./components/DashboardBackground";
@@ -38,6 +39,7 @@ import CreateCommunity from "./pages/communities/CreateCommunity";
 import LandingPage from "./pages/LandingPage";
 import WhiteboardPage from "./pages/WhiteboardPage";
 import { initCsrf } from "./services/api";
+import Profile from "./components/Profile";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -70,7 +72,17 @@ function HomeRedirect() {
 
   return <Navigate to={user ? "/dashboard" : "/landing"} replace />;
 }
+function ProfileRoute() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
+  return (
+    <Profile
+      user={user || {}}
+      onBack={() => navigate("/dashboard")}
+    />
+  );
+}
 function App() {
   useEffect(() => {
     initCsrf()
@@ -268,7 +280,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+            <Route
+  path="/profile"
+  element={
+    <ProtectedRoute>
+      <ProfileRoute />
+    </ProtectedRoute>
+  }
+/>
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>

@@ -178,15 +178,15 @@ function Dashboard() {
         </div>
 
         <button
-          type="button"
-          onClick={() => {
-            setProfileMenuOpen(false);
-            navigate("/dashboard");
-          }}
-          className="w-full px-4 py-2.5 text-left text-sm text-[#D8E7F8] transition hover:bg-[#24476B]"
-        >
-          Profile
-        </button>
+  type="button"
+  onClick={() => {
+    setProfileMenuOpen(false);
+    navigate("/profile");
+  }}
+  className="w-full px-4 py-2.5 text-left text-sm text-[#D8E7F8] transition hover:bg-[#24476B]"
+>
+  Profile
+</button>
 
         <button
           type="button"
