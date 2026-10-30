@@ -50,6 +50,7 @@ api.interceptors.response.use(
             url.includes("/api/auth/login") ||
             url.includes("/api/auth/register") ||
             url.includes("/api/auth/refresh-token") ||
+            url.includes("/api/auth/refresh") ||
             url.includes("/api/auth/logout") ||
             url.includes("/api/auth/logout-all") ||
             url.includes("/api/csrf-token");

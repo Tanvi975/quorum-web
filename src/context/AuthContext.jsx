@@ -1,5 +1,6 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { resetRefreshState } from "../services/api";
 import {
   getCurrentUser,
   logoutUser,
@@ -30,8 +31,14 @@ export function AuthProvider({ children }) {
         }
       } catch (error) {
         if (!cancelled) {
-          setUser(null);
-          localStorage.removeItem("user");
+          const status = error?.response?.status;
+      
+          if (status === 401) {
+            setUser(null);
+            localStorage.removeItem("user");
+          } else {
+            console.error("Session restoration failed:", error);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -58,6 +65,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
+      resetRefreshState();
       setUser(null);
       localStorage.removeItem("user");
     }
