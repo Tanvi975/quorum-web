@@ -528,7 +528,7 @@ export default function WhiteboardCanvas({
             }
 
             const base = {
-                id: createId(),
+                id: makeId(),
                 x: point.x,
                 y: point.y,
                 width: 0,
