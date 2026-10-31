@@ -20,26 +20,25 @@ import "../styles/LandingPage.css";
 
 const features = [
   {
-    title: "Create or join Organizations, build teams seamlessly.",
+    title: "Create or Join Organizations, build teams seamlessly.",
     description:
-      "Bring people, conversations and work together in one connected workspace.",
+      "Keep every decision connected to the people who made it.",
   },
   {
     title: "Team chat & conversations",
     description:
-      "Keep conversations connected to the work your team is doing.",
+      "Move from DMs to focused team spaces without losing context.",
   },
   {
-    title: "Workspace & whiteboards",
+    title: "Workspace utilities",
     description:
-      "Turn ideas into shared plans and keep everyone moving forward.",
+      "Whiteboards, docs, and workflows — everything in one place.",
   },
 ];
 
 function LandingPage() {
   return (
     <main className="landing-page">
-      {/* Keep the existing cloud background */}
       <div className="landing-background" aria-hidden="true">
         <img
           src={cloud1}
@@ -54,7 +53,6 @@ function LandingPage() {
       </div>
 
       <div className="landing-content">
-        {/* Header */}
         <header className="landing-header">
           <a href="#home" className="landing-logo">
             <span className="landing-logo__mark">Q</span>
@@ -63,34 +61,42 @@ function LandingPage() {
 
           <nav className="landing-nav" aria-label="Main navigation">
             <a href="#features">Features</a>
-            <a href="#calendar">Calendar</a>
+            <a href="#calendar">Workspace</a>
             <a href="#testimonials">About</a>
           </nav>
 
           <div className="landing-header__actions">
-            <a className="landing-shine" href="#features" aria-label="Explore features">
-              ✦
+            <a
+              href="/login"
+              className="landing-button landing-button--small landing-button--outline"
+            >
+              Sign in
             </a>
-            <a className="landing-button landing-button--small" href="/login">
+
+            <a
+              href="/signup"
+              className="landing-button landing-button--small"
+            >
               Get Started
             </a>
           </div>
         </header>
 
-        {/* Hero */}
         <section className="landing-hero" id="home">
           <div className="landing-hero__copy">
-            <p className="landing-eyebrow">YOUR WORKSPACE, CONNECTED</p>
+            <p className="landing-eyebrow">
+              THE TEAM WORKSPACE, SIMPLIFIED
+            </p>
 
             <h1>
-              One clear place for your
-              <br className="desktop-break" /> team to move work
-              <br className="desktop-break" /> forward.
+              Unified workspace for
+              <br className="desktop-break" /> cross-functional
+              <br className="desktop-break" /> execution.
             </h1>
 
             <p className="landing-hero__description">
-              Bring your team, meetings and everyday work together
-              in one clear, connected workspace.
+              Consolidate video calls, team chat, documentation, and project
+              tracking into one high-performance platform.
             </p>
 
             <a href="/login" className="landing-button">
@@ -125,14 +131,18 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
         <section className="landing-section features-section" id="features">
           <div className="landing-section__heading">
-            <p className="landing-eyebrow">ONE CONNECTED WORKSPACE</p>
+            <p className="landing-eyebrow">WORK BETTER TOGETHER</p>
             <h2>
-              Everything your team
-              <br className="desktop-break" /> needs. Nothing it doesn’t.
+              Purpose-built collaboration for
+              <br className="desktop-break" /> modern engineering and
+              <br className="desktop-break" /> operations.
             </h2>
+            <p>
+              Centralize critical communications, task management, and
+              documentation without workflow overhead.
+            </p>
           </div>
 
           <div className="features-layout">
@@ -177,13 +187,12 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Calendar */}
         <section className="landing-section calendar-section" id="calendar">
           <div className="calendar-section__heading">
-            <p className="landing-eyebrow">PLANNING WITHOUT THE CHAOS</p>
+            <p className="landing-eyebrow">ONE WORKSPACE, EVERY FLOW</p>
             <h2>
-              Stay in rhythm from the first
-              <br className="desktop-break" /> meeting to the final handoff.
+              End-to-end lifecycle visibility across
+              <br className="desktop-break" /> meetings, chat, and deliverables.
             </h2>
           </div>
 
@@ -202,13 +211,15 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="landing-section testimonials-section" id="testimonials">
+        <section
+          className="landing-section testimonials-section"
+          id="testimonials"
+        >
           <div className="landing-section__heading">
-            <p className="landing-eyebrow">BUILT FOR BETTER TEAMWORK</p>
+            <p className="landing-eyebrow">BUILT FOR REAL TEAMS</p>
             <h2>
-              More focus. Fewer
-              <br className="desktop-break" /> handoffs.
+              Trusted by decision-makers to
+              <br className="desktop-break" /> drive execution.
             </h2>
           </div>
 
@@ -219,27 +230,24 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Final CTA */}
         <section className="landing-cta" id="get-started">
           <div className="landing-cta__copy">
-            <p className="landing-eyebrow">MAKE WORK FLOW</p>
+            <p className="landing-eyebrow">YOUR TEAM, IN SYNC</p>
             <h2>
-              Make space for the work that
-              <br className="desktop-break" /> matters.
+              Transform how your organization
+              <br className="desktop-break" /> collaborates.
             </h2>
             <p>
-              Give your team one connected place to plan, meet and move
-              meaningful work forward.
+              Bring your meetings, conversations, and resources into one
+              clear workspace.
             </p>
           </div>
 
           <div className="landing-cta__actions">
-            <a href="/login" className="landing-button">
-              Sign in to Quorum
+            <a href="/signup" className="landing-button">
+              Create account
             </a>
-            <a href="/login" className="landing-button landing-button--outline">
-              Get Started
-            </a>
+            <p>No account yet? Start free — no card needed.</p>
           </div>
         </section>
 

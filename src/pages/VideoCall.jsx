@@ -56,7 +56,7 @@ function VideoCall() {
   const meetingLink = window.location.href;
   const isHostFromUrl = searchParams.get("host") === "1";
   const organizationId = searchParams.get("organizationId");
-
+  const whiteboardEnabled = searchParams.get("whiteboard") === "1";
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
@@ -277,7 +277,7 @@ function VideoCall() {
             <FiInfo size={19} />
           </button>
 
-  {meetingCode && organizationId && (
+          {meetingCode && whiteboardEnabled && (
   <button
     type="button"
     onClick={() => setShowWhiteboard((open) => !open)}

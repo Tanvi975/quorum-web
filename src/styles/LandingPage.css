@@ -679,3 +679,272 @@ html {
 #testimonials {
     scroll-margin-top: 30px;
 }
+
+.landing-page {
+    overflow-x: clip;
+    background: #071a32;
+}
+
+.landing-background {
+    background: radial-gradient( ellipse at 50% 14%, rgb(1 91 225 / 18%) 0%, transparent 48%), radial-gradient( ellipse at 50% 52%, rgb(110 151 190 / 18%) 0%, transparent 55%), linear-gradient( 180deg, #06152b 0%, #092d5c 23%, #294a70 48%, #385d82 68%, #173b68 86%, #06152b 100%);
+}
+
+.landing-cloud {
+    filter: blur(5px);
+}
+
+.landing-cloud--one {
+    opacity: 0.55;
+}
+
+.landing-cloud--two {
+    opacity: 0.42;
+}
+
+*/ .landing-section,
+.landing-hero,
+.landing-cta,
+.landing-footer {
+    position: relative;
+}
+
+.calendar-section {
+    background: transparent;
+    border-top: 0;
+    border-bottom: 0;
+}
+
+.feature-card {
+    background: rgb(13 35 61 / 78%);
+    border-color: rgb(255 255 255 / 11%);
+    backdrop-filter: blur(10px);
+}
+
+.hero-visual,
+.calendar-main {
+    filter: drop-shadow(0 20px 35px rgb(0 0 0 / 16%));
+}
+
+
+/* Better tablet layout */
+
+@media (max-width: 900px) {
+    .landing-hero__showcase {
+        width: min(100%, 760px);
+        min-height: 0;
+        aspect-ratio: 1.65 / 1;
+        margin-top: 48px;
+    }
+    .landing-section {
+        width: calc(100% - 40px);
+    }
+    .features-layout {
+        grid-template-columns: 1fr;
+    }
+    .features-layout__right {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: auto;
+    }
+    .feature-card--chat,
+    .feature-card--whiteboard {
+        grid-template-columns: 1fr;
+    }
+    .feature-card--chat .feature-visual,
+    .feature-card--whiteboard .feature-visual {
+        max-height: 220px;
+    }
+    .calendar-layout {
+        grid-template-columns: minmax(100px, 0.3fr) minmax(0, 1.4fr);
+    }
+}
+
+
+/* Mobile layout */
+
+@media (max-width: 600px) {
+    .landing-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        width: calc(100% - 28px);
+        min-height: auto;
+        padding: 12px 0;
+        gap: 12px;
+    }
+    .landing-logo {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .landing-header__actions {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .landing-nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 22px;
+        padding: 4px 0;
+    }
+    .landing-nav a {
+        font-size: 12px;
+    }
+    .landing-shine {
+        display: none;
+    }
+    .landing-button--small {
+        min-height: 36px;
+        padding: 0 13px;
+        font-size: 11px;
+    }
+    .landing-hero {
+        padding: 52px 16px 55px;
+    }
+    .landing-hero h1 {
+        font-size: clamp(34px, 9vw, 43px);
+        line-height: 1.12;
+    }
+    .landing-hero__description {
+        max-width: 340px;
+        margin: 17px auto 23px;
+        font-size: 13px;
+        line-height: 1.7;
+    }
+    .landing-hero__showcase {
+        width: 100%;
+        min-height: 0;
+        aspect-ratio: 1.45 / 1;
+        margin-top: 38px;
+    }
+    .hero-visual--video {
+        top: 10%;
+        left: 5%;
+        width: 83%;
+    }
+    .hero-visual--unity {
+        top: 34%;
+        left: 0;
+        width: 29%;
+    }
+    .hero-visual--side {
+        top: 1%;
+        right: 0;
+        width: 20%;
+    }
+    .hero-visual--calendar {
+        right: 1%;
+        bottom: -4%;
+        width: 45%;
+    }
+    .landing-section {
+        width: calc(100% - 32px);
+        padding: 58px 0;
+    }
+    .landing-section__heading {
+        margin-bottom: 28px;
+    }
+    .landing-section h2,
+    .landing-cta h2 {
+        font-size: clamp(28px, 7.5vw, 36px);
+        line-height: 1.16;
+    }
+    .features-layout,
+    .features-layout__right {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .feature-card--organization {
+        display: flex;
+    }
+    .feature-card--chat,
+    .feature-card--whiteboard {
+        grid-template-columns: 1fr;
+        padding: 12px;
+    }
+    .feature-card--chat .feature-visual,
+    .feature-card--whiteboard .feature-visual {
+        width: 100%;
+        max-height: 220px;
+    }
+    .feature-card__copy,
+    .feature-card--chat .feature-card__copy,
+    .feature-card--whiteboard .feature-card__copy {
+        padding: 12px;
+    }
+    .feature-card__copy h3 {
+        font-size: 15px;
+    }
+    .feature-card__copy p {
+        font-size: 12px;
+    }
+    .calendar-section {
+        padding: 58px 16px;
+    }
+    .calendar-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .calendar-menu {
+        width: min(110px, 35%);
+        max-width: 110px;
+        justify-self: start;
+    }
+    .calendar-main {
+        width: 100%;
+    }
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+    .testimonials-grid img:nth-child(2) {
+        margin-top: 0;
+    }
+    .landing-cta {
+        width: calc(100% - 32px);
+        padding: 58px 0;
+        gap: 22px;
+    }
+    .landing-cta__actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .landing-cta__actions .landing-button {
+        width: 100%;
+    }
+    .landing-footer {
+        width: calc(100% - 32px);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .landing-cloud--one {
+        opacity: 0.50;
+    }
+    .landing-cloud--two {
+        opacity: 0.38;
+    }
+}
+
+@media (max-width: 380px) {
+    .landing-nav {
+        gap: 14px;
+    }
+    .landing-nav a {
+        font-size: 11px;
+    }
+    .landing-hero h1 {
+        font-size: 33px;
+    }
+    .landing-hero__showcase {
+        aspect-ratio: 1.3 / 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-page * {
+        scroll-behavior: auto;
+        transition-duration: 0.01ms !important;
+    }
+}

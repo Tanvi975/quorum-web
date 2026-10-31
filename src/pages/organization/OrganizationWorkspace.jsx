@@ -312,8 +312,8 @@ function OrganizationWorkspace() {
       }
 
       const meetingUrl =
-        `/video-call?code=${encodeURIComponent(meeting.code)}` +
-        `&host=1&organizationId=${encodeURIComponent(organizationId)}`;
+      `/video-call?code=${encodeURIComponent(meeting.code)}` +
+      `&host=1&organizationId=${encodeURIComponent(organizationId)}&whiteboard=1`;
 
       setShowMeetingInviteModal(false);
       navigate(meetingUrl);
@@ -402,7 +402,7 @@ function OrganizationWorkspace() {
 
     setShowMeetingInviteModal(false);
     navigate(
-      `/video-call?code=${encodeURIComponent(code)}&organizationId=${encodeURIComponent(organizationId)}`
+      `/video-call?code=${encodeURIComponent(code)}&organizationId=${encodeURIComponent(organizationId)}&whiteboard=1`
     );
   }
 
