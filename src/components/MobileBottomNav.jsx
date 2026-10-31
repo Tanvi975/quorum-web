@@ -18,14 +18,14 @@ function MobileBottomNav() {
 
   const navItems = [
     { label: "Home", icon: FiHome, path: "/dashboard" },
-    { label: "Meetings", icon: FiCalendar, path: "/calendar" },
+    { label: "Calendar", icon: FiCalendar, path: "/calendar" },
     { label: "Saved", icon: FiBookmark, path: "/saved-items" },
     { label: "Chat", icon: FiMessageCircle, path: "/chat" },
   ];
 
   const moreItems = [
     { label: "Home", icon: FiHome, path: "/dashboard" },
-    { label: "Meetings", icon: FiCalendar, path: "/calendar" },
+    { label: "Calendar", icon: FiCalendar, path: "/calendar" },
     { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
     { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
     { label: "Organizations", icon: FiUsers, path: "/organization" },
