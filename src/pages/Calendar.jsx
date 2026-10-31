@@ -524,27 +524,33 @@ function Calendar() {
       return;
     }
   
-    let meetingUrl = event.meetingLink;
+    const meetingUrl = new URL(event.meetingLink, window.location.origin);
   
-    // Add organizationId only for organization-scoped meetings
-    if (event.scopeType === "ORGANIZATION") {
-      const organizationId =
-        event.organizationId ||
-        event.organization?._id ||
-        event.organization?.id;
+    const meetingCode =
+      meetingUrl.searchParams.get("code") ||
+      meetingUrl.pathname.match(/\/meet\/([^/?#]+)/i)?.[1];
   
-      if (organizationId) {
-        const url = new URL(meetingUrl, window.location.origin);
-        url.searchParams.set("organizationId", organizationId);
-        meetingUrl = url.toString();
-      }
+    if (!meetingCode) {
+      meetingUrl.searchParams.set("whiteboard", "1");
+      window.open(meetingUrl.toString(), "_blank", "noopener,noreferrer");
+      return;
     }
   
-    if (/^https?:\/\//i.test(meetingUrl)) {
-      window.open(meetingUrl, "_blank", "noopener,noreferrer");
-    } else {
-      navigate(meetingUrl);
+    const params = new URLSearchParams({
+      code: meetingCode,
+      whiteboard: "1",
+    });
+  
+    const organizationId =
+      event.organizationId ||
+      event.organization?._id ||
+      event.organization?.id;
+  
+    if (organizationId) {
+      params.set("organizationId", organizationId);
     }
+  
+    navigate(`/video-call?${params.toString()}`);
   }
   return (
     <div className="flex h-screen min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#062C5F]">
