@@ -649,7 +649,6 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
         onChange={(event) => setPrompt(event.target.value)}
         maxLength={20000}
         rows={1}
-        required
         placeholder="Message Quorum AI..."
         aria-label="Message Quorum AI"
         className="min-h-10 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2 text-xs text-white/90 outline-none focus:border-blue-300 sm:text-sm"
