@@ -7,6 +7,7 @@ import {
   FiMessageCircle,
   FiCpu,
   FiGlobe,
+  FiUser,
 } from "react-icons/fi";
 import { SiJira } from "react-icons/si";
 
@@ -19,6 +20,7 @@ const navigationItems = [
   { label: "Jira integration", icon: SiJira, path: "/jira/my-tickets" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
+  { label: "Profile", icon: FiUser, path: "/profile" },
 ];
 
 export default function Sidebar() {

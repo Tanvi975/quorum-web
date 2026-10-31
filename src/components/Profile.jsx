@@ -1,31 +1,172 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FaArrowLeft,
+  FaCamera,
+  FaSpinner,
+  FaUser,
+} from "react-icons/fa";
+
+import {
+  getProfile,
+  updateProfile,
+  uploadProfileAvatar,
+} from "../services/profileService";
+
+const USE_CASE_OPTIONS = [
+  { value: "ORGANIZATION", label: "Organization" },
+  { value: "FREELANCE", label: "Freelance" },
+  { value: "HIRE_COLLABORATE", label: "Hire & Collaborate" },
+  { value: "COMMUNITY", label: "Community" },
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const Profile = ({ user = {}, onSave, onBack }) => {
-  const [name, setName] = useState(user.name || user.fullName || "");
+  const fileInputRef = useRef(null);
+  const previewUrlRef = useRef(null);
+
+  const [profile, setProfile] = useState(user);
+  const [name, setName] = useState(
+    user.name || user.fullName || ""
+  );
+  const [useCases, setUseCases] = useState(
+    Array.isArray(user.useCases) ? user.useCases : []
+  );
+
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(user.avatar || "");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
 
-  const email = user.email || "";
-  const isVerified = user.isEmailVerified ?? user.verified ?? false;
+  const email = profile.email || user.email || "";
+  const role = profile.role || user.role || "Member";
 
-  const firstLetter = (name || email || "U").trim().charAt(0).toUpperCase();
+  const isVerified =
+    profile.isEmailVerified ??
+    profile.verified ??
+    user.isEmailVerified ??
+    user.verified ??
+    false;
 
-  const memberSince = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-US", {
+  const isOnboarded = profile.isOnboarded ?? false;
+
+  const firstLetter = (
+    name ||
+    email ||
+    "U"
+  ).trim().charAt(0).toUpperCase();
+
+  const memberSince = profile.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", {
         month: "short",
         year: "numeric",
       })
     : "Not available";
 
-  const handleSave = async () => {
-    if (!onSave) {
-      setMessage("Profile API is not connected yet.");
+  const lastLogin = profile.lastLogin
+    ? new Date(profile.lastLogin).toLocaleString()
+    : "Not available";
+
+  function showMessage(text, type = "success") {
+    setMessage(text);
+    setMessageType(type);
+  }
+
+  function clearPreviewUrl() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        const data = await getProfile();
+
+        if (!active || !data) return;
+
+        setProfile(data);
+        setName(data.name || "");
+        setUseCases(
+          Array.isArray(data.useCases) ? data.useCases : []
+        );
+        setPreview(data.avatar || "");
+      } catch (error) {
+        if (active) {
+          showMessage(
+            error?.response?.data?.message ||
+              "Unable to load profile. Showing available account information.",
+            "error"
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      active = false;
+      clearPreviewUrl();
+    };
+  }, []);
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+      "image/gif",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      showMessage(
+        "Please select JPG, PNG, WEBP, HEIC or GIF image.",
+        "error"
+      );
+      event.target.value = "";
       return;
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      showMessage("Image size must be under 10 MB.", "error");
+      event.target.value = "";
+      return;
+    }
+
+    clearPreviewUrl();
+
+    const localUrl = URL.createObjectURL(file);
+    previewUrlRef.current = localUrl;
+
+    setSelectedFile(file);
+    setPreview(localUrl);
+    showMessage("Photo selected. Click Save Changes to upload.");
+  }
+
+  function toggleUseCase(value) {
+    setUseCases((previous) =>
+      previous.includes(value)
+        ? previous.filter((item) => item !== value)
+        : [...previous, value]
+    );
+  }
+
+  async function handleSave() {
     if (!name.trim()) {
-      setMessage("Please enter your name.");
+      showMessage("Please enter your name.", "error");
       return;
     }
 
@@ -33,17 +174,64 @@ const Profile = ({ user = {}, onSave, onBack }) => {
       setSaving(true);
       setMessage("");
 
-      await onSave({
-        name: name.trim(),
-      });
+      let updatedUser;
 
-      setMessage("Profile updated successfully!");
+      if (selectedFile) {
+        updatedUser = await uploadProfileAvatar(selectedFile, {
+          name: name.trim(),
+          useCases,
+          isOnboarded,
+        });
+      } else {
+        updatedUser = await updateProfile({
+          name: name.trim(),
+          useCases,
+          isOnboarded,
+        });
+      }
+
+      if (!updatedUser) {
+        throw new Error("Profile update response was empty.");
+      }
+
+      setProfile((previous) => ({
+        ...previous,
+        ...updatedUser,
+      }));
+
+      setName(updatedUser.name || name.trim());
+
+      setUseCases(
+        Array.isArray(updatedUser.useCases)
+          ? updatedUser.useCases
+          : useCases
+      );
+
+      setPreview(updatedUser.avatar || preview);
+      setSelectedFile(null);
+
+      clearPreviewUrl();
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      if (onSave) {
+        await onSave(updatedUser);
+      }
+
+      showMessage("Profile updated successfully!");
     } catch (error) {
-      setMessage(error.message || "Unable to update profile.");
+      showMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to update profile.",
+        "error"
+      );
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
     <div
@@ -63,7 +251,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
         backgroundSize: "100% 100%",
       }}
     >
-      {/* Header */}
+  
       <div className="flex items-center gap-4 border-b border-white/20 bg-[#213F70]/50 px-4 py-5 backdrop-blur-sm sm:px-6 md:px-12">
         <button
           type="button"
@@ -84,9 +272,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-10 md:px-8">
-
         <div className="mb-7">
           <p className="mb-2 text-xs font-semibold tracking-[3px] text-[#D5E6FA]">
             ACCOUNT PROFILE
@@ -101,7 +287,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
           </p>
         </div>
 
-        {/* Profile Card */}
+  
         <div
           className="grid w-full grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-white/25 p-3 shadow-2xl md:grid-cols-[280px_minmax(0,1fr)] md:gap-4 md:p-4"
           style={{
@@ -110,17 +296,62 @@ const Profile = ({ user = {}, onSave, onBack }) => {
             WebkitBackdropFilter: "blur(5px)",
           }}
         >
-          {/* Left: Avatar and Basic Details */}
+      
           <div
             className="flex min-w-0 flex-col items-center justify-center rounded-xl px-4 py-8 text-center sm:py-10"
             style={{
               backgroundColor: "rgba(220, 232, 246, 0.18)",
             }}
           >
-            {/* Initial Avatar */}
-            <div className="mb-5 flex h-28 w-28 items-center justify-center rounded-full border-4 border-white/40 bg-[#315A8A] text-5xl font-bold text-white shadow-lg sm:h-36 sm:w-36 sm:text-6xl">
-              {firstLetter}
+    
+            <div className="relative mb-5">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white/40 bg-[#315A8A] text-5xl font-bold text-white shadow-lg sm:h-36 sm:w-36 sm:text-6xl">
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                    onError={() => {
+                      if (!selectedFile) setPreview("");
+                    }}
+                  />
+                ) : (
+                  firstLetter
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                title="Upload profile photo"
+                aria-label="Upload profile photo"
+                className="absolute bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/50 bg-[#315A8A] text-white shadow-md transition hover:bg-[#213F70] disabled:opacity-50"
+              >
+                <FaCamera />
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.heic,.gif,image/jpeg,image/png,image/webp,image/heic,image/gif"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={saving}
+              className="mb-4 rounded-lg border border-white/30 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+            >
+              Change Profile Photo
+            </button>
+
+            <p className="mb-4 text-xs text-[#E0EAF6]">
+              JPG, PNG, WEBP, HEIC or GIF · Max 10 MB
+            </p>
 
             <h3 className="max-w-full break-words text-xl font-semibold text-white sm:text-2xl">
               {name || "Your Name"}
@@ -143,7 +374,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
             </div>
           </div>
 
-          {/* Right: Account Details */}
+        
           <div
             className="min-w-0 rounded-xl border border-white/20 p-4 sm:p-6 md:p-8"
             style={{
@@ -160,7 +391,6 @@ const Profile = ({ user = {}, onSave, onBack }) => {
               </h3>
             </div>
 
-            {/* Full Name */}
             <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
               <label
                 htmlFor="profile-name"
@@ -173,13 +403,14 @@ const Profile = ({ user = {}, onSave, onBack }) => {
                 id="profile-name"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Enter your full name"
+                maxLength={100}
                 className="w-full min-w-0 border-b border-transparent bg-transparent py-2 text-white outline-none transition placeholder:text-white/60 focus:border-white"
               />
             </div>
 
-            {/* Email */}
+
             <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
               <label
                 htmlFor="profile-email"
@@ -197,7 +428,12 @@ const Profile = ({ user = {}, onSave, onBack }) => {
               />
             </div>
 
-            {/* Verification */}
+            <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
+              <span className="text-sm text-white">Role</span>
+              <span className="text-white capitalize">{role}</span>
+            </div>
+
+  
             <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
               <span className="text-sm text-white">
                 Account Status
@@ -214,35 +450,78 @@ const Profile = ({ user = {}, onSave, onBack }) => {
               </span>
             </div>
 
-            {/* Member Since */}
-            <div className="grid min-w-0 gap-2 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
+            <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
+              <span className="text-sm text-white">
+                Onboarding Status
+              </span>
+
+              <span className="text-white">
+                {isOnboarded ? "Completed" : "Pending"}
+              </span>
+            </div>
+
+            <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
               <span className="text-sm text-white">
                 Member Since
               </span>
 
-              <span className="text-white">
-                {memberSince}
+              <span className="text-white">{memberSince}</span>
+            </div>
+            <div className="grid min-w-0 gap-2 border-b border-white/25 py-5 sm:grid-cols-[35%_1fr] sm:items-center">
+              <span className="text-sm text-white">
+                Last Login
+              </span>
+
+              <span className="break-words text-sm text-white">
+                {lastLogin}
               </span>
             </div>
 
-            {/* Feedback */}
+            <div className="border-b border-white/25 py-5">
+              <p className="mb-4 text-sm font-medium text-white">
+                Collaboration Interests
+              </p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {USE_CASE_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex min-w-0 items-center gap-2 text-sm text-white"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useCases.includes(option.value)}
+                      onChange={() => toggleUseCase(option.value)}
+                      disabled={saving}
+                      className="h-4 w-4 shrink-0 accent-[#315A8A]"
+                    />
+
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
             {message && (
               <p
                 role="status"
-                className="mt-3 break-words text-sm text-white"
+                aria-live="polite"
+                className={`mt-4 break-words text-sm ${
+                  messageType === "error"
+                    ? "text-amber-200"
+                    : "text-white"
+                }`}
               >
                 {message}
               </p>
             )}
-
-            {/* Save Button */}
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
-                className="w-full rounded-lg bg-[#315A8A] px-7 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#213F70] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                disabled={saving || loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#315A8A] px-7 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#213F70] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
+                {saving && <FaSpinner className="animate-spin" />}
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>

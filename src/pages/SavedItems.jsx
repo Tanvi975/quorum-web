@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
+import ProfileMenu from "../components/ProfileMenu";
 import {
   FiBookmark,
   FiMessageCircle,
@@ -360,9 +361,9 @@ export default function SavedItems() {
             Saved Items
           </span>
         </div>
-        <div className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-gradient-to-br from-[#0066FF] to-[#0148B3] text-sm font-semibold text-white shadow-sm">
-    {user?.name?.[0] || "U"}
-  </div>
+        <div className="ml-auto">
+  <ProfileMenu />
+</div>
       </header>
 
       <div className="min-h-[calc(100vh-64px)]">

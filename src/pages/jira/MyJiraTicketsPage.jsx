@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import ProfileMenu from "../../components/ProfileMenu";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FiArrowLeft,
@@ -148,6 +149,9 @@ export default function MyJiraTicketsPage() {
         >
           QUORUM
         </button>
+        <div className="ml-auto">
+  <ProfileMenu />
+</div>
       </header>
 
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ProfileMenu from "../../components/ProfileMenu";
 import { FiArrowLeft } from "react-icons/fi";
 import {
   FiPlus,
@@ -139,6 +140,9 @@ export default function Communities() {
 >
   QUORUM
 </button>
+<div className="ml-auto">
+  <ProfileMenu />
+</div>
 </header>
 <div className="relative z-10 flex min-h-0 flex-1">
   <main className="min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8 lg:pt-8">

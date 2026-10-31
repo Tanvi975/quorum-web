@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ProfileMenu from "../components/ProfileMenu";
 import {
   createScopedMeeting,
   cancelMeeting,
@@ -581,6 +582,9 @@ function Calendar() {
   >
     QUORUM
   </button>
+  <div className="ml-auto">
+  <ProfileMenu />
+</div>
 </header>
       <main
         className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-5 sm:py-6 lg:px-8"

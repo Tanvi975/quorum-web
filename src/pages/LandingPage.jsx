@@ -62,7 +62,7 @@ function LandingPage() {
           <nav className="landing-nav" aria-label="Main navigation">
             <a href="#features">Features</a>
             <a href="#calendar">Workspace</a>
-            <a href="#testimonials">About</a>
+            <a href="#testimonials">Pricing</a>
           </nav>
 
           <div className="landing-header__actions">

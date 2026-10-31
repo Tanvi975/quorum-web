@@ -17,6 +17,7 @@ import NotificationBell from "../components/NotificationBell";
 import { getUpcomingEvents } from "../services/calendarService";
 import DashboardOverview from "../components/DashboardOverview";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { getProfile } from "../services/profileService";
 
 function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -24,6 +25,29 @@ function Dashboard() {
   const [upcomingError, setUpcomingError] = useState("");
 
   const { user, logout } = useAuth();
+  const [currentUser, setCurrentUser] = useState(user || {});
+
+useEffect(() => {
+  setCurrentUser(user || {});
+}, [user]);
+
+useEffect(() => {
+  let active = true;
+
+  getProfile()
+    .then((profile) => {
+      if (active && profile) {
+        setCurrentUser(profile);
+      }
+    })
+    .catch((error) => {
+      console.error("Profile fetch failed:", error);
+    });
+
+  return () => {
+    active = false;
+  };
+}, []);
   const navigate = useNavigate();
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -134,7 +158,7 @@ function Dashboard() {
     }
   }
 
-  const userName = user?.name || "Karan";
+  const userName = currentUser?.name || "Karan";
 
   return (
     <div className="relative h-dvh overflow-hidden bg-[#0B1729] text-[#EAF2FF]">
@@ -156,15 +180,23 @@ function Dashboard() {
   <NotificationBell />
 
   <div className="relative" ref={profileMenuRef}>
-    <button
-      type="button"
-      onClick={() => setProfileMenuOpen((open) => !open)}
-      aria-label="Open profile menu"
-      aria-expanded={profileMenuOpen}
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-[#65A7FF]/50 bg-[#2878D5] text-sm font-semibold text-white transition hover:ring-4 hover:ring-[#2878D5]/25"
-    >
-      {userName.charAt(0).toUpperCase()}
-    </button>
+  <button
+  type="button"
+  onClick={() => setProfileMenuOpen((open) => !open)}
+  aria-label="Open profile menu"
+  aria-expanded={profileMenuOpen}
+  className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[#65A7FF]/50 bg-[#2878D5] text-sm font-semibold text-white transition hover:ring-4 hover:ring-[#2878D5]/25"
+>
+  {currentUser?.avatar ? (
+    <img
+      src={currentUser.avatar}
+      alt="Profile"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    userName.charAt(0).toUpperCase()
+  )}
+</button>
 
     {profileMenuOpen && (
       <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-[#355574] bg-[#142B45] py-2 shadow-2xl shadow-black/40">
