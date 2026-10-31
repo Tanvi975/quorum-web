@@ -111,6 +111,8 @@ export default function QuorumAIAssistant() {
   const [prompt, setPrompt] = useState("");
   const [context, setContext] = useState("");
   const [messages, setMessages] = useState([]);
+  const [attachments, setAttachments] = useState([]);
+const fileInputRef = useRef(null);
   const [quickMode, setQuickMode] = useState("replies");
   const [tone, setTone] = useState("professional");
   const [suggestions, setSuggestions] = useState([]);
@@ -159,32 +161,108 @@ export default function QuorumAIAssistant() {
         setBusy(false);
       });
     }
-  async function handleChat(event) {
-    event.preventDefault();
-    const text = prompt.trim();
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILES = 5;
 
-    if (!text || busy) return;
-    if (text.length > 10000 || context.length > 10000) {
+const ALLOWED_EXTENSIONS = [
+    "png", "jpg", "jpeg", "webp", "gif",
+    "pdf",
+    "csv", "tsv", "json", "xml",
+    "txt", "md", "markdown", "rtf",
+    "js", "ts", "html", "css", "py", "sql", "yaml", "yml",
+];
+
+function handleFileSelection(event) {
+  const selectedFiles = Array.from(event.target.files || []);
+
+  if (!selectedFiles.length) return;
+
+  setError("");
+
+  const validFiles = [];
+
+  for (const file of selectedFiles) {
+      const extension = file.name.split(".").pop().toLowerCase();
+
+      if (!ALLOWED_EXTENSIONS.includes(extension)) {
+          setError(`${file.name}: This file format is not supported.`);
+          continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+          setError(`${file.name}: File size must not exceed 10 MB.`);
+          continue;
+      }
+
+      validFiles.push(file);
+  }
+
+  const availableSlots = MAX_FILES - attachments.length;
+
+  if (validFiles.length > availableSlots) {
+      setError("You can attach a maximum of 5 files.");
+  }
+
+  setAttachments((current) => [
+      ...current,
+      ...validFiles.slice(0, availableSlots),
+  ]);
+
+  event.target.value = "";
+}
+
+function removeAttachment(index) {
+    setAttachments((current) =>
+        current.filter((_, i) => i !== index)
+    );
+}
+async function handleChat(event) {
+  event.preventDefault();
+
+  const text = prompt.trim();
+  const selectedFiles = [...attachments];
+
+  if ((!text && selectedFiles.length === 0) || busy) return;
+
+  if (text.length > 10000 || context.length > 10000) {
       setError("Prompt and context must each be 10,000 characters or fewer.");
       return;
-    }
+  }
 
-    setPrompt("");
-    setSuggestions([]);
-    setMessages((current) => [...current, { role: "user", text }]);
+  const userMessage = text || `Attached files: ${selectedFiles.map(file => file.name).join(", ")}`;
 
-    await runRequest(async () => {
-      const response = await aiService.chat(text, context.trim());
+  setSuggestions([]);
+  setMessages((current) => [
+      ...current,
+      { role: "user", text: userMessage },
+  ]);
+
+  await runRequest(async () => {
+      const response = await aiService.chat(
+          text,
+          context.trim(),
+          selectedFiles
+      );
+
       const data = response.data;
 
-      if (!data?.answer) throw new Error("The AI response did not contain an answer.");
+      if (!data?.answer) {
+          throw new Error("The AI response did not contain an answer.");
+      }
 
       setMessages((current) => [
-        ...current,
-        { role: "assistant", text: data.answer, metadata: data.metadata },
+          ...current,
+          {
+              role: "assistant",
+              text: data.answer,
+              metadata: data.metadata,
+          },
       ]);
-    });
-  }
+
+      setPrompt("");
+      setAttachments([]);
+  });
+}
 
   async function handleQuickReplies() {
     if (busy) return;
@@ -510,6 +588,42 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
   className="shrink-0 border-t border-white/20 px-3 py-3 sm:px-4"
 >
   <div className="mx-auto w-full max-w-full space-y-2">
+  <input
+    ref={fileInputRef}
+    type="file"
+    multiple
+    accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.csv,.tsv,.json,.xml,.txt,.md,.markdown,.rtf,.js,.ts,.html,.css,.py,.sql,.yaml,.yml"
+    onChange={handleFileSelection}
+    className="hidden"
+/>
+
+{attachments.length > 0 && (
+    <div className="flex flex-wrap gap-2">
+        {attachments.map((file, index) => (
+            <div
+                key={`${file.name}-${index}`}
+                className="flex max-w-full items-center gap-2 rounded-lg border border-white/25 bg-[#062C5F]/50 px-3 py-2 text-xs text-white"
+            >
+                <span className="max-w-[180px] truncate">
+                    {file.name}
+                </span>
+
+                <span className="shrink-0 text-white/60">
+                    {(file.size / 1024).toFixed(0)} KB
+                </span>
+
+                <button
+                    type="button"
+                    onClick={() => removeAttachment(index)}
+                    className="shrink-0 text-white/70 hover:text-red-300"
+                    aria-label={`Remove ${file.name}`}
+                >
+                    ×
+                </button>
+            </div>
+        ))}
+    </div>
+)}
     <div>
       <label
         htmlFor="ai-context"
@@ -540,10 +654,18 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
         aria-label="Message Quorum AI"
         className="min-h-10 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2 text-xs text-white/90 outline-none focus:border-blue-300 sm:text-sm"
       />
-
+  <button
+    type="button"
+    onClick={() => fileInputRef.current?.click()}
+    disabled={busy || attachments.length >= 5}
+    className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-white/25 px-3 text-sm text-white hover:bg-white/10 disabled:opacity-50 sm:h-11"
+    title="Attach files"
+  >
+    📎
+  </button>
       <button
         type="submit"
-        disabled={busy || !prompt.trim()}
+        disabled={busy || (!prompt.trim() && attachments.length === 0)}
         className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50 sm:h-11 sm:px-5"
       >
         {busy ? "..." : "Send"}
@@ -649,7 +771,6 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 maxLength={1000}
-                required
                 placeholder="Search messages, posts, teams, meetings..."
                 className="w-full min-w-0 flex-1 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm outline-none focus:border-blue-300"
               />
