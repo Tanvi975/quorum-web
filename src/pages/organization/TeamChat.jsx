@@ -474,7 +474,7 @@ useEffect(() => {
   }
 
   return (
-    <main className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md"
+<main className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-white/10 text-white shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md max-md:h-[calc(100dvh-80px)]"
     style={{
       backgroundImage: "linear-gradient(to bottom, #213F70 0%, #315A8A 45%, #506D9A 100%)"
     }}>
@@ -661,7 +661,7 @@ useEffect(() => {
       </div>
     )}
 
-<div className="relative flex h-full min-h-0 flex-1 items-stretch overflow-hidden">
+<div className="relative flex min-h-0 flex-1 items-stretch overflow-hidden">
       <section className="flex min-w-0 flex-1 flex-col">
         {connectionError && (
           <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
