@@ -10,6 +10,7 @@ import {
   FaVideo,
   FaTimes,
   FaInfoCircle,
+  FaComments,
 } from "react-icons/fa";
 
 import {
@@ -21,6 +22,8 @@ import {
 
 import useChatSocket from "../../hooks/useChatSocket";
 import { createScopedMeeting } from "../../services/meetingService";
+import { SiJira } from "react-icons/si";
+import TeamJiraBoard from "../../components/jira/TeamJiraBoard";
 
 function getStoredUser() {
   for (const key of ["user", "currentUser", "authUser", "auth"]) {
@@ -155,6 +158,7 @@ export default function TeamChat({
   const [scheduleTime, setScheduleTime] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [scheduleNotice, setScheduleNotice] = useState("");
+  const [teamViewMode, setTeamViewMode] = useState("chat"); // "chat" | "jira"
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -498,8 +502,35 @@ useEffect(() => {
           {teamName}
         </h2>
         <p className="mt-0.5 text-xs text-sky-100/65">
-          Team conversation
+          {teamViewMode === "jira" ? "Jira tickets & board" : "Team conversation"}
         </p>
+      </div>
+
+      <div className="flex items-center rounded-xl bg-black/25 p-1 border border-white/10 shrink-0">
+        <button
+          type="button"
+          onClick={() => setTeamViewMode("chat")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            teamViewMode === "chat"
+              ? "bg-[#0068FF] text-white shadow-sm"
+              : "text-white/70 hover:text-white"
+          }`}
+        >
+          <FaComments className="h-3.5 w-3.5" />
+          <span>Chat</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTeamViewMode("jira")}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            teamViewMode === "jira"
+              ? "bg-[#0068FF] text-white shadow-sm"
+              : "text-white/70 hover:text-white"
+          }`}
+        >
+          <SiJira className="h-3.5 w-3.5" />
+          <span>Jira Tickets</span>
+        </button>
       </div>
 
       <button
@@ -661,7 +692,16 @@ useEffect(() => {
       </div>
     )}
 
-<div className="relative flex min-h-0 flex-1 items-stretch overflow-hidden">
+    {teamViewMode === "jira" ? (
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+        <TeamJiraBoard
+          orgId={organizationId}
+          team={team}
+          currentUser={currentUser}
+        />
+      </div>
+    ) : (
+      <div className="relative flex min-h-0 flex-1 items-stretch overflow-hidden">
       <section className="flex min-w-0 flex-1 flex-col">
         {connectionError && (
           <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
@@ -689,7 +729,7 @@ useEffect(() => {
 
         <div
           ref={messagesContainerRef}
-          className="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain bg-white/5 px-2 py-3 sm:px-5 sm:py-5"
+          className="min-h-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain bg-white/5 px-2 py-3 sm:px-5 sm:py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-live="polite"
         >
           {loading ? (
@@ -904,7 +944,7 @@ useEffect(() => {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1D4770] text-sky-100">
                   <FaUsers />
@@ -1011,6 +1051,7 @@ useEffect(() => {
           </>
         )}
       </div>
+    )}
     </main>
   );
 }

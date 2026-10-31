@@ -9,7 +9,9 @@ import {
   FiGlobe,
   FiCpu,
   FiUsers,
+  FiSettings,
 } from "react-icons/fi";
+import { SiJira } from "react-icons/si";
 
 function MobileBottomNav() {
   const navigate = useNavigate();
@@ -29,8 +31,10 @@ function MobileBottomNav() {
     { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
     { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
     { label: "Organizations", icon: FiUsers, path: "/organization" },
+    { label: "My Jira Tickets", icon: SiJira, path: "/jira/my-tickets" },
     { label: "Chat", icon: FiMessageCircle, path: "/chat" },
     { label: "Communities", icon: FiGlobe, path: "/communities" },
+    { label: "Settings", icon: FiSettings, path: "/settings/integrations/jira" },
   ];
 
   function goTo(path) {

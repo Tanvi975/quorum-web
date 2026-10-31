@@ -40,6 +40,8 @@ import LandingPage from "./pages/LandingPage";
 import WhiteboardPage from "./pages/WhiteboardPage";
 import { initCsrf } from "./services/api";
 import Profile from "./components/Profile";
+import JiraSettingsPage from "./pages/jira/JiraSettingsPage"; 
+import MyJiraTicketsPage from "./pages/jira/MyJiraTicketsPage";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -287,7 +289,24 @@ function App() {
       <ProfileRoute />
     </ProtectedRoute>
   }
+
 />
+           <Route
+            path="/settings/integrations/jira"
+            element={
+              <ProtectedRoute>
+                <JiraSettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/jira/my-tickets"
+            element={
+              <ProtectedRoute>
+                <MyJiraTicketsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>
