@@ -542,15 +542,24 @@ function Calendar() {
     });
   
     const organizationId =
-      event.organizationId ||
-      event.organization?._id ||
-      event.organization?.id;
+    event.organizationId ||
+    event.organization?._id ||
+    event.organization?.id;
   
-    if (organizationId) {
-      params.set("organizationId", organizationId);
-    }
+  const teamId =
+    event.teamId ||
+    event.team?._id ||
+    event.team?.id;
   
-    navigate(`/video-call?${params.toString()}`);
+  if (organizationId) {
+    params.set("organizationId", organizationId);
+  }
+  
+  if (teamId) {
+    params.set("teamId", teamId);
+  }
+  
+  navigate(`/video-call?${params.toString()}`);
   }
   return (
     <div className="flex h-screen min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#062C5F]">
