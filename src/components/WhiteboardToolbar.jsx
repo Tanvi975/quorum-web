@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
+import ConfirmDialog from "./ConfirmDialog";
 import {
     FiMousePointer,
     FiEdit3,
@@ -103,12 +104,13 @@ export default function WhiteboardToolbar({
     selectedEmoji = "😀",
     setSelectedEmoji = () => {},
     disabled = false,
+    
 }) {
     const [openGroup, setOpenGroup] = useState(null);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
     const [activeEmojiCategory, setActiveEmojiCategory] = useState("Smileys");
     const toolbarRef = useRef(null);
-
+    const [showClearDialog, setShowClearDialog] = useState(false);
     useEffect(() => {
         const handlePointerDown = (event) => {
             if (
@@ -229,14 +231,7 @@ export default function WhiteboardToolbar({
     const handleClear = () => {
         setOpenGroup(null);
         setEmojiPickerOpen(false);
-
-        const confirmed = window.confirm(
-            "Are you sure you want to clear the entire whiteboard? This action cannot be undone."
-        );
-
-        if (confirmed) {
-            onClear?.();
-        }
+        setShowClearDialog(true);
     };
 
     return (
@@ -420,6 +415,19 @@ export default function WhiteboardToolbar({
                     </p>
                 </div>
             )}
+            <ConfirmDialog
+    open={showClearDialog}
+    type="delete"
+    title="Clear Whiteboard?"
+    message="Are you sure you want to clear the entire whiteboard? This action cannot be undone."
+    confirmText="Clear Board"
+    cancelText="Cancel"
+    onCancel={() => setShowClearDialog(false)}
+    onConfirm={() => {
+        onClear?.();
+        setShowClearDialog(false);
+    }}
+/>
         </div>
     );
 }
