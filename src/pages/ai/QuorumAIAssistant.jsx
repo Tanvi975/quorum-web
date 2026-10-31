@@ -343,7 +343,7 @@ export default function QuorumAIAssistant() {
 
   return (
 <div
-className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow-hidden p-2 text-white sm:p-3 lg:p-4"
+className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-col overflow-x-hidden p-2 text-white sm:h-[calc(100dvh-64px)] sm:overflow-hidden sm:p-3 lg:p-4"
   style={{
     backgroundColor: "#062C5F",
     backgroundImage:
@@ -352,8 +352,8 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
     backgroundSize: "100% 100%",
   }}
 >
-<div className="mx-auto flex h-full w-full max-w-7xl min-h-0 min-w-0 flex-col">
-        <header className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border border-white/20 bg-[#0F2748]/80 px-3 py-3 shadow-lg backdrop-blur-md sm:px-5">
+<div className="mx-auto flex min-h-[calc(100dvh-80px)] w-full max-w-7xl min-w-0 flex-col sm:h-full sm:min-h-0">
+        <header className="mb-3 flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-[#0F2748]/80 px-3 py-3 shadow-lg backdrop-blur-md sm:rounded-t-2xl sm:px-5">
           <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
@@ -387,7 +387,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
           )}
         </header>
 
-        <div className="mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-xl border border-white/20 bg-[#102842]/60 p-2 shadow-sm backdrop-blur-md">
+        <div className="mb-3 flex w-full shrink-0 gap-1 overflow-x-auto overscroll-x-contain rounded-xl border border-white/20 bg-[#102842]/60 p-2 shadow-sm backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => (
             <button
               type="button"
@@ -396,7 +396,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
                 setError("");
                 setActiveTab(tab.id);
               }}
-              className={`shrink-0 rounded-lg px-4 py-2 text-sm transition ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${
                 activeTab === tab.id
                   ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white shadow-sm"
                   : "text-white/75 hover:bg-white/10 hover:text-white"
@@ -425,8 +425,8 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         )}
 
         {activeTab === "chat" && (
-          <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_260px] lg:overflow-hidden">
-           <section className="flex min-h-[480px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md lg:h-full lg:min-h-0">
+          <div className="grid min-h-0 min-w-0 w-full flex-1 grid-cols-1 gap-3 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,1fr)_260px] lg:overflow-hidden">
+           <section className="flex min-h-[min(68dvh,560px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:min-h-[480px] lg:h-full lg:min-h-0">
               <div className="shrink-0 border-b border-white/20 px-4 py-3">
                 <h2 className="font-medium">Quorum AI</h2>
                 <p className="mt-1 text-xs text-white/70">
@@ -509,7 +509,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
   onSubmit={handleChat}
   className="shrink-0 border-t border-white/20 px-3 py-3 sm:px-4"
 >
-  <div className="mx-auto w-full max-w-[96%] space-y-2">
+  <div className="mx-auto w-full max-w-full space-y-2">
     <div>
       <label
         htmlFor="ai-context"
@@ -525,7 +525,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         maxLength={20000}
         rows={1}
         placeholder="Add relevant context (optional)..."
-        className="h-11 max-h-24 w-full resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-300"
+        className="min-h-10 max-h-24 w-full resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2 text-xs text-white/90 outline-none focus:border-blue-300 sm:text-sm"
       />
     </div>
 
@@ -538,13 +538,13 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         required
         placeholder="Message Quorum AI..."
         aria-label="Message Quorum AI"
-        className="h-11 min-h-11 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-300"
+        className="min-h-10 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2 text-xs text-white/90 outline-none focus:border-blue-300 sm:text-sm"
       />
 
       <button
         type="submit"
         disabled={busy || !prompt.trim()}
-        className="max-h-[420px] min-h-0 overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md lg:h-full lg:max-h-full lg:p-4"
+        className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50 sm:h-11 sm:px-5"
       >
         {busy ? "..." : "Send"}
       </button>
@@ -558,7 +558,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
 
             </section>
 
-            <aside className="h-full min-h-0 overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md">
+            <aside className="min-h-0 w-full overflow-y-auto rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-4 lg:h-full">
               <h3 className="font-medium">Message assistant</h3>
               <p className="mt-1 text-sm text-white/70">
                 Generate suggestions for a draft. Review before using them.
@@ -639,7 +639,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         )}
 
         {activeTab === "search" && (
-          <section className="max-w-4xl rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
+          <section className="w-full max-w-4xl min-w-0 rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-5 lg:p-6">
             <SectionTitle
               title="Workspace Search"
               subtitle="Search available workspace evidence and view the returned sources."
@@ -651,7 +651,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
                 maxLength={1000}
                 required
                 placeholder="Search messages, posts, teams, meetings..."
-                className="min-w-0 flex-1 w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm outline-none focus:border-blue-300"
+                className="w-full min-w-0 flex-1 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm outline-none focus:border-blue-300"
               />
               <button
                 disabled={busy || !query.trim()}
@@ -720,7 +720,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         )}
 
         {(activeTab === "project" || activeTab === "update") && (
-          <section className="flex w-full max-w-4xl min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-5 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
+          <section className="flex w-full max-w-4xl min-w-0 min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-5 lg:p-6">
             <SectionTitle
               title={activeTab === "project" ? "Project Assistance" : "Project Status Report"}
               subtitle="Choose exactly one workspace type and provide its ID."
@@ -751,7 +751,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
                   value={targetId}
                   onChange={(event) => setTargetId(event.target.value)}
                   placeholder="Enter organization/team/community UUID"
-                  className="w-full w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
+                  className="w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                 />
                 <button
                   type="button"
@@ -786,7 +786,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
                   rows={4}
                   required
                   placeholder="Example: Give me a high-level breakdown of our team structure."
-                  className="w-full w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
+                  className="w-full min-w-0 rounded-xl border border-white/25 bg-[#062C5F]/35 p-3 text-sm text-white/90 outline-none focus:border-blue-300"
                 />
                 <button
                   disabled={busy || !projectPrompt.trim() || !targetId.trim()}
@@ -840,7 +840,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
 
             {activeTab === "update" && statusResult && (
               <div className="mt-5 space-y-4">
-                <div className="rounded-lg border border-white/20 bg-[#062C5F]/25 p-4">
+                <div className="min-w-0 rounded-lg border border-white/20 bg-[#062C5F]/25 p-3 sm:p-4">
                   <h3 className="font-medium">{getProjectLabel(statusProject)}</h3>
                   <p className="mt-1 text-sm text-white/70">
                     {statusResult.timeframe} · {statusResult.activitySource || "Activity source not specified"}
@@ -873,7 +873,7 @@ className="relative isolate flex h-[calc(100dvh-64px)] min-h-0 flex-col overflow
         )}
 
         {activeTab === "history" && (
-         <section className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-4 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-6">
+         <section className="min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-5 lg:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <SectionTitle
                 title="AI History"

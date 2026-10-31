@@ -137,7 +137,7 @@ export default function Chat() {
 const [mentionQuery, setMentionQuery] = useState(null);
 const [mentionStart, setMentionStart] = useState(-1);
 const [showInfo, setShowInfo] = useState(false);
-  const [showMobileContacts, setShowMobileContacts] = useState(false);
+  const [showMobileContacts, setShowMobileContacts] = useState(true);
   const [searchMode, setSearchMode] = useState(false);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -1166,7 +1166,7 @@ const handleSaveConversation = async () => {
 
   return (
     <div
-      className="h-screen overflow-hidden p-2 text-white sm:p-4 lg:p-5"
+      className="h-[100dvh] min-h-0 overflow-hidden p-0 text-white sm:p-3 lg:p-5"
       style={{
         backgroundColor: "#062C5F",
         backgroundImage:
@@ -1176,7 +1176,7 @@ const handleSaveConversation = async () => {
         {saveMessage && (
       <div
         role="status"
-        className="fixed right-5 top-5 z-[100] rounded-lg border border-[#3B8068] bg-[#193D35] px-4 py-3 text-sm font-medium text-white shadow-lg"
+        className="fixed left-3 right-3 top-3 z-[100] mx-auto w-fit max-w-[calc(100vw-1.5rem)] rounded-lg border border-[#3B8068] bg-[#193D35] px-3 py-3 text-xs font-medium text-white shadow-lg sm:left-auto sm:right-5 sm:top-5 sm:px-4 sm:text-sm"
       >
         {saveMessage}
         <button
@@ -1188,8 +1188,8 @@ const handleSaveConversation = async () => {
         </button>
       </div>
     )}
-      <div className="mx-auto flex h-[calc(100vh-16px)] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-2xl border border-white/25 bg-white/10 shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md sm:h-[calc(100vh-32px)] lg:h-[calc(100vh-40px)]">
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/75 px-4 backdrop-blur-md sm:h-14">
+      <div className="mx-auto flex h-[100dvh] min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-none border-0 bg-white/10 shadow-[0_20px_40px_rgba(10,35,65,0.22)] backdrop-blur-md sm:h-[calc(100dvh-24px)] sm:rounded-2xl sm:border sm:border-white/25 lg:h-[calc(100dvh-40px)]">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/75 px-2.5 backdrop-blur-md sm:h-14 sm:px-4">
           <div className="flex items-center gap-2">
           <button
   type="button"
@@ -1228,12 +1228,12 @@ const handleSaveConversation = async () => {
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 gap-2.5 p-2.5 sm:gap-3 sm:p-3">
+        <div className="flex min-h-0 flex-1 gap-1.5 p-1.5 sm:gap-3 sm:p-3">
         {true && (
             <aside
               className={`${
                 showMobileContacts ? "flex" : "hidden"
-              } w-full shrink-0 flex-col rounded-xl border border-white/20 bg-[#102842]/55 p-3 shadow-sm backdrop-blur-md md:flex md:w-[245px] lg:w-[265px] xl:w-[275px]`}
+              } min-h-0 w-full shrink-0 flex-col rounded-xl border border-white/20 bg-[#102842]/55 p-2.5 shadow-sm backdrop-blur-md md:flex md:w-[245px] md:p-3 lg:w-[265px] xl:w-[275px]`}
             >
          <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white">
@@ -1429,11 +1429,11 @@ const handleSaveConversation = async () => {
 <main
   className={`${
     showMobileContacts ? "hidden md:flex" : "flex"
-  } min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/25 bg-white/10 shadow-sm backdrop-blur-md`}
+   } min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/25 bg-white/10 shadow-sm backdrop-blur-md`}
 >
             {activeConversation ? (
               <>
-               <div className="flex h-[58px] shrink-0 items-center justify-between border-b border-white/20 bg-[#102842]/55 px-3 sm:px-4">
+               <div className="flex min-h-[58px] shrink-0 items-center justify-between gap-1 border-b border-white/20 bg-[#102842]/55 px-2 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <Avatar name={activeConversationName} size={35} />
                     <div className="min-w-0">
@@ -1454,7 +1454,7 @@ const handleSaveConversation = async () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex shrink-0 items-center gap-0 sm:gap-0.5">
                   {activeIsGroupAdmin && (
                    <IconButton
                   label="Add members"
@@ -1517,7 +1517,7 @@ const handleSaveConversation = async () => {
                         }`}
                       >
                         <div
-                          className={`max-w-[88%] rounded-md px-3 py-2 sm:max-w-[75%] ${
+                          className={`max-w-[92%] break-words rounded-md px-2.5 py-2 sm:max-w-[75%] sm:px-3 ${
                             item.mine
                               ? "rounded-br-sm border border-[#1267B6] bg-[#1A3048] text-white"
                               : "rounded-bl-sm border border-white/25 bg-[#1A3048] text-[#E4ECF5]"
@@ -1549,7 +1549,7 @@ const handleSaveConversation = async () => {
 )}
 
 {item.fileUrl && item.fileType === "audio" && (
-    <audio src={item.fileUrl} controls />
+    <audio src={item.fileUrl} controls className="w-full max-w-full" />
 )}
 
 {item.fileUrl && item.fileType === "file" && (
@@ -1596,7 +1596,7 @@ const handleSaveConversation = async () => {
 
                 <form
                   onSubmit={sendMessage}
-                  className="shrink-0 border-t border-white/20 bg-white/5 p-3 sm:px-4 sm:py-3.5"
+                  className="shrink-0 border-t border-white/20 bg-white/5 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3.5"
                 >
                   <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-white/30 bg-transparent px-2.5 focus-within:border-[#85B6FF]">
                   <IconButton
@@ -1658,7 +1658,7 @@ const handleSaveConversation = async () => {
          
           {showInfo && activeConversation && (
  
-<aside className="fixed inset-0 z-40 flex w-full flex-col overflow-y-auto rounded-none border border-white/20 bg-[#102842]/55 backdrop-blur-md p-4 sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:p-3 xl:w-[260px]">
+<aside className="fixed inset-0 z-40 flex w-full min-h-0 flex-col overflow-y-auto rounded-none border border-white/20 bg-[#102842]/95 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg sm:p-4 lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:bg-[#102842]/55 lg:p-3 xl:w-[260px]">
     <div className="mb-5 flex items-center justify-between">
       <h2 className="text-xs font-semibold text-white">
         {activeIsGroup ? "Group info" : "Contact info"}
@@ -1834,10 +1834,10 @@ const handleSaveConversation = async () => {
 )}
 
       {showGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#061426]/70 p-2 backdrop-blur-sm sm:p-4">
           <form
             onSubmit={handleCreateGroup}
-            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5 shadow-2xl"
+            className="my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-md flex-col overflow-y-auto rounded-xl border border-white/25 bg-[#102842]/95 p-3 shadow-2xl backdrop-blur-xl sm:max-h-[85vh] sm:p-5"
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-white">
@@ -1945,18 +1945,18 @@ const handleSaveConversation = async () => {
               </p>
             )}
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowGroupModal(false)}
-                className="rounded-md border border-white/30 px-4 py-2 text-xs text-white/90 hover:bg-white/10"
+                className="w-full rounded-md border border-white/30 px-4 py-2.5 text-xs text-white/90 hover:bg-white/10 sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={creatingGroup}
-                className="rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
+                className="w-full rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50 sm:w-auto"
               >
                 {creatingGroup ? "Creating..." : "Create Group"}
               </button>
@@ -1965,10 +1965,10 @@ const handleSaveConversation = async () => {
         </div>
       )}
 {showAddMembersModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
+  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#061426]/70 p-2 backdrop-blur-sm sm:p-4">
     <form
       onSubmit={handleAddMembers}
-      className="flex max-h-[85vh] w-full max-w-md flex-col rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5"
+      className="my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-md flex-col overflow-y-auto rounded-xl border border-white/25 bg-[#102842]/95 p-3 backdrop-blur-xl sm:max-h-[85vh] sm:p-5"
     >
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-white">
@@ -2047,18 +2047,18 @@ const handleSaveConversation = async () => {
         <p className="mt-2 text-xs text-red-300">{addMembersError}</p>
       )}
 
-      <div className="mt-5 flex justify-end gap-2">
+      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={() => setShowAddMembersModal(false)}
-          className="rounded-md border border-white/30 px-4 py-2 text-xs text-white"
+          className="w-full rounded-md border border-white/30 px-4 py-2.5 text-xs text-white sm:w-auto"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={addingMembers || selectedAddMembers.length === 0}
-          className="rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          className="w-full rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto"
         >
           {addingMembers ? "Adding..." : "Add Members"}
         </button>
@@ -2067,10 +2067,10 @@ const handleSaveConversation = async () => {
   </div>
 )}
 {showRenameGroup && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#061426]/55 p-4 backdrop-blur-sm">
+  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#061426]/70 p-2 backdrop-blur-sm sm:p-4">
     <form
       onSubmit={handleRenameGroup}
-      className="w-full max-w-sm rounded-xl border border-white/25 bg-[#102842]/75 backdrop-blur-xl p-5 shadow-2xl"
+      className="my-auto max-h-[calc(100dvh-1rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-white/25 bg-[#102842]/95 p-3 shadow-2xl backdrop-blur-xl sm:p-5"
     >
       <h2 className="mb-4 text-base font-semibold text-white">
       Edit Group Details
@@ -2093,7 +2093,7 @@ const handleSaveConversation = async () => {
           className="mb-4 h-10 w-full rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none focus:border-[#85B6FF]"
       />
 
-      <div className="mt-4 flex justify-end gap-2">
+      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={() => {
