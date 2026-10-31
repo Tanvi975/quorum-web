@@ -948,3 +948,65 @@ html {
         transition-duration: 0.01ms !important;
     }
 }
+
+
+/* Landing page alignment adjustments */
+
+.landing-hero__copy {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.features-section .landing-section__heading {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.calendar-section__heading {
+    text-align: left;
+}
+
+.testimonials-section .landing-section__heading {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.testimonials-grid {
+    align-items: start;
+    justify-items: stretch;
+}
+
+.landing-cta__copy {
+    text-align: left;
+}
+
+.landing-cta__actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.landing-cloud--one {
+    opacity: 0.68;
+}
+
+.landing-cloud--two {
+    opacity: 0.55;
+}
+
+@media (max-width: 600px) {
+    .landing-cloud--one {
+        opacity: 0.60;
+    }
+    .landing-cloud--two {
+        opacity: 0.48;
+    }
+    .landing-cta__actions {
+        align-items: stretch;
+    }
+}
