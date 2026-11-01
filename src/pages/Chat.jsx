@@ -1820,14 +1820,6 @@ const handleSaveConversation = async () => {
           </p>
         </div>
 
-        <div className="py-4">
-          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-white/65">
-            Shared media
-          </p>
-          <p className="text-[10px] text-white/60">
-            Media integration is not connected yet.
-          </p>
-        </div>
       </>
     )}
   </aside>
