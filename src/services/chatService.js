@@ -12,7 +12,7 @@ export async function searchUsers(query) {
         });
         return res.data;
     } catch (error) {
-        if (error.response ?.status !== 404) {
+        if (error.response?.status !== 404) {
             throw error;
         }
 
@@ -123,7 +123,7 @@ export async function getChatUploadSignature() {
         folder: "chat",
     });
 
-    return response.data ?.data ?? response.data;
+    return response.data?.data ?? response.data;
 }
 
 export async function getTeamMessages(orgId, teamId) {
@@ -131,7 +131,7 @@ export async function getTeamMessages(orgId, teamId) {
         `/api/organizations/${orgId}/teams/${teamId}/messages`
     );
 
-    return response.data ?.data ?? response.data;
+    return response.data?.data ?? response.data;
 }
 
 export async function sendTeamMessage(orgId, teamId, messageData) {
@@ -140,7 +140,7 @@ export async function sendTeamMessage(orgId, teamId, messageData) {
         messageData
     );
 
-    return response.data ?.data ?? response.data;
+    return response.data?.data ?? response.data;
 }
 
 export async function deleteTeamMessage(orgId, teamId, messageId) {
@@ -156,5 +156,12 @@ export async function pinTeamMessage(orgId, teamId, messageId) {
         `/api/organizations/${orgId}/teams/${teamId}/messages/${messageId}/pin`
     );
 
-    return response.data ?.data ?? response.data;
+    return response.data?.data ?? response.data;
+}
+export async function getConversationPresence(conversationId) {
+    const response = await api.get(
+        `/api/conversations/${conversationId}/presence`
+    );
+
+    return response.data?.data ?? response.data;
 }

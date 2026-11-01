@@ -11,6 +11,7 @@ import {
   FaTimes,
   FaInfoCircle,
   FaComments,
+  FaEllipsisV,
 } from "react-icons/fa";
 
 import {
@@ -19,7 +20,8 @@ import {
   deleteTeamMessage,
   pinTeamMessage,
 } from "../../services/chatService";
-
+import { removeTeamMember } from "../../services/teamService";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import useChatSocket from "../../hooks/useChatSocket";
 import { createScopedMeeting } from "../../services/meetingService";
 import { SiJira } from "react-icons/si";
@@ -123,17 +125,46 @@ function getMessageTime(message) {
     minute: "2-digit",
   });
 }
+function MemberAvatar({ member, name }) {
+  const [imageError, setImageError] = useState(false);
 
+  const avatar =
+    member?.user?.avatar ||
+    member?.avatar ||
+    member?.user?.avatarUrl ||
+    member?.avatarUrl;
+
+  const firstLetter = name?.trim()?.charAt(0)?.toUpperCase() || "M";
+
+  if (avatar && !imageError) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        onError={() => setImageError(true)}
+        className="h-8 w-8 shrink-0 rounded-full border border-white/15 object-cover"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-sky-100">
+      {firstLetter}
+    </div>
+  );
+}
 const iconButton =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sky-100/80 transition hover:bg-sky-300/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300";
 
-export default function TeamChat({
-  organizationId,
-  team,
-  onClose,
-  currentUser: currentUserProp,
-  onAddMembers,
-}) {
+  export default function TeamChat({
+    organizationId,
+    team,
+    onClose,
+    currentUser: currentUserProp,
+    onAddMembers,
+    canManageTeam: canManageTeamProp,
+    onTeamUpdated,
+  }) {
   const {
     socket,
     connected,
@@ -153,6 +184,9 @@ export default function TeamChat({
     () => typeof window !== "undefined" && window.innerWidth >= 1024
   );
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const [openMemberMenu, setOpenMemberMenu] = useState("");
+  const [memberToRemove, setMemberToRemove] = useState(null);
+const [removingMemberId, setRemovingMemberId] = useState("");
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
@@ -197,9 +231,10 @@ export default function TeamChat({
     ["team_head", "teamhead", "team_lead", "teamlead"].includes(currentRole) ||
     team?.isTeamHead === true;
 
-  const teamName =
-    team?.name ?? team?.teamName ?? "Team Chat";
 
+    const teamName =
+    team?.name ?? team?.teamName ?? "Team Chat";
+  
   const teamMembers = Array.isArray(team?.members)
     ? team.members
     : Array.isArray(team?.users)
@@ -207,13 +242,70 @@ export default function TeamChat({
       : Array.isArray(team?.participants)
         ? team.participants
         : [];
-
+  
+        const canManageTeam =
+        Boolean(canManageTeamProp) ||
+        isTeamHead ||
+        teamMembers.some((member) => {
+          const memberUserId = getId(
+            member?.userId ??
+            member?.user?.id ??
+            member?.user?._id
+          );
+      
+          const memberRole = String(member?.role || "").toUpperCase();
+      
+          return (
+            memberUserId === currentUserId &&
+            ["LEAD", "TEAM_HEAD", "TEAM_LEAD"].includes(memberRole)
+          );
+        });
+      
+      console.log("Team management permission:", {
+        canManageTeamProp,
+        isTeamHead,
+        canManageTeam,
+        currentUserId,
+        teamMembers,
+      });
+    function handleRemoveTeamMember(member) {
+      setOpenMemberMenu("");
+      setMemberToRemove(member);
+    }
+    
+    async function handleConfirmRemoveMember() {
+      const member = memberToRemove;
+    
+      const userId = getId(
+        member?.userId ??
+        member?.user?.id ??
+        member?.user?._id
+      );
+    
+      if (!userId || removingMemberId) return;
+    
+      setRemovingMemberId(userId);
+      setError("");
+    
+      try {
+        await removeTeamMember(organizationId, teamId, userId);
+        setMemberToRemove(null);
+        await onTeamUpdated?.();
+      } catch (err) {
+        setError(
+          err?.response?.data?.message ||
+          "Failed to remove team member. Please try again."
+        );
+      } finally {
+        setRemovingMemberId("");
+      }
+    }
   const organizationName =
     team?.organization?.name ??
     team?.organizationName ??
     team?.organization?.organizationName ??
     "Organization";
-
+  
   const loadMessages = useCallback(
     async (showLoader = false) => {
       if (!organizationId || !teamId) {
@@ -991,51 +1083,99 @@ useEffect(() => {
                 </div>
 
                 <div className="space-y-3">
-                  {(showAllMembers
-                    ? teamMembers
-                    : teamMembers.slice(0, 3)
-                  ).map((member, index) => {
-                    const memberId =
-                      getId(member?._id ?? member?.id ?? member?.userId) ||
-                      `${getMemberName(member)}-${index}`;
+  {(showAllMembers
+    ? teamMembers
+    : teamMembers.slice(0, 3)
+  ).map((member, index) => {
+    const memberUserId = getId(
+      member?.userId ??
+      member?.user?.id ??
+      member?.user?._id
+    );
 
-                    const memberName = getMemberName(member);
+    const memberId =
+      getId(member?._id ?? member?.id) ||
+      memberUserId ||
+      `${getMemberName(member)}-${index}`;
 
-                    const initials = memberName
-                      .split(/\s+/)
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((part) => part[0])
-                      .join("")
-                      .toUpperCase();
+    const memberName = getMemberName(member);
+    const isCurrentUser =
+      Boolean(memberUserId) && memberUserId === currentUserId;
 
-                    return (
-                      <div
-                        key={memberId}
-                        className="flex min-w-0 items-center gap-2.5"
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-sky-100">
-                          {initials || "M"}
-                        </div>
+    return (
+      <div
+        key={memberId}
+        className="flex min-w-0 items-center gap-2.5"
+      >
+        <MemberAvatar
+          member={member}
+          name={memberName}
+        />
 
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white">
-                            {memberName}
-                          </p>
-                          <p className="truncate text-xs capitalize text-sky-100/60">
-                            {getMemberRole(member)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-white">
+            {memberName}
+            {isCurrentUser ? " (You)" : ""}
+          </p>
 
-                  {teamMembers.length === 0 && (
-                    <p className="text-xs leading-5 text-sky-100/60">
-                      Member details are not available in the team data.
-                    </p>
+          <p className="truncate text-xs capitalize text-sky-100/60">
+            {getMemberRole(member)}
+          </p>
+        </div>
+
+        {canManageTeam && !isCurrentUser && (
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() =>
+                setOpenMemberMenu((current) =>
+                  current === memberUserId ? "" : memberUserId
+                )
+              }
+              disabled={Boolean(removingMemberId)}
+              aria-label={`Options for ${memberName}`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sky-100/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+            >
+              <FaEllipsisV />
+            </button>
+
+            {openMemberMenu === memberUserId && (
+              <div className="absolute right-0 top-9 z-30 w-44 rounded-xl border border-white/15 bg-[#102842] p-1.5 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!memberUserId) {
+                      setError("Member ID is missing. Unable to remove this member.");
+                      return;
+                    }
+                  
+                    handleRemoveTeamMember(member);
+                  }}
+                  disabled={removingMemberId === memberUserId}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/15 disabled:opacity-50"
+                >
+                  {removingMemberId === memberUserId ? (
+                    <FaSpinner className="animate-spin" />
+                  ) : (
+                    <FaTrash />
                   )}
-                </div>
+                  Remove from team
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  })}
+
+  {teamMembers.length === 0 && (
+    <p className="text-xs leading-5 text-sky-100/60">
+      Member details are not available in the team data.
+    </p>
+  )}
+</div>
+
 
                 <button
                   type="button"
@@ -1052,6 +1192,39 @@ useEffect(() => {
         )}
       </div>
     )}
+  {memberToRemove && (
+  <ConfirmDialog
+    open={Boolean(memberToRemove)}
+    type="remove"
+    title="Remove member from team?"
+    message="This member will lose access to this team's chat, but will remain in your organization and any other teams."
+    confirmText="Remove from team"
+    cancelText="Keep member"
+    loading={Boolean(removingMemberId)}
+    onConfirm={handleConfirmRemoveMember}
+    onCancel={() => {
+      if (!removingMemberId) {
+        setMemberToRemove(null);
+      }
+    }}
+    userName={getMemberName(memberToRemove)}
+    userEmail={
+      memberToRemove?.user?.email ||
+      memberToRemove?.email ||
+      ""
+    }
+    avatarUrl={
+      memberToRemove?.user?.avatar ||
+      memberToRemove?.avatar ||
+      memberToRemove?.user?.avatarUrl ||
+      memberToRemove?.avatarUrl ||
+      ""
+    }
+    detailTitle={teamName}
+    detailSubtitle="Team membership"
+    detailIcon={FaUsers}
+  />
+)}
     </main>
   );
 }

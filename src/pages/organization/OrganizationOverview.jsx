@@ -12,7 +12,6 @@ import {
 
 const ROLE_LABELS = {
   ORG_ADMIN: "Organization admin",
-  ADMIN: "Admin",
   TEAM_HEAD: "Team head",
   MEMBER: "Member",
 };
@@ -179,7 +178,6 @@ export default function OrganizationOverview({
                 >
                   <option value="ALL" className="bg-[#212F44]">All roles</option>
                   <option value="ORG_ADMIN" className="bg-[#212F44]">Organization admin</option>
-                  <option value="ADMIN" className="bg-[#212F44]">Admin</option>
                   <option value="TEAM_HEAD" className="bg-[#212F44]">Team head</option>
                   <option value="MEMBER" className="bg-[#212F44]">Member</option>
                 </select>

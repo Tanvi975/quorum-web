@@ -35,6 +35,14 @@ import {
       confirmText: "Delete",
       variant: "danger",
     },
+    remove: {
+      icon: FaTrashAlt,
+      defaultTitle: "Remove this member?",
+      defaultMessage:
+        "This member will be removed from this team but will remain in the organization and any other teams.",
+      confirmText: "Remove member",
+      variant: "danger",
+    },
   };
   
   function getInitials(name = "") {

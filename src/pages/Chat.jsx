@@ -11,6 +11,7 @@ import {
   removeGroupParticipant,
   leaveGroupConversation,
   updateGroupConversation,
+  getConversationPresence,
 } from "../services/chatService";
 import {
   FiSearch,
@@ -174,7 +175,7 @@ const [showInfo, setShowInfo] = useState(false);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [readBoundary, setReadBoundary] = useState({});
-
+  const [presenceByUser, setPresenceByUser] = useState({});
   const [showGroupModal, setShowGroupModal] = useState(false);
 const [groupName, setGroupName] = useState("");
 const [groupSearch, setGroupSearch] = useState("");
@@ -207,8 +208,23 @@ const [savedMessageIds, setSavedMessageIds] = useState(() => new Set());
   const navigate = useNavigate();
 
   const activeContact = activeConversation
-    ? getOtherParticipant(activeConversation, currentUserId)
-    : {};
+  ? getOtherParticipant(activeConversation, currentUserId)
+  : {};
+
+const activeContactId = getUserId(activeContact);
+
+const activeContactPresence = activeContactId
+  ? presenceByUser[String(activeContactId)]
+  : null;
+
+const activeContactStatus = activeContactPresence?.isOnline
+  ? "Online"
+  : activeContactPresence?.lastSeen
+    ? `Last seen ${new Date(activeContactPresence.lastSeen).toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}`
+    : "Offline";
     const activeIsGroup = activeConversation?.type === "group";
     const mentionUsers = activeIsGroup
   ? (activeConversation?.participants || [])
@@ -293,7 +309,34 @@ const filteredMentionUsers =
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
-
+  useEffect(() => {
+    if (!activeConversation?.id || activeConversation.type === "group") {
+      return;
+    }
+  
+    let cancelled = false;
+  
+    async function loadPresence() {
+      try {
+        const result = await getConversationPresence(activeConversation.id);
+  
+        if (cancelled) return;
+  
+        setPresenceByUser((previous) => ({
+          ...previous,
+          ...(result?.presences || {}),
+        }));
+      } catch (err) {
+        console.error("Unable to load conversation presence:", err);
+      }
+    }
+  
+    loadPresence();
+  
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConversation?.id, activeConversation?.type]);
   useEffect(() => {
     if (!search.trim() || !searchMode) {
       setSearchResults([]);
@@ -400,6 +443,12 @@ const filteredMentionUsers =
       }
 
       const normalized = normalizeMessage(incoming, currentUserId);
+      if (!normalized.mine && getMessageId(normalized)) {
+        socket.emit("message:read", {
+          conversationId,
+          messageId: getMessageId(normalized),
+        });
+      }
 
       setMessages((previous) => {
         const exists = previous.some(
@@ -469,10 +518,6 @@ const handleMessageRead = (data) => {
       return;
     }
   
-    if (String(data.userId) === String(currentUserId)) {
-      return;
-    }
-  
     setReadBoundary((previous) => ({
       ...previous,
       [data.conversationId]: {
@@ -483,6 +528,32 @@ const handleMessageRead = (data) => {
   };
   
   socket.on("message:read", handleMessageRead);
+  const handlePresenceOnline = (data) => {
+    if (!data?.userId) return;
+  
+    setPresenceByUser((previous) => ({
+      ...previous,
+      [String(data.userId)]: {
+        isOnline: true,
+        lastSeen: null,
+      },
+    }));
+  };
+  
+  const handlePresenceOffline = (data) => {
+    if (!data?.userId) return;
+  
+    setPresenceByUser((previous) => ({
+      ...previous,
+      [String(data.userId)]: {
+        isOnline: false,
+        lastSeen: data.lastSeen || null,
+      },
+    }));
+  };
+  
+  socket.on("presence:online", handlePresenceOnline);
+  socket.on("presence:offline", handlePresenceOffline);
   
 
     return () => {
@@ -492,6 +563,8 @@ const handleMessageRead = (data) => {
       socket.off("conversation:updated", handleConversationUpdated);
       socket.off("conversation:removed", handleConversationRemoved);
       socket.off("message:read", handleMessageRead);
+      socket.off("presence:online", handlePresenceOnline);
+      socket.off("presence:offline", handlePresenceOffline);
     };
   }, [
     socket,
@@ -1550,18 +1623,20 @@ const handleSaveConversation = async () => {
                     <h2 className="truncate text-xs font-semibold text-white sm:text-sm">
                    {activeConversationName}
                    </h2>
-                      <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/75">
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            connected ? "bg-[#38BDF8]" : "bg-[#7D8C9D]"
-                          }`}
-                        />
-                        {activeIsGroup
-  ? `Group · ${activeConversation?.participants?.length || 0} members`
-  : connected
-    ? "Connected"
-    : connectionError || "Connecting..."}
-                      </p>
+                   <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/75">
+  <span
+className={`h-1.5 w-1.5 rounded-full ${
+  activeIsGroup
+    ? "bg-[#38BDF8]"
+    : activeContactPresence?.isOnline
+      ? "bg-[#22C55E]"
+      : "bg-[#7D8C9D]"
+}`}
+  />
+  {activeIsGroup
+    ? `Group · ${activeConversation?.participants?.length || 0} members`
+    : activeContactStatus}
+</p>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-0 sm:gap-0.5">
@@ -1696,7 +1771,34 @@ const handleSaveConversation = async () => {
     }
   />
 </button>
-                            <span>{item.time}</span>
+<span className="flex items-center gap-1">
+  <span>{item.time}</span>
+
+  {item.mine && (
+    <span
+      title={
+        Number(item.seq || 0) > 0 &&
+        Number(item.seq) <=
+          Number(readBoundary[activeConversation.id]?.seq || 0)
+          ? "Read"
+          : "Sent"
+      }
+      className={
+        Number(item.seq || 0) > 0 &&
+        Number(item.seq) <=
+          Number(readBoundary[activeConversation.id]?.seq || 0)
+          ? "font-bold text-[#38BDF8]"
+          : "text-white/55"
+      }
+    >
+      ✓{Number(item.seq || 0) > 0 &&
+      Number(item.seq) <=
+        Number(readBoundary[activeConversation.id]?.seq || 0)
+        ? "✓"
+        : ""}
+    </span>
+  )}
+</span>
                           </div>
                         </div>
                       </div>
