@@ -15,7 +15,7 @@ import {
 import { SiJira } from "react-icons/si";
 import { createTeamJiraTicket, getTeamJiraAssignees } from "../../services/jiraService";
 
-const ISSUE_TYPES = ["Task", "Bug", "Story", "Improvement", "Epic"];
+const ISSUE_TYPES = ["Idea", "Story", "Epic"];
 const PRIORITIES = ["Highest", "High", "Medium", "Low", "Lowest"];
 
 export function CreateJiraTicketModal({
@@ -30,7 +30,7 @@ export function CreateJiraTicketModal({
 }) {
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
-  const [issueType, setIssueType] = useState("Task");
+  const [issueType, setIssueType] = useState("Idea");
   const [priority, setPriority] = useState("High");
   const [assigneeAccountId, setAssigneeAccountId] = useState("");
   const [assignees, setAssignees] = useState(initialAssignees);
@@ -109,7 +109,7 @@ export function CreateJiraTicketModal({
   function handleClose() {
     setSummary("");
     setDescription("");
-    setIssueType("Task");
+    setIssueType("Idea");
     setPriority("High");
     setAssigneeAccountId("");
     setManualAssigneeMode(false);
