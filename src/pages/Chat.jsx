@@ -41,7 +41,39 @@ function getUserId(person) {
 function getUserName(person) {
   return person?.name || person?.fullName || person?.email || "User";
 }
+function renderMessageText(text, mentionedUsers = []) {
+  const names = mentionedUsers
+    .map((person) => person?.name)
+    .filter(Boolean);
 
+  if (!names.length) return text;
+
+  const escapedNames = names.map((name) =>
+    name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  );
+
+  const pattern = new RegExp(
+    `(@(?:${escapedNames.join("|")}))(?=$|\\s|[.,!?])`,
+    "gi"
+  );
+
+  return text.split(pattern).map((part, index) => {
+    const isMention = names.some(
+      (name) => part.toLowerCase() === `@${name}`.toLowerCase()
+    );
+
+    return isMention ? (
+      <span
+        key={index}
+        className="font-semibold text-[#85B6FF]"
+      >
+        {part}
+      </span>
+    ) : (
+      part
+    );
+  });
+}
 function getOtherParticipant(conversation, currentUserId) {
 
   const participants = conversation?.participants || [];
@@ -168,6 +200,7 @@ const [uploadingFile, setUploadingFile] = useState(false);
 const [saveMessage, setSaveMessage] = useState("");
 const [savedMessageIds, setSavedMessageIds] = useState(() => new Set());
   const messageEndRef = useRef(null);
+  const messageInputRef = useRef(null);
   const searchRequestRef = useRef(0);
   const activeConversationRef = useRef(null);
   const messagesRef = useRef([]);
@@ -177,6 +210,27 @@ const [savedMessageIds, setSavedMessageIds] = useState(() => new Set());
     ? getOtherParticipant(activeConversation, currentUserId)
     : {};
     const activeIsGroup = activeConversation?.type === "group";
+    const mentionUsers = activeIsGroup
+  ? (activeConversation?.participants || [])
+      .map((participant) => ({
+        ...getUser(participant),
+        id: participant?.userId || getUserId(getUser(participant)),
+      }))
+      .filter(
+        (person) =>
+          person.id &&
+          String(person.id) !== String(currentUserId)
+      )
+  : [];
+
+const filteredMentionUsers =
+  mentionQuery !== null
+    ? mentionUsers.filter((person) =>
+        getUserName(person)
+          .toLowerCase()
+          .includes(mentionQuery.toLowerCase())
+      )
+    : [];
     const activeConversationName = activeConversation
       ? getConversationName(activeConversation, currentUserId)
       : "";
@@ -564,7 +618,62 @@ setMessages(normalizedList);
       );
     }
   }
-
+  function handleMessageChange(event) {
+    const value = event.target.value;
+    const cursorPosition = event.target.selectionStart;
+  
+    setMessage(value);
+  
+    setSelectedMentionUserIds((previous) =>
+      previous.filter((id) => {
+        const person = mentionUsers.find(
+          (item) => String(item.id) === String(id)
+        );
+  
+        return person && value.includes(`@${getUserName(person)}`);
+      })
+    );
+  
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const match = textBeforeCursor.match(/(^|\s)@([^\s@]*)$/);
+  
+    if (activeIsGroup && match) {
+      setMentionQuery(match[2]);
+      setMentionStart(match.index + match[1].length);
+    } else {
+      setMentionQuery(null);
+      setMentionStart(-1);
+    }
+  }
+  
+  function selectMentionUser(person) {
+    const userName = getUserName(person);
+    const cursorPosition = messageInputRef.current?.selectionStart ?? message.length;
+  
+    const beforeMention = message.slice(0, mentionStart);
+    const afterMention = message.slice(cursorPosition);
+    const insertedText = `@${userName} `;
+  
+    const updatedMessage =
+      beforeMention + insertedText + afterMention;
+  
+    setMessage(updatedMessage);
+  
+    setSelectedMentionUserIds((previous) =>
+      previous.includes(person.id)
+        ? previous
+        : [...previous, person.id]
+    );
+  
+    setMentionQuery(null);
+    setMentionStart(-1);
+  
+    requestAnimationFrame(() => {
+      const nextCursor = beforeMention.length + insertedText.length;
+      messageInputRef.current?.focus();
+      messageInputRef.current?.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
   function sendMessage(event) {
     event.preventDefault();
 
@@ -593,7 +702,7 @@ setMessages(normalizedList);
         conversationId: activeConversation.id,
         clientMessageId,
         content,
-
+        mentions: activeIsGroup ? selectedMentionUserIds : [],
       },
       (timeoutError, response) => {
         setSending(false);
@@ -627,6 +736,9 @@ setMessages(normalizedList);
         }
 
         setMessage("");
+        setSelectedMentionUserIds([]);
+        setMentionQuery(null);
+        setMentionStart(-1);
         loadConversations();
       }
     );
@@ -634,8 +746,6 @@ setMessages(normalizedList);
 
   async function handleFileSelected(event) {
     const file = event.target.files?.[0];
-
-    // Same file ko dobara select karne ki permission
     event.target.value = "";
 
     if (!file || !activeConversation?.id) return;
@@ -1259,7 +1369,7 @@ const handleSaveConversation = async () => {
         setSearchMode(false);
            }}
          onChange={(event) => setSearch(event.target.value)}
-         className="h-9 w-full rounded-md border border-white/25 bg-[#062C5F]/30 pl-9 pr-8 text-xs text-white outline-none placeholder:text-white/50 focus:border-[#85B6FF]"
+         className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#101b35]/70 px-3 py-2 text-sm text-white outline-none transition-all placeholder:text-white/45 focus:border-blue-400/70 focus:bg-[#142344]"
          />
           {search && (
            <button
@@ -1524,7 +1634,7 @@ const handleSaveConversation = async () => {
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">
-                            {item.text}
+                          {renderMessageText(item.text, item.mentionedUsers)}
                             {item.fileUrl && item.fileType === "image" && (
     <a href={item.fileUrl} target="_blank" rel="noreferrer">
         <img
@@ -1598,7 +1708,7 @@ const handleSaveConversation = async () => {
                   onSubmit={sendMessage}
                   className="shrink-0 border-t border-white/20 bg-white/5 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3.5"
                 >
-                  <div className="flex min-h-[42px] items-center gap-2 rounded-md border border-white/30 bg-transparent px-2.5 focus-within:border-[#85B6FF]">
+                  <div className="flex min-h-[52px] items-center gap-2 rounded-xl border border-white/15 bg-[#0b1730]/80 px-2 shadow-inner transition-all focus-within:border-blue-400/60">
                   <IconButton
   label="Attach file"
   onClick={() => fileInputRef.current?.click()}
@@ -1613,12 +1723,45 @@ const handleSaveConversation = async () => {
   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
   onChange={handleFileSelected}
 />
-                    <input
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                      placeholder={`Send message to ${activeConversationName}...`}
-                      className="min-w-0 flex-1 bg-transparent py-2 text-xm text-white outline-none placeholder:text-[#263238]/90"
-                    />
+<div className="relative min-w-0 flex-1">
+  <input
+    ref={messageInputRef}
+    value={message}
+    onChange={handleMessageChange}
+    placeholder={`Send message to ${activeConversationName}...`}
+    className="w-full min-w-0 bg-transparent py-2 text-xs text-white outline-none placeholder:text-white/50"
+  />
+
+  {activeIsGroup &&
+    mentionQuery !== null &&
+    filteredMentionUsers.length > 0 && (
+      <div className="absolute bottom-full left-0 z-50 mb-2 max-h-52 w-full min-w-[190px] overflow-y-auto rounded-lg border border-white/20 bg-[#102842] p-1.5 shadow-xl">
+        {filteredMentionUsers.map((person) => (
+          <button
+            key={person.id}
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => selectMentionUser(person)}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition hover:bg-white/10"
+          >
+            <Avatar name={getUserName(person)} size={28} />
+
+            <span className="min-w-0 flex-1 truncate text-xs text-white">
+              {getUserName(person)}
+            </span>
+          </button>
+        ))}
+      </div>
+    )}
+
+  {activeIsGroup &&
+    mentionQuery !== null &&
+    filteredMentionUsers.length === 0 && (
+      <div className="absolute bottom-full left-0 z-50 mb-2 w-full rounded-lg border border-white/20 bg-[#102842] px-3 py-2 text-xs text-white/70 shadow-xl">
+        No group members found.
+      </div>
+    )}
+</div>
                     <button
                       type="submit"
                       disabled={!message.trim() || sending || !connected}
