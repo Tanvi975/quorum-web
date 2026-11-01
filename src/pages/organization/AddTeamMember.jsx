@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import api from "../../services/api";
+import { addTeamMember } from "../../services/teamService";
 
 function AddTeamMember({
   organizationId,
@@ -37,13 +37,7 @@ function AddTeamMember({
     try {
       setLoading(true);
 
-      await api.post(
-        `/api/organizations/${organizationId}/teams/${teamId}/members`,
-        {
-          userId,
-          role: selectedRole === "TEAM_HEAD" ? "LEAD" : "MEMBER",
-        }
-      );
+      await addTeamMember(organizationId, teamId, userId, selectedRole);
 
       await onSuccess?.();
     } catch (err) {

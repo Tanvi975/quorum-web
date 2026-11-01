@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { FaSpinner, FaTimes, FaTrash } from "react-icons/fa";
-import api from "../../services/api";
+import { removeTeamMember } from "../../services/teamService";
 
 function RemoveTeamMember({
   organizationId,
@@ -47,10 +46,7 @@ function RemoveTeamMember({
     try {
       setLoading(true);
 
-      await api.delete(
-        `/api/organizations/${organizationId}/teams/${teamId}/members/${userId}`
-      );
-
+      await removeTeamMember(organizationId, teamId, userId);
       await onSuccess?.();
     } catch (err) {
       setError(

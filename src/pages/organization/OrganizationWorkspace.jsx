@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa";
 
 import api from "../../services/api";
+import { deleteTeam } from "../../services/teamService";
 import { createMeeting, createScopedMeeting } from "../../services/meetingService";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
@@ -138,6 +139,7 @@ function OrganizationWorkspace() {
   const [selectedChatTeam, setSelectedChatTeam] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
   const [memberToRemove, setMemberToRemove] = useState(null);
+  const [teamToDelete, setTeamToDelete] = useState(null);
   const [memberRole, setMemberRole] = useState("MEMBER");
   const [showMeetingInviteModal, setShowMeetingInviteModal] = useState(false);
   const [selectedMeetingMembers, setSelectedMeetingMembers] = useState([]);
@@ -232,11 +234,24 @@ function OrganizationWorkspace() {
           data
       );
 
-      setTeams(
-        teamResult.status === "fulfilled"
-          ? items(teamResult.value.data, "teams")
-          : []
+      const freshTeams =
+      teamResult.status === "fulfilled"
+        ? items(teamResult.value.data, "teams")
+        : [];
+    
+    setTeams(freshTeams);
+    
+    setSelectedChatTeam((currentTeam) => {
+      if (!currentTeam) return currentTeam;
+    
+      const currentId = String(currentTeam._id || currentTeam.id);
+    
+      return (
+        freshTeams.find(
+          (team) => String(team._id || team.id) === currentId
+        ) || null
       );
+    });
 
       setMembers(
         memberResult.status === "fulfilled"
@@ -288,6 +303,7 @@ function OrganizationWorkspace() {
     setModal("");
     setSelectedMember(null);
     setMemberToRemove(null);
+    setTeamToDelete(null);
     setSaving(false);
   }
 
@@ -470,14 +486,7 @@ function OrganizationWorkspace() {
     setNotice("");
   
     try {
-      await api.patch(
-        `/api/organizations/${organizationId}/teams/${teamId}`,
-        {
-          name: teamForm.name.trim(),
-          description: teamForm.description.trim(),
-        }
-      );
-  
+      await deleteTeam(organizationId, teamId);
       closeModal();
       setSelectedTeam(null);
       setTeamForm({ name: "", description: "" });
@@ -758,6 +767,42 @@ function OrganizationWorkspace() {
       setSaving(false);
     }
   }
+  function openDeleteTeam(team) {
+    setOpenMenu("");
+    setTeamToDelete(team);
+    setModal("delete-team");
+  }
+  
+  async function confirmDeleteTeam() {
+    const teamId = teamToDelete?._id || teamToDelete?.id;
+  
+    if (!teamId || saving) return;
+  
+    setSaving(true);
+    setNotice("");
+  
+    try {
+      await api.delete(
+        `/api/organizations/${organizationId}/teams/${teamId}`
+      );
+  
+      setTeams((previous) =>
+        previous.filter(
+          (team) => String(team._id || team.id) !== String(teamId)
+        )
+      );
+  
+      setTeamToDelete(null);
+      setModal("");
+  
+      setNotice("Team deleted successfully.");
+      await loadWorkspace(false);
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function menu(id, options) {
     return (
@@ -835,24 +880,20 @@ function OrganizationWorkspace() {
             Open Team Chat
           </button>
 
-          {menu(`team-${id}`, [
-            {
-              label: "Edit team",
-              icon: <FaEdit />,
-              onClick: () => openEditTeam(team),
-            },
-            {
-              label: "Delete team",
-              icon: <FaTrash />,
-              danger: true,
-              onClick: () => {
-                setOpenMenu("");
-                setNotice(
-                  "Delete team option is visible; connect the backend endpoint to delete this team."
-                );
-              },
-            },
-          ])}
+          {(role === "ORG_ADMIN" || role === "TEAM_HEAD") &&
+  menu(`team-${id}`, [
+    {
+      label: "Edit team",
+      icon: <FaEdit />,
+      onClick: () => openEditTeam(team),
+    },
+    {
+      label: "Delete team",
+      icon: <FaTrash />,
+      danger: true,
+      onClick: () => openDeleteTeam(team),
+    },
+  ])}
         </div>
       </div>
     );
@@ -990,12 +1031,14 @@ function OrganizationWorkspace() {
   if (selectedChatTeam) {
     return (
       <OnboardingLayout fullWidth>
-        <TeamChat
-          organizationId={organizationId}
-          team={selectedChatTeam}
-          currentUser={currentUser}
-          onClose={() => setSelectedChatTeam(null)}
-        />
+     <TeamChat
+  organizationId={organizationId}
+  team={selectedChatTeam}
+  currentUser={currentUser}
+  canManageTeam={role === "ORG_ADMIN" || role === "TEAM_HEAD"}
+  onTeamUpdated={() => loadWorkspace(false)}
+  onClose={() => setSelectedChatTeam(null)}
+/>
       </OnboardingLayout>
     );
   }
@@ -1978,7 +2021,47 @@ function OrganizationWorkspace() {
             </div>
           </Modal>
         )}
+{modal === "delete-team" && (
+  <Modal
+    title="Delete team?"
+    description={`Are you sure you want to delete "${
+      teamToDelete?.name || "this team"
+    }"? This will delete the team and its team-specific data. Organization memberships will not be removed.`}
+    close={() => {
+      if (saving) return;
+      setModal("");
+      setTeamToDelete(null);
+    }}
+  >
+    <div className="flex justify-end gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          setModal("");
+          setTeamToDelete(null);
+        }}
+        className={secondary}
+        disabled={saving}
+      >
+        Cancel
+      </button>
 
+      <button
+        type="button"
+        onClick={confirmDeleteTeam}
+        disabled={saving || !teamToDelete}
+        className={`${btn} border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25`}
+      >
+        {saving ? (
+          <FaSpinner className="animate-spin" />
+        ) : (
+          <FaTrash />
+        )}
+        {saving ? "Deleting..." : "Delete Team"}
+      </button>
+    </div>
+  </Modal>
+)}
         {modal === "leave-organization" && (
           <Modal
             title="Leave organization?"
