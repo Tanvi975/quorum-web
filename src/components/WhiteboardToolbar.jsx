@@ -236,10 +236,10 @@ export default function WhiteboardToolbar({
 
     return (
         <div
-            ref={toolbarRef}
-            className="relative flex w-full flex-wrap items-center gap-2 overflow-visible border-b border-gray-200 bg-white px-3 py-2"
-        >
-            <div className="flex w-full items-center gap-2 px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  ref={toolbarRef}
+  className="relative flex w-full min-w-0 max-w-full items-center gap-2 overflow-visible border-b border-gray-200 bg-white px-2 py-2 sm:px-3"
+>
+<div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto overflow-y-visible overscroll-x-contain px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="flex shrink-0 items-center gap-1">
                 <ToolButton
                     title="Select"

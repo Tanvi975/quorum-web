@@ -471,7 +471,7 @@ export default function WhiteboardWorkspace({
         )}
     </div>
 
-    <div className="relative z-20 mb-2 flex w-full shrink-0 justify-center rounded-xl border border-white/30 bg-[#0B2344] p-2 shadow-2xl">
+    <div className="relative z-20 mb-2 flex w-full min-w-0 max-w-full shrink-0 justify-start overflow-visible rounded-xl border border-white/30 bg-[#0B2344] p-1.5 shadow-2xl sm:justify-center sm:p-2">
         <WhiteboardToolbar
             tool={tool}
             setTool={setTool}
