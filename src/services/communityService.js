@@ -6,7 +6,7 @@ export function getFileCategory(file) {
     if (!file) return "file";
 
     const mime = (file.type || "").toLowerCase();
-    const ext = (file.name || "").split(".").pop() ?.toLowerCase();
+    const ext = (file.name || "").split(".").pop()?.toLowerCase();
 
     if (mime.startsWith("image/")) return "image";
     if (mime.startsWith("video/")) return "video";
@@ -49,7 +49,7 @@ export async function uploadAttachment(file) {
             fileType,
         });
 
-        const signData = signResponse.data ?.data ?? signResponse.data;
+        const signData = signResponse.data?.data ?? signResponse.data;
 
         if (signData ?.uploadUrl && signData.signature && signData.apiKey) {
             const formData = new FormData();
@@ -402,6 +402,82 @@ export async function uploadFileToS3(uploadData) {
 export async function updatePostComment(communityId, postId, commentId, content) {
     const response = await api.put(
         `/api/communities/${communityId}/posts/${postId}/comments/${commentId}`, { content }
+    );
+
+    return response.data;
+}
+
+export async function searchCommunities({
+    q = "",
+    limit = 20,
+    cursor,
+} = {}) {
+    const response = await api.get("/api/communities/search", {
+        params: { q, limit, cursor },
+    });
+
+    return response.data;
+}
+export async function sendCommunityJoinRequest(
+    communityId,
+    message = ""
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/join-requests`,
+        message ? { message } : {}
+    );
+
+    return response.data;
+}
+
+export async function getMyJoinRequests() {
+    const response = await api.get(
+        "/api/communities/join-requests/my"
+    );
+
+    return response.data;
+}
+
+export async function cancelCommunityJoinRequest(communityId) {
+    const response = await api.delete(
+        `/api/communities/${communityId}/join-requests`
+    );
+
+    return response.data;
+}
+
+export async function getCommunityJoinRequests(
+    communityId,
+    status = "PENDING"
+) {
+    const response = await api.get(
+        `/api/communities/${communityId}/join-requests`, {
+            params: { status },
+        }
+    );
+
+    return response.data;
+}
+
+export async function acceptCommunityJoinRequest(
+    communityId,
+    requestId
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/join-requests/${requestId}/accept`
+    );
+
+    return response.data;
+}
+
+export async function rejectCommunityJoinRequest(
+    communityId,
+    requestId,
+    reason = ""
+) {
+    const response = await api.post(
+        `/api/communities/${communityId}/join-requests/${requestId}/reject`,
+        reason ? { reason } : {}
     );
 
     return response.data;

@@ -26,6 +26,9 @@ import {
     deleteCommunity,
     updateCommunityMemberRole,
     transferCommunityOwnership,
+    getCommunityJoinRequests,
+    acceptCommunityJoinRequest,
+    rejectCommunityJoinRequest,
 } from "../../services/communityService";
 import {
     FiArrowLeft,
@@ -41,6 +44,8 @@ import {
     FiTrash2,
     FiEdit2,
     FiBookmark,
+    FiCheck,
+    FiX,
 } from "react-icons/fi";
 import { saveItem } from "../../services/savedItemsService";
 
@@ -49,6 +54,7 @@ const tabs = [
     { label: "Members", icon: FiUsers },
     { label: "Invitations", icon: FiUserPlus },
     { label: "About", icon: FiInfo },
+    { label: "Join Requests", icon: FiUsers, adminOnly: true },
 ];
 
 const glassCard =
@@ -101,6 +107,9 @@ function CommunityDetails() {
     const [savingCommunity, setSavingCommunity] = useState(false);
     const [openMemberActionsId, setOpenMemberActionsId] = useState(null);
     const [pendingInvites, setPendingInvites] = useState([]);
+    const [joinRequests, setJoinRequests] = useState([]);
+    const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+    const [processingRequestId, setProcessingRequestId] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null);
     const [confirmingAction, setConfirmingAction] = useState(false);
 
@@ -453,7 +462,61 @@ function CommunityDetails() {
             setSearchingMembers(false);
         }
     }
-
+    async function loadJoinRequests() {
+        if (!communityId || !canManageMembers) return;
+    
+        setJoinRequestsLoading(true);
+        setError("");
+    
+        try {
+            const response = await getCommunityJoinRequests(communityId, "PENDING");
+            const result = response?.data?.data ?? response?.data ?? response;
+    
+            const items = Array.isArray(result?.requests)
+                ? result.requests
+                : Array.isArray(result)
+                    ? result
+                    : [];
+    
+            setJoinRequests(items);
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                "Could not load pending join requests. Please try again."
+            );
+        } finally {
+            setJoinRequestsLoading(false);
+        }
+    }
+    
+    async function handleJoinRequestAction(request, action) {
+        const requestId = request.id || request._id;
+    
+        if (!requestId) return;
+    
+        setProcessingRequestId(requestId);
+        setError("");
+    
+        try {
+            if (action === "accept") {
+                await acceptCommunityJoinRequest(communityId, requestId);
+                setNotice("Join request accepted successfully.");
+            } else {
+                await rejectCommunityJoinRequest(communityId, requestId);
+                setNotice("Join request rejected successfully.");
+            }
+    
+            await loadJoinRequests();
+            await loadCommunityData();
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                "Could not process the join request. Please try again."
+            );
+        } finally {
+            setProcessingRequestId(null);
+        }
+    }
     function handleLeaveCommunity() {
         setConfirmDialog({
             title: "Leave community?",
@@ -687,13 +750,17 @@ function CommunityDetails() {
                 )}
 
                 <nav className="mt-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-[#365F86]/50 p-1.5 shadow-lg backdrop-blur-xl">
-                    {tabs.map(({ label, icon: Icon }) => (
+                {tabs.filter((tab) => !tab.adminOnly || canManageMembers).map(({ label, icon: Icon }) => (
                         <button
                             key={label}
                             type="button"
                             onClick={() => {
                                 setActiveTab(label);
                                 setError("");
+                            
+                                if (label === "Join Requests") {
+                                    loadJoinRequests();
+                                }
                             }}
                             className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:px-5 ${
                                 activeTab === label
@@ -1536,6 +1603,104 @@ function CommunityDetails() {
                                 </div>
                             )}
                         </div>
+                    
+) : activeTab === "Join Requests" && canManageMembers ? (
+    <div className="space-y-5">
+        <div className={`${glassCard} flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center`}>
+            <div>
+                <h2 className="text-xl font-extrabold text-white">
+                    Pending Join Requests
+                </h2>
+                <p className="mt-1 text-sm text-white/80">
+                    Review and manage requests to join this community.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                onClick={loadJoinRequests}
+                disabled={joinRequestsLoading}
+                className={secondaryButton}
+            >
+                <FiRefreshCw size={16} />
+                Refresh
+            </button>
+        </div>
+
+        {joinRequestsLoading ? (
+            <div className={`${glassCard} flex justify-center py-12`}>
+                <FiRefreshCw className="animate-spin text-white" size={24} />
+            </div>
+        ) : joinRequests.length === 0 ? (
+            <EmptyState
+                icon={FiUsers}
+                title="No pending join requests"
+                description="New requests from people who want to join this community will appear here."
+            />
+        ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+                {joinRequests.map((request) => {
+                    const requestId = request.id || request._id;
+                    const requester = request.user || request.requester || {};
+
+                    const name = requester.name || "Community user";
+                    const email = requester.email || "";
+
+                    return (
+                        <article
+                            key={requestId}
+                            className={`${glassCard} min-w-0 p-5`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-[#365F86]/70 font-bold text-white">
+                                    {name.slice(0, 1).toUpperCase()}
+                                </div>
+
+                                <div className="min-w-0">
+                                    <h3 className="break-words font-semibold text-white">
+                                        {name}
+                                    </h3>
+                                    {email && (
+                                        <p className="break-all text-xs text-white/70">
+                                            {email}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {request.message && (
+                                <p className="mt-4 break-words rounded-xl border border-white/10 bg-[#365F86]/50 p-3 text-sm leading-6 text-white/90">
+                                    {request.message}
+                                </p>
+                            )}
+
+                            <div className="mt-5 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={processingRequestId === requestId}
+                                    onClick={() => handleJoinRequestAction(request, "accept")}
+                                    className={primaryButton}
+                                >
+                                    <FiCheck size={16} />
+                                    {processingRequestId === requestId ? "Please wait..." : "Accept"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={processingRequestId === requestId}
+                                    onClick={() => handleJoinRequestAction(request, "reject")}
+                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-200/30 bg-red-500/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500/30 disabled:opacity-50"
+                                >
+                                    <FiX size={16} />
+                                    Reject
+                                </button>
+                            </div>
+                        </article>
+                    );
+                })}
+            </div>
+        )}
+    </div>
                     ) : activeTab === "Invitations" ? (
                         <div className="mx-auto w-full max-w-4xl">
                             <div className={`${glassCard} p-3 sm:p-5`}>

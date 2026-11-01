@@ -42,6 +42,7 @@ import { initCsrf } from "./services/api";
 import Profile from "./components/Profile";
 import JiraSettingsPage from "./pages/jira/JiraSettingsPage"; 
 import MyJiraTicketsPage from "./pages/jira/MyJiraTicketsPage";
+import MyJoinRequests from "./pages/communities/MyJoinRequests";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -250,6 +251,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/my-join-requests"
+  element={
+    <ProtectedRoute>
+      <MyJoinRequests />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/onboarding/step-1"
             element={

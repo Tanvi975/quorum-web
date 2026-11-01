@@ -1,33 +1,28 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileMenu from "../../components/ProfileMenu";
-import { FiArrowLeft } from "react-icons/fi";
-import {
-  FiPlus,
-  FiUsers,
-  FiSearch,
-  FiRefreshCw,
-  FiX,
-  FiGlobe,
-  FiArrowUpRight,
-} from "react-icons/fi";
+import { FiArrowLeft, FiPlus, FiUsers, FiSearch, FiRefreshCw, FiX, FiGlobe, FiArrowUpRight, FiCompass } from "react-icons/fi";
 import {
   getCommunities,
   createCommunity,
+  searchCommunities,
+  sendCommunityJoinRequest,
+  cancelCommunityJoinRequest,
 } from "../../services/communityService";
 
 function parseCommunities(response) {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.communities)) return response.communities;
-  if (Array.isArray(response?.data?.communities)) {
-    return response.data.communities;
-  }
+  if (Array.isArray(response?.data?.communities)) return response.data.communities;
   if (Array.isArray(response?.data)) return response.data;
-  throw new Error("Unexpected communities API response.");
+  throw new Error("communities not found.");
 }
 
 export default function Communities() {
   const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState("my");
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,30 +31,53 @@ export default function Communities() {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
+  const [requestLoading, setRequestLoading] = useState({});
+  const [requestErrors, setRequestErrors] = useState({});
   const [form, setForm] = useState({ name: "", description: "" });
 
-  const loadCommunities = useCallback(async () => {
+  const loadCommunities = useCallback(async (query = "") => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await getCommunities();
+      const response = activeTab === "my"
+        ? await getCommunities()
+        : await searchCommunities({ q: query.trim(), limit: 20 });
+
       setCommunities(parseCommunities(response));
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          (err.response?.status === 404
-            ? "Communities API was not found. Please verify the backend route."
-            : "Could not load communities. Please try again.")
+        "Could not load communities. Please try again."
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
-    loadCommunities();
-  }, [loadCommunities]);
+    if (activeTab === "my") {
+      setSearch("");
+      loadCommunities();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      loadCommunities(search);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, search, loadCommunities]);
+
+  const myCommunities = communities.filter((community) => {
+    const status = community.membershipStatus;
+
+    return !status || ["OWNER", "ADMIN", "MEMBER"].includes(status);
+  });
+
+  const displayedCommunities = activeTab === "my"
+    ? myCommunities
+    : communities;
 
   function openCreateForm() {
     setForm({ name: "", description: "" });
@@ -85,47 +103,75 @@ export default function Communities() {
       await createCommunity({ name, description });
       setShowForm(false);
       setForm({ name: "", description: "" });
+
+      setActiveTab("my");
       await loadCommunities();
     } catch (err) {
       setFormError(
         err.response?.data?.message ||
-          (err.response?.status === 404
-            ? "Create community API was not found. Please check with the backend team."
-            : "Could not create community. Please try again.")
+        "Could not create community. Please try again."
       );
     } finally {
       setCreating(false);
     }
   }
 
-  const filteredCommunities = communities.filter((community) => {
-    const query = search.trim().toLowerCase();
+  async function handleJoinRequest(community) {
+    const communityId = community._id || community.id;
 
-    return (
-      (community.name || "").toLowerCase().includes(query) ||
-      (community.description || "").toLowerCase().includes(query)
-    );
-  });
+    if (!communityId) return;
+
+    setRequestLoading((current) => ({
+      ...current,
+      [communityId]: true,
+    }));
+
+    setRequestErrors((current) => ({
+      ...current,
+      [communityId]: "",
+    }));
+
+    try {
+      if (community.membershipStatus === "PENDING_REQUEST") {
+        await cancelCommunityJoinRequest(communityId);
+      } else {
+        await sendCommunityJoinRequest(communityId);
+      }
+
+      await loadCommunities(search);
+    } catch (err) {
+      setRequestErrors((current) => ({
+        ...current,
+        [communityId]:
+          err.response?.data?.message ||
+          "Could not update your join request. Please try again.",
+      }));
+    } finally {
+      setRequestLoading((current) => ({
+        ...current,
+        [communityId]: false,
+      }));
+    }
+  }
 
   return (
-
-<div
-  className="relative isolate flex h-dvh flex-col overflow-hidden text-white"
-  style={{
-    backgroundColor: "#062C5F",
-    backgroundImage: `linear-gradient(
-      to bottom,
-      #213F70 0%,
-      #315A8A 35%,
-      #506D9A 65%,
-      #7698C5 100%
-    )`,
-    backgroundRepeat: "no-repeat",
-    backgroundSize: "100% 100%",
-  }}
->
-<header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-white/15 bg-[#062C5F]/85 px-4 shadow-sm sm:px-6 lg:px-8">
-      <button
+    <div
+      className="relative isolate flex h-dvh flex-col overflow-hidden text-white"
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage: `linear-gradient(
+          to bottom,
+          #213F70 0%,
+          #315A8A 35%,
+          #506D9A 65%,
+          #7698C5 100%
+        )`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+      }}
+    >
+      <header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-white/15 bg-[#062C5F]/85 px-4 shadow-sm sm:px-6 lg:px-8">
+        <button
           type="button"
           onClick={() => navigate("/dashboard")}
           aria-label="Back to dashboard"
@@ -134,78 +180,125 @@ export default function Communities() {
           <FiArrowLeft size={18} />
         </button>
 
-  <button
-    type="button"
-    onClick={() => navigate("/dashboard")}
-    className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl"
-  >
-    QUORUM
-  </button>
-  <div className="ml-auto">
-  <ProfileMenu />
-</div>
-</header>
-<div className="relative z-10 flex min-h-0 flex-1">
-  <main className="min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8 lg:pt-8">
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl"
+        >
+          QUORUM
+        </button>
+
+        <div className="ml-auto">
+          <ProfileMenu />
+        </div>
+      </header>
+
+      <div className="relative z-10 flex min-h-0 flex-1">
+        <main className="min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8 lg:pt-8">
           <div className="mx-auto w-full max-w-[1180px]">
             <section className="flex flex-col justify-between gap-5 rounded-2xl border border-white/15 bg-[#1F5A91]/75 p-5 shadow-[0_8px_25px_rgba(0,0,0,0.08)] backdrop-blur-md sm:flex-row sm:items-center sm:p-7">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
-                  Discover your network
+                  Your community space
                 </p>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                   Communities
                 </h1>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100/75">
-                  Discover and participate in public and private interest groups.
+                  Connect with people and explore communities around your interests.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate("/communities/create")}
-                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#0879F9]"
-              >
-                <FiPlus size={18} />
-                Create Community
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+  <button
+    type="button"
+    onClick={() => navigate("/communities/create")}
+    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#0879F9]"
+  >
+    <FiPlus size={18} />
+    Create Community
+  </button>
+
+  <button
+    type="button"
+    onClick={() => navigate("/my-join-requests")}
+    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+  >
+    <FiUsers size={18} />
+    My Join Requests
+  </button>
+</div>
             </section>
 
-            <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/20 bg-[#0B2F58]/30 px-4 py-3 shadow-sm backdrop-blur-sm sm:max-w-lg">
-              <FiSearch className="shrink-0 text-blue-100/70" size={18} />
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search communities..."
-                aria-label="Search communities"
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-blue-100/60"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  aria-label="Clear search"
-                  className="rounded-md p-1 text-blue-100/70 transition hover:bg-white/10 hover:text-white"
-                >
-                  <FiX size={16} />
-                </button>
-              )}
+            <div className="mt-6 grid grid-cols-2 gap-3 rounded-xl border border-white/15 bg-[#0B2F58]/30 p-2 sm:max-w-md">
+              <button
+                type="button"
+                onClick={() => setActiveTab("my")}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                  activeTab === "my"
+                    ? "bg-[#0068FF] text-white shadow-md"
+                    : "text-blue-100/80 hover:bg-white/10"
+                }`}
+              >
+                <FiUsers size={17} />
+                My Communities
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("discover")}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                  activeTab === "discover"
+                    ? "bg-[#0068FF] text-white shadow-md"
+                    : "text-blue-100/80 hover:bg-white/10"
+                }`}
+              >
+                <FiCompass size={17} />
+                Discover
+              </button>
             </div>
+
+            {activeTab === "discover" && (
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-white/20 bg-[#0B2F58]/30 px-4 py-3 shadow-sm backdrop-blur-sm sm:max-w-lg">
+                <FiSearch className="shrink-0 text-blue-100/70" size={18} />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search public communities..."
+                  aria-label="Search communities"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-blue-100/60"
+                />
+
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label="Clear search"
+                    className="rounded-md p-1 text-blue-100/70 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <FiX size={16} />
+                  </button>
+                )}
+              </div>
+            )}
 
             <section className="mt-8">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-white">
-                    Your communities
+                    {activeTab === "my" ? "My Communities" : "Discover Communities"}
                   </h2>
                   <p className="mt-1 text-xs text-blue-100/75">
-                    Your spaces for collaboration and ideas
+                    {activeTab === "my"
+                      ? "Communities you are already part of"
+                      : "Explore public communities and request to join"}
                   </p>
                 </div>
+
                 {!loading && (
                   <span className="rounded-full border border-white/20 bg-[#0B2F58]/25 px-3 py-1 text-xs text-blue-50">
-                    {filteredCommunities.length} found
+                    {displayedCommunities.length} found
                   </span>
                 )}
               </div>
@@ -218,7 +311,7 @@ export default function Communities() {
                   <p className="text-sm text-red-100">{error}</p>
                   <button
                     type="button"
-                    onClick={loadCommunities}
+                    onClick={() => loadCommunities(search)}
                     disabled={loading}
                     className="inline-flex items-center gap-2 self-start rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
                   >
@@ -237,109 +330,147 @@ export default function Communities() {
                     />
                   ))}
                 </div>
-              ) : filteredCommunities.length === 0 ? (
+              ) : displayedCommunities.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/30 bg-[#D9EAFE]/15 px-5 py-14 text-center backdrop-blur-sm">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-blue-50">
-                    {search ? <FiSearch size={25} /> : <FiUsers size={25} />}
+                    {activeTab === "my" ? <FiUsers size={25} /> : <FiSearch size={25} />}
                   </div>
+
                   <h3 className="mt-4 text-base font-semibold text-white">
-                    {search ? "No communities found" : "Find Your People & Community"}
+                    {activeTab === "my"
+                      ? "You haven't joined any communities yet"
+                      : "No communities found"}
                   </h3>
+
                   <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-blue-50/75">
-                    {search
-                      ? "Try another search term."
-                      : "Create your first community and bring people together around shared interests."}
+                    {activeTab === "my"
+                      ? "Explore public communities and find people who share your interests."
+                      : "Try another search term or check back later."}
                   </p>
-                  {!search && (
+
+                  {activeTab === "my" && (
                     <button
                       type="button"
-                      onClick={openCreateForm}
+                      onClick={() => setActiveTab("discover")}
                       className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0879F9]"
                     >
-                      <FiPlus size={16} />
-                      Create your first community
+                      <FiCompass size={16} />
+                      Discover Communities
                     </button>
                   )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredCommunities.map((community, index) => {
+                  {displayedCommunities.map((community, index) => {
                     const id = community._id || community.id || index;
-                    const description =
-                      community.description || "Community workspace";
+                    const description = community.description || "Community workspace";
                     const expanded = Boolean(expandedDescriptions[id]);
                     const longDescription = description.length > 100;
 
                     return (
                       <article
-                      key={id}
-                      role="link"
-                      tabIndex={0}
-                      onClick={() => {
-                        const communityId = community._id || community.id;
-                    
-                        if (communityId) {
-                          navigate(`/communities/${communityId}`);
-                        }
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
+                        key={id}
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => {
                           const communityId = community._id || community.id;
-                    
+
                           if (communityId) {
                             navigate(`/communities/${communityId}`);
                           }
-                        }
-                      }}
-                      className="flex min-h-[150px] min-w-0 cursor-pointer flex-col rounded-2xl border border-white/25 bg-[#2A4F74]/90 p-5 shadow-[0_5px_18px_rgba(5,35,75,0.18)] backdrop-blur-[3px] transition duration-200 hover:border-white/40 hover:bg-[#365F86] focus:outline-none focus:ring-2 focus:ring-sky-300"
-                    >
-                      <div className="flex w-full min-w-0 items-center gap-3 text-left">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-[#EAF4FF]/25 text-blue-50">
-                          <FiGlobe size={23} />
-                        </span>
-                    
-                        <span className="min-w-0 flex-1">
-                          <span className="block break-words text-base font-semibold text-white">
-                            {community.name || "Untitled community"}
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            const communityId = community._id || community.id;
+
+                            if (communityId) {
+                              navigate(`/communities/${communityId}`);
+                            }
+                          }
+                        }}
+                        className="flex min-h-[150px] min-w-0 cursor-pointer flex-col rounded-2xl border border-white/25 bg-[#2A4F74]/90 p-5 shadow-[0_5px_18px_rgba(5,35,75,0.18)] backdrop-blur-[3px] transition duration-200 hover:border-white/40 hover:bg-[#365F86] focus:outline-none focus:ring-2 focus:ring-sky-300"
+                      >
+                        <div className="flex w-full min-w-0 items-center gap-3 text-left">
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-[#EAF4FF]/25 text-blue-50">
+                            <FiGlobe size={23} />
                           </span>
-                          <span className="mt-1 block text-xs text-blue-50/75">
-                            Community workspace
+
+                          <span className="min-w-0 flex-1">
+                            <span className="block break-words text-base font-semibold text-white">
+                              {community.name || "Untitled community"}
+                            </span>
+                            <span className="mt-1 block text-xs text-blue-50/75">
+                              Community workspace
+                            </span>
                           </span>
-                        </span>
-                    
-                        <FiArrowUpRight
-                          size={18}
-                          className="shrink-0 text-blue-50/70"
-                        />
-                      </div>
-                    
-                      <div className="mt-3 min-w-0">
-                        <p
-                          className={`break-words text-sm leading-5 text-blue-50/85 ${
-                            expanded ? "whitespace-pre-wrap" : "line-clamp-2"
-                          }`}
-                        >
-                          {description}
-                        </p>
-                    
-                        {longDescription && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setExpandedDescriptions((current) => ({
-                                ...current,
-                                [id]: !current[id],
-                              }));
-                            }}
-                            className="mt-2 text-xs font-semibold text-white underline underline-offset-4"
+
+                          <FiArrowUpRight size={18} className="shrink-0 text-blue-50/70" />
+                        </div>
+
+                        <div className="mt-3 min-w-0">
+                          <p
+                            className={`break-words text-sm leading-5 text-blue-50/85 ${
+                              expanded ? "whitespace-pre-wrap" : "line-clamp-2"
+                            }`}
                           >
-                            {expanded ? "Show less" : "Read more"}
-                          </button>
+                            {description}
+                          </p>
+
+                          {longDescription && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setExpandedDescriptions((current) => ({
+                                  ...current,
+                                  [id]: !current[id],
+                                }));
+                              }}
+                              className="mt-2 text-xs font-semibold text-white underline underline-offset-4"
+                            >
+                              {expanded ? "Show less" : "Read more"}
+                            </button>
+                          )}
+                        </div>
+
+                        {activeTab === "discover" && (
+                          <div className="mt-auto pt-4">
+                            {community.membershipStatus === "NOT_MEMBER" ||
+                            community.membershipStatus === "PENDING_REQUEST" ? (
+                              <button
+                                type="button"
+                                disabled={Boolean(requestLoading[id])}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleJoinRequest(community);
+                                }}
+                                className="w-full rounded-xl bg-[#0068FF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0879F9] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {requestLoading[id]
+                                  ? "Please wait..."
+                                  : community.membershipStatus === "PENDING_REQUEST"
+                                    ? "Cancel Request"
+                                    : "Request to Join"}
+                              </button>
+                            ) : (
+                              <p className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-center text-sm font-semibold text-white">
+                                {community.membershipStatus === "OWNER"
+                                  ? "Owner"
+                                  : community.membershipStatus === "ADMIN"
+                                    ? "Admin"
+                                    : "Joined"}
+                              </p>
+                            )}
+
+                            {requestErrors[id] && (
+                              <p className="mt-2 text-xs text-red-200">
+                                {requestErrors[id]}
+                              </p>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </article>
+                      </article>
                     );
                   })}
                 </div>
@@ -364,7 +495,7 @@ export default function Communities() {
             aria-labelledby="create-community-title"
             className="my-auto w-full max-w-md rounded-2xl border border-white/25 bg-[#123B6A]/95 p-6 text-white shadow-2xl"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2">
               <div>
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-blue-100">
                   <FiGlobe size={20} />
@@ -376,6 +507,7 @@ export default function Communities() {
                   Add a name and description for your new space.
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
@@ -412,9 +544,7 @@ export default function Communities() {
               <textarea
                 id="community-description"
                 value={form.description}
-                onChange={(event) =>
-                  setForm({ ...form, description: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, description: event.target.value })}
                 placeholder="What is this community about?"
                 rows={3}
                 maxLength={500}
@@ -436,6 +566,7 @@ export default function Communities() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={creating || !form.name.trim()}
