@@ -566,14 +566,14 @@ function Calendar() {
     <div className="flex h-screen min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[#062C5F]">
 
       <header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-white/15 bg-[#062C5F]/85 px-4 shadow-sm sm:px-6 lg:px-8">
-  <button
-    type="button"
-    onClick={() => navigate("/dashboard")}
-    aria-label="Back to dashboard"
-    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
-  >
-    <FiArrowLeft size={18} />
-  </button>
+      <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Back to dashboard"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-white/80 transition hover:bg-gray-100"
+        >
+          <FiArrowLeft size={18} />
+        </button>
 
   <button
     type="button"

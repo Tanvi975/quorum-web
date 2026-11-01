@@ -251,7 +251,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
         backgroundSize: "100% 100%",
       }}
     >
-  
+      {/* Header */}
       <div className="flex items-center gap-4 border-b border-white/20 bg-[#213F70]/50 px-4 py-5 backdrop-blur-sm sm:px-6 md:px-12">
         <button
           type="button"
@@ -272,6 +272,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
         </div>
       </div>
 
+ 
       <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-10 md:px-8">
         <div className="mb-7">
           <p className="mb-2 text-xs font-semibold tracking-[3px] text-[#D5E6FA]">
@@ -287,7 +288,7 @@ const Profile = ({ user = {}, onSave, onBack }) => {
           </p>
         </div>
 
-  
+   
         <div
           className="grid w-full grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-white/25 p-3 shadow-2xl md:grid-cols-[280px_minmax(0,1fr)] md:gap-4 md:p-4"
           style={{

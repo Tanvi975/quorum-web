@@ -124,23 +124,24 @@ export default function Communities() {
     backgroundSize: "100% 100%",
   }}
 >
-<header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-gray-200 bg-[#062C5F] px-4 shadow-sm sm:px-6 lg:px-8">
+<header className="relative z-20 flex h-16 min-h-16 shrink-0 items-center border-b border-white/15 bg-[#062C5F]/85 px-4 shadow-sm sm:px-6 lg:px-8">
+      <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Back to dashboard"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-white/80 transition hover:bg-gray-100"
+        >
+          <FiArrowLeft size={18} />
+        </button>
+
   <button
     type="button"
     onClick={() => navigate("/dashboard")}
-    aria-label="Back to dashboard"
-    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-[#213F70] transition hover:bg-gray-100"
+    className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl"
   >
-    <FiArrowLeft size={18} />
+    QUORUM
   </button>
-  <button
-  type="button"
-  onClick={() => navigate("/dashboard")}
-  className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-[#315A8A] sm:text-2xl"
->
-  QUORUM
-</button>
-<div className="ml-auto">
+  <div className="ml-auto">
   <ProfileMenu />
 </div>
 </header>

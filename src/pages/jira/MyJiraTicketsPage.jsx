@@ -138,7 +138,7 @@ export default function MyJiraTicketsPage() {
           type="button"
           onClick={() => navigate("/dashboard")}
           aria-label="Back to dashboard"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-[#213F70] transition hover:bg-gray-100"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-white/80 transition hover:bg-gray-100"
         >
           <FiArrowLeft size={18} />
         </button>

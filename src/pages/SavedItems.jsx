@@ -19,6 +19,7 @@ import {
   FiAlertCircle,
   FiDownload,
   FiLayers,
+  FiArrowLeft
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -349,18 +350,20 @@ export default function SavedItems() {
       }}
     >
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-[#0F2748]/85 px-4 shadow-sm backdrop-blur-xl sm:px-8">
+      <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Back to dashboard"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-white/80 transition hover:bg-gray-100"
+        >
+          <FiArrowLeft size={18} />
+        </button>
         <button
           onClick={() => navigate("/dashboard")}
-          className="absolute left-1/2 -translate-x-1/2 text-base font-bold tracking-[0.18em] text-white sm:text-lg"
-        >
+          className="absolute left-1/2 -translate-x-1/2 font-sans text-xl font-extrabold tracking-[0.18em] text-white transition hover:text-blue-200 sm:text-2xl"
+  >
           QUORUM
         </button>
-
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-white/70 sm:inline">
-            Saved Items
-          </span>
-        </div>
         <div className="ml-auto">
   <ProfileMenu />
 </div>
