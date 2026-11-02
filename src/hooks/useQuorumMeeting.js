@@ -34,9 +34,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [remoteStreams, setRemoteStreams] = useState({});
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-
+    const [reactions, setReactions] = useState([]);
+    const [isHandRaised, setIsHandRaised] = useState(false);
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc ?.remoteDescription) return;
+        if (!pc?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
@@ -482,7 +483,40 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.on("meeting:new-message", (message) => {
             setMessages((previous) => [...previous, message]);
         });
+        socket.on("meeting:reaction", (data) => {
+            if (!data ?.userId || !data ?.emoji) return;
 
+            const reaction = {
+                ...data,
+                id: `${Date.now()}-${Math.random()}`,
+            };
+
+            setReactions((previous) => [...previous, reaction]);
+
+            setTimeout(() => {
+                setReactions((previous) =>
+                    previous.filter((item) => item.id !== reaction.id)
+                );
+            }, 2500);
+        });
+
+        socket.on("meeting:hand-raise-status", (data) => {
+            const { userId, isHandRaised } = data || {};
+
+            if (!userId) return;
+
+            setParticipants((previous) =>
+                previous.map((person) =>
+                    person.userId === userId ?
+                    {...person, isHandRaised } :
+                    person
+                )
+            );
+
+            if (userId === user.id) {
+                setIsHandRaised(isHandRaised);
+            }
+        });
         socket.on("meeting:ended", ({ message } = {}) => {
             setStatus("Meeting ended");
             setError(message || "");
@@ -629,7 +663,31 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             content: content.trim(),
         });
     };
+    const sendReaction = (emoji) => {
+        const socket = socketRef.current;
 
+        if (!socket ?.connected || !meetingCode || !emoji) return;
+
+        socket.emit(
+            "meeting:reaction", { meetingCode, emoji },
+            (ack) => {
+                if (!ack ?.success) {
+                    console.error("Reaction failed:", ack ?.message);
+                }
+            }
+        );
+    };
+
+    const toggleHand = () => {
+        const next = !isHandRaised;
+
+        setIsHandRaised(next);
+
+        socketRef.current ?.emit("meeting:toggle-hand", {
+            meetingCode,
+            isHandRaised: next,
+        });
+    };
     const admitGuest = (userId) => {
         const socket = socketRef.current;
 
@@ -687,6 +745,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         status,
         error,
         participants,
+        reactions,
+        isHandRaised,
+        sendReaction,
+        toggleHand,
         waitingList,
         messages,
         localStream,

@@ -16,6 +16,7 @@ import {
   FiMessageCircle,
   FiEdit3,
   FiPhoneOff,
+  FiSmile,
 } from "react-icons/fi";
 
 function RemoteVideo({ stream }) {
@@ -61,6 +62,7 @@ function VideoCall() {
   const [screenSharing, setScreenSharing] = useState(false);
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const [activeSideTab, setActiveSideTab] = useState("participants");
   const [chatInput, setChatInput] = useState("");
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -75,6 +77,10 @@ function VideoCall() {
     remoteStreams,
     isMuted,
     isVideoOff,
+    reactions,
+    isHandRaised,
+    sendReaction,
+    toggleHand,
     toggleMic,
     toggleCamera,
     replaceVideoTrack,
@@ -386,6 +392,22 @@ function VideoCall() {
                   {!isMuted ? <FiMic size={13} /> : <FiMicOff size={13} />}
                   You
                 </div>
+                {isHandRaised && (
+    <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">
+        ✋ Hand Raised
+    </div>
+)}
+
+{reactions
+    .filter((reaction) => reaction.userId === user?.id)
+    .map((reaction) => (
+        <div
+            key={reaction.id}
+            className="absolute right-1/2 top-1/3 animate-bounce text-5xl"
+        >
+            {reaction.emoji}
+        </div>
+    ))}
               </div>
 
               {remoteEntries.map(([peerId, remoteStream]) => {
@@ -415,6 +437,22 @@ function VideoCall() {
                     <div className="absolute bottom-3 left-3 rounded-md bg-black/60 px-3 py-1.5 text-xs">
                       {participant?.name || "Guest"}
                     </div>
+                    {participant?.isHandRaised && (
+    <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">
+        ✋ Hand Raised
+    </div>
+)}
+
+{reactions
+    .filter((reaction) => reaction.userId === participant?.userId)
+    .map((reaction) => (
+        <div
+            key={reaction.id}
+            className="absolute right-1/2 top-1/3 animate-bounce text-5xl"
+        >
+            {reaction.emoji}
+        </div>
+    ))}
                   </div>
                 );
               })}
@@ -481,7 +519,51 @@ function VideoCall() {
         >
           {isVideoOff ? <FiVideoOff size={18} /> : <FiVideo size={18} />}
         </button>
+        <div className="relative">
+    <button
+        type="button"
+        onClick={() => setShowReactions((previous) => !previous)}
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl transition hover:bg-white/20"
+        title="Reactions"
+        aria-label="Open reactions"
+    >
+        <FiSmile size={22} />
+    </button>
 
+    {showReactions && (
+        <div className="absolute bottom-14 left-1/2 z-50 flex -translate-x-1/2 gap-2 rounded-xl border border-white/20 bg-[#0B2344] p-3 shadow-xl">
+            {["👍", "👏", "❤️", "🎉", "😂", "🔥"].map((emoji) => (
+                <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                        sendReaction(emoji);
+                        setShowReactions(false);
+                    }}
+                    className="rounded-lg p-2 text-2xl transition hover:bg-white/20"
+                    aria-label={`Send ${emoji} reaction`}
+                >
+                    {emoji}
+                </button>
+            ))}
+        </div>
+    )}
+</div>
+
+<button
+    type="button"
+    onClick={toggleHand}
+    className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+        isHandRaised
+            ? "bg-amber-500 hover:bg-amber-600"
+            : "bg-white/10 hover:bg-white/20"
+    }`}
+    title={isHandRaised ? "Lower hand" : "Raise hand"}
+    aria-label={isHandRaised ? "Lower hand" : "Raise hand"}
+    aria-pressed={isHandRaised}
+>
+    ✋
+</button>
         <button
           type="button"
           onClick={toggleScreenShare}
