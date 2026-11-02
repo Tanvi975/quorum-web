@@ -43,6 +43,13 @@ import {
       confirmText: "Remove member",
       variant: "danger",
     },
+    status: {
+      icon: FaExclamationTriangle,
+      defaultTitle: "Change ticket status?",
+      defaultMessage: "Are you sure you want to change this ticket's status?",
+      confirmText: "Change status",
+      variant: "primary",
+    },
   };
   
   function getInitials(name = "") {

@@ -6,6 +6,7 @@ import {
   FiAlertCircle,
   FiColumns,
   FiList,
+  FiMove,
 } from "react-icons/fi";
 import { SiJira } from "react-icons/si";
 import {
@@ -16,7 +17,7 @@ import {
   getJiraConnectionStatus,
 } from "../../services/jiraService";
 import CreateJiraTicketModal from "./CreateJiraTicketModal";
-
+import ConfirmDialog from "../../components/ConfirmDialog";
 const COLUMNS = [
   { key: "todo", label: "To Do", match: (s) => ["to do", "new", "open"].includes(s.toLowerCase()) },
   { key: "inProgress", label: "In Progress", match: (s) => ["in progress", "indeterminate"].includes(s.toLowerCase()) },
@@ -34,10 +35,11 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingKey, setUpdatingKey] = useState(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userJiraStatus, setUserJiraStatus] = useState(null);
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
-
+  const [viewMode, setViewMode] = useState("kanban"); 
+  const [draggedTicketKey, setDraggedTicketKey] = useState(null);
   const teamId = team?._id || team?.id;
   const teamName = team?.name || team?.teamName || "Team";
 
@@ -96,28 +98,89 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
     fetchAssignees();
   }, [fetchTickets, fetchAssignees]);
 
-  async function handleStatusChange(ticketKey, nextStatus) {
+  function handleStatusChange(ticket, nextStatus) {
+    setPendingStatusChange({
+      ticket,
+      nextStatus,
+    });
+  }
+  
+  async function handleConfirmStatusChange() {
+    if (!pendingStatusChange) return;
+  
+    const { ticket, nextStatus } = pendingStatusChange;
+    const ticketKey = ticket.jiraKey;
+  
     try {
       setUpdatingKey(ticketKey);
-      await updateJiraTicketStatus(orgId, teamId, ticketKey, nextStatus);
-
+  
+      await updateJiraTicketStatus(
+        orgId,
+        teamId,
+        ticketKey,
+        nextStatus
+      );
+  
       setTickets((prev) =>
         prev.map((t) =>
           t.jiraKey === ticketKey
-            ? { ...t, jiraStatus: nextStatus, lastSyncedAt: new Date().toISOString() }
+            ? {
+                ...t,
+                jiraStatus: nextStatus,
+                lastSyncedAt: new Date().toISOString(),
+              }
             : t
         )
       );
+  
+      setPendingStatusChange(null);
     } catch (err) {
       console.error(`Failed to update status of ${ticketKey}:`, err);
-      alert(
+  
+      setError(
         err?.response?.data?.message ||
           `Failed to transition ticket ${ticketKey} to ${nextStatus}.`
       );
+  
+      setPendingStatusChange(null);
     } finally {
       setUpdatingKey(null);
     }
   }
+  useEffect(() => {
+    if (!draggedTicketKey) return;
+  
+    function handlePointerUp(event) {
+      const target = document.elementFromPoint(
+        event.clientX,
+        event.clientY
+      );
+  
+      const column = target?.closest("[data-kanban-column]");
+      const nextStatus = column?.getAttribute("data-kanban-status");
+  
+      const ticket = tickets.find(
+        (item) => item.jiraKey === draggedTicketKey
+      );
+  
+      if (
+        ticket &&
+        nextStatus &&
+        nextStatus.toLowerCase() !==
+          (ticket.jiraStatus || "To Do").toLowerCase()
+      ) {
+        setPendingStatusChange({ ticket, nextStatus });
+      }
+  
+      setDraggedTicketKey(null);
+    }
+  
+    document.addEventListener("pointerup", handlePointerUp);
+  
+    return () => {
+      document.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [draggedTicketKey, tickets]);
   async function handleConnectJira() {
     try {
       const url = await getJiraAuthorizeUrl();
@@ -201,7 +264,7 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0068FF] px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#0879F9]"
           >
             <FiPlus size={16} />
-            <span>+ Create Jira Issue</span>
+            <span> Create Jira Issue</span>
           </button>
         </div>
       </div>
@@ -280,7 +343,7 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
           </div>
         ) : viewMode === "kanban" ? (
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 h-full pb-4">
+          <div className="flex h-full min-w-0 gap-4 overflow-x-auto overflow-y-hidden pb-4 snap-x snap-mandatory xl:snap-none">
             {COLUMNS.map((col) => {
               const columnTickets = filteredTickets.filter((t) => {
                 const s = t.jiraStatus || t.statusCategory || "To Do";
@@ -289,9 +352,11 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
 
               return (
                 <div
-                  key={col.key}
-                  className="flex flex-col rounded-2xl border border-white/20 bg-[#0B2F58]/35 p-3.5 backdrop-blur-sm min-h-[350px]"
-                >
+                key={col.key}
+                data-kanban-column
+                data-kanban-status={col.label}
+                className="flex w-[85vw] shrink-0 snap-start flex-col rounded-2xl border border-white/20 bg-[#0B2F58]/35 p-3.5 backdrop-blur-sm min-h-[350px] sm:w-[320px] xl:w-0 xl:flex-1"
+              >
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/15 px-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white uppercase tracking-wider">
@@ -329,6 +394,17 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
                                 <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] text-blue-100">
                                   {ticket.priority || "Medium"}
                                 </span>
+                                <button
+                              type="button"
+                             aria-label={`Drag ${ticket.jiraKey}`}
+                             onPointerDown={(event) => {
+                             event.preventDefault();
+                             setDraggedTicketKey(ticket.jiraKey);
+                             }}
+                            disabled={isUpdating}
+                           className="touch-none cursor-grab rounded-md border border-white/20 bg-white/10 p-1.5 text-blue-100 hover:bg-[#0068FF] active:cursor-grabbing disabled:opacity-50">
+                          <FiMove size={14} />
+                           </button>
                               </div>
                               <h4 className="text-xs font-semibold text-white leading-snug line-clamp-3">
                                 {ticket.jiraSummary}
@@ -365,7 +441,7 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
                                       key={target}
                                       type="button"
                                       disabled={isUpdating}
-                                      onClick={() => handleStatusChange(ticket.jiraKey, target)}
+                                      onClick={() => handleStatusChange(ticket, target)}
                                       className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] text-white hover:bg-[#0068FF] hover:border-[#0068FF] transition disabled:opacity-50"
                                     >
                                       {isUpdating ? "..." : target}
@@ -396,7 +472,11 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
               return (
                 <article
                   key={ticket.id || ticket.jiraKey}
-                  className="flex min-h-[160px] min-w-0 flex-col justify-between rounded-2xl border border-white/25 bg-[#2A4F74]/90 p-5 shadow-[0_5px_18px_rgba(5,35,75,0.18)] backdrop-blur-[3px] transition duration-200 hover:border-white/40 hover:bg-[#365F86]"
+                  className={`rounded-xl border border-white/20 bg-[#2A4F74]/90 p-3.5 shadow-sm hover:border-white/40 transition flex flex-col justify-between gap-3 ${
+                    draggedTicketKey === ticket.jiraKey
+                      ? "opacity-50 scale-[0.98]"
+                      : ""
+                  }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2">
@@ -450,7 +530,7 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
                               key={targetStatus}
                               type="button"
                               disabled={isUpdating}
-                              onClick={() => handleStatusChange(ticket.jiraKey, targetStatus)}
+                              onClick={() => handleStatusChange(ticket, targetStatus)}
                               className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-[#0068FF] hover:border-[#0068FF] disabled:opacity-50"
                             >
                               {isUpdating ? "..." : targetStatus}
@@ -479,6 +559,26 @@ export function TeamJiraBoard({ orgId, team, currentUser }) {
           setTickets((prev) => [newTicket, ...prev]);
         }}
       />
+      {pendingStatusChange && (
+  <ConfirmDialog
+    open={Boolean(pendingStatusChange)}
+    type="status"
+    title="Change Jira ticket status?"
+    message={`Are you sure you want to move ${pendingStatusChange.ticket.jiraKey} from "${pendingStatusChange.ticket.jiraStatus || "To Do"}" to "${pendingStatusChange.nextStatus}"?`}
+    confirmText="Confirm status change"
+    cancelText="Cancel"
+    loading={updatingKey === pendingStatusChange.ticket.jiraKey}
+    onConfirm={handleConfirmStatusChange}
+    onCancel={() => {
+      if (!updatingKey) {
+        setPendingStatusChange(null);
+      }
+    }}
+    detailTitle={pendingStatusChange.ticket.jiraKey}
+    detailSubtitle={pendingStatusChange.ticket.jiraSummary}
+    detailIcon={SiJira}
+  />
+)}
     </div>
   );
 }

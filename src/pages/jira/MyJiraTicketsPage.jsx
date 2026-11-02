@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import ProfileMenu from "../../components/ProfileMenu";
 import { Link, useNavigate } from "react-router-dom";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import {
   FiArrowLeft,
   FiSearch,
@@ -30,6 +31,8 @@ export default function MyJiraTicketsPage() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingKey, setUpdatingKey] = useState(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
+const [statusError, setStatusError] = useState("");
   const [jiraStatus, setJiraStatus] = useState(null);
 
   const fetchTickets = useCallback(async (isBackground = false) => {
@@ -67,25 +70,41 @@ export default function MyJiraTicketsPage() {
     fetchTickets();
   }, [fetchTickets]);
 
-  async function handleStatusChange(ticket, nextStatus) {
+  function handleStatusChange(ticket, nextStatus) {
+    setPendingStatusChange({ ticket, nextStatus });
+  }
+  
+  async function handleConfirmStatusChange() {
+    if (!pendingStatusChange) return;
+  
+    const { ticket, nextStatus } = pendingStatusChange;
     const orgId = ticket.organizationId || ticket.orgId;
     const teamId = ticket.teamId;
     const ticketKey = ticket.jiraKey;
-
+  
     try {
       setUpdatingKey(ticketKey);
+  
       await updateJiraTicketStatus(orgId, teamId, ticketKey, nextStatus);
-
+  
       setTickets((prev) =>
         prev.map((t) =>
           t.jiraKey === ticketKey
-            ? { ...t, jiraStatus: nextStatus, lastSyncedAt: new Date().toISOString() }
+            ? {
+                ...t,
+                jiraStatus: nextStatus,
+                lastSyncedAt: new Date().toISOString(),
+              }
             : t
         )
       );
+  
+      setPendingStatusChange(null);
     } catch (err) {
       console.error(`Failed to update status for ${ticketKey}:`, err);
-      alert(
+  
+      setPendingStatusChange(null);
+      setStatusError(
         err?.response?.data?.message ||
           `Failed to transition ticket ${ticketKey} to ${nextStatus}.`
       );
@@ -439,6 +458,39 @@ export default function MyJiraTicketsPage() {
           </div>
         </main>
       </div>
+      {pendingStatusChange && (
+  <ConfirmDialog
+    open={Boolean(pendingStatusChange)}
+    type="status"
+    title="Change Jira ticket status?"
+    message={`Are you sure you want to move ${pendingStatusChange.ticket.jiraKey} from "${pendingStatusChange.ticket.jiraStatus || "To Do"}" to "${pendingStatusChange.nextStatus}"?`}
+    confirmText="Confirm status change"
+    cancelText="Cancel"
+    loading={Boolean(updatingKey)}
+    onConfirm={handleConfirmStatusChange}
+    onCancel={() => {
+      if (!updatingKey) setPendingStatusChange(null);
+    }}
+    detailTitle={pendingStatusChange.ticket.jiraKey}
+    detailSubtitle={pendingStatusChange.ticket.jiraSummary}
+    detailIcon={SiJira}
+  />
+)}
+
+{statusError && (
+  <ConfirmDialog
+    open={Boolean(statusError)}
+    type="delete"
+    title="Status update failed"
+    message={statusError}
+    confirmText="Close"
+    cancelText="Close"
+    onConfirm={() => setStatusError("")}
+    onCancel={() => setStatusError("")}
+    detailTitle="Jira ticket"
+    detailIcon={SiJira}
+  />
+)}
     </div>
   );
 }
