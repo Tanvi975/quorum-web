@@ -16,14 +16,13 @@ export const aiService = {
             formData.append("prompt", prompt.trim());
         }
 
-        if (context ?.trim()) {
+        if (context?.trim()) {
             formData.append("context", context.trim());
         }
 
-        files.forEach((file) => {
+        files.slice(0, 5).forEach((file) => {
             formData.append("files", file);
         });
-
         return api.post(`${AI_BASE}/chat`, formData);
     },
 

@@ -216,6 +216,7 @@ function removeAttachment(index) {
         current.filter((_, i) => i !== index)
     );
 }
+
 async function handleChat(event) {
   event.preventDefault();
 
@@ -225,44 +226,46 @@ async function handleChat(event) {
   if ((!text && selectedFiles.length === 0) || busy) return;
 
   if (text.length > 10000 || context.length > 10000) {
-      setError("Prompt and context must each be 10,000 characters or fewer.");
-      return;
+    setError("Prompt and context must each be 10,000 characters or fewer.");
+    return;
   }
 
-  const userMessage = text || `Attached files: ${selectedFiles.map(file => file.name).join(", ")}`;
+  const userMessage = text || `Attached files: ${selectedFiles.map((file) => file.name).join(", ")}`;
 
   setSuggestions([]);
   setMessages((current) => [
-      ...current,
-      { role: "user", text: userMessage },
+    ...current,
+    { role: "user", text: userMessage },
   ]);
 
   await runRequest(async () => {
-      const response = await aiService.chat(
-          text,
-          context.trim(),
-          selectedFiles
-      );
+    const response = await aiService.chat(
+      text,
+      context.trim(),
+      selectedFiles
+    );
 
-      const data = response.data;
+    const data = response.data?.data ?? response.data;
 
-      if (!data?.answer) {
-          throw new Error("The AI response did not contain an answer.");
-      }
+    if (!data?.answer) {
+      throw new Error("The AI response did not contain an answer.");
+    }
 
-      setMessages((current) => [
-          ...current,
-          {
-              role: "assistant",
-              text: data.answer,
-              metadata: data.metadata,
-          },
-      ]);
+    setMessages((current) => [
+      ...current,
+      {
+        role: "assistant",
+        text: data.answer,
+        metadata: data.metadata,
+        attachments: data.attachments || [],
+      },
+    ]);
 
-      setPrompt("");
-      setAttachments([]);
+    setPrompt("");
+    setAttachments([]);
   });
 }
+
 
   async function handleQuickReplies() {
     if (busy) return;
