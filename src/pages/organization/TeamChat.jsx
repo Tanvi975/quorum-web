@@ -24,7 +24,8 @@ import { removeTeamMember } from "../../services/teamService";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import useChatSocket from "../../hooks/useChatSocket";
 import { createScopedMeeting } from "../../services/meetingService";
-import { SiJira } from "react-icons/si";
+import { SiGithub, SiJira } from "react-icons/si";
+import TeamGitHubBoard from "../../components/github/TeamGitHubBoard";
 import TeamJiraBoard from "../../components/jira/TeamJiraBoard";
 
 function getStoredUser() {
@@ -192,7 +193,7 @@ const [removingMemberId, setRemovingMemberId] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [scheduleNotice, setScheduleNotice] = useState("");
-  const [teamViewMode, setTeamViewMode] = useState("chat"); // "chat" | "jira"
+  const [teamViewMode, setTeamViewMode] = useState("chat");
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -594,7 +595,11 @@ useEffect(() => {
           {teamName}
         </h2>
         <p className="mt-0.5 text-xs text-sky-100/65">
-          {teamViewMode === "jira" ? "Jira tickets & board" : "Team conversation"}
+        {teamViewMode === "jira"
+  ? "Jira tickets & board"
+  : teamViewMode === "github"
+    ? "GitHub repository & development activity"
+    : "Team conversation"}
         </p>
       </div>
 
@@ -623,6 +628,18 @@ useEffect(() => {
           <SiJira className="h-3.5 w-3.5" />
           <span>Jira Tickets</span>
         </button>
+        <button
+  type="button"
+  onClick={() => setTeamViewMode("github")}
+  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+    teamViewMode === "github"
+      ? "bg-[#0068FF] text-white shadow-sm"
+      : "text-white/70 hover:text-white"
+  }`}
+>
+  <SiGithub className="h-3.5 w-3.5" />
+  <span>GitHub</span>
+</button>
       </div>
 
       <button
@@ -784,15 +801,22 @@ useEffect(() => {
       </div>
     )}
 
-    {teamViewMode === "jira" ? (
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
-        <TeamJiraBoard
-          orgId={organizationId}
-          team={team}
-          currentUser={currentUser}
-        />
-      </div>
-    ) : (
+{teamViewMode === "github" ? (
+  <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+    <TeamGitHubBoard
+      orgId={organizationId}
+      team={team}
+    />
+  </div>
+) : teamViewMode === "jira" ? (
+  <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+    <TeamJiraBoard
+      orgId={organizationId}
+      team={team}
+      currentUser={currentUser}
+    />
+  </div>
+) : (
       <div className="relative flex min-h-0 flex-1 items-stretch overflow-hidden">
       <section className="flex min-w-0 flex-1 flex-col">
         {connectionError && (

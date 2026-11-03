@@ -43,6 +43,8 @@ import Profile from "./components/Profile";
 import JiraSettingsPage from "./pages/jira/JiraSettingsPage"; 
 import MyJiraTicketsPage from "./pages/jira/MyJiraTicketsPage";
 import MyJoinRequests from "./pages/communities/MyJoinRequests";
+import MyGitHubPage from "./pages/github/MyGitHubPage";
+import GitHubPage from "./pages/github/GitHubPage";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -308,6 +310,23 @@ function App() {
               </ProtectedRoute>
             }
           />
+ <Route
+  path="/github"
+  element={
+    <ProtectedRoute>
+      <MyGitHubPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/settings/integrations/github"
+  element={
+    <ProtectedRoute>
+      <GitHubPage />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/jira/my-tickets"
             element={

@@ -9,7 +9,7 @@ import {
   FiGlobe,
   FiUser,
 } from "react-icons/fi";
-import { SiJira } from "react-icons/si";
+import { SiGithub, SiJira } from "react-icons/si";
 
 const navigationItems = [
   { label: "Home", icon: FiHome, path: "/dashboard" },
@@ -18,9 +18,10 @@ const navigationItems = [
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
   { label: "My Jira", icon: SiJira, path: "/jira/my-tickets" },
+  { label: "My GitHub", icon: SiGithub, path: "/github" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
-  { label: "Profile", icon: FiUser, path: "/profile" },
+  { label: "Profile", icon: FiUser, path: "/profile" }
 ];
 
 export default function Sidebar() {
