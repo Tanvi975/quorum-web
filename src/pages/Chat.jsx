@@ -12,6 +12,11 @@ import {
   leaveGroupConversation,
   updateGroupConversation,
   getConversationPresence,
+  getVoiceUploadSignature,
+  addMessageReaction,
+  editConversationMessage,
+  forwardConversationMessages,
+  deleteConversationMessage,
 } from "../services/chatService";
 import {
   FiSearch,
@@ -30,6 +35,12 @@ import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
 import { getChatUploadSignature } from "../services/chatService";
 import { useNavigate } from "react-router-dom";
+import MessageActions from "../components/chat/MessageActions";
+import MessageReactions from "../components/chat/MessageReactions";
+import ReplyPreview from "../components/chat/ReplyPreview";
+import VoiceRecorder from "../components/chat/VoiceRecorder";
+import VoiceMessage from "../components/chat/VoiceMessage";
+import ForwardMessagesModal from "../components/chat/ForwardMessagesModal";
 
 function getUser(participant) {
   return participant?.user || participant || {};
@@ -109,7 +120,7 @@ function normalizeMessage(item, currentUserId) {
   return {
     ...item,
     id: getMessageId(item) || item?.clientMessageId,
-    text: item?.content || "",
+    text: item?.content || item?.text || "",
     sender,
     mine: String(senderId) === String(currentUserId),
     time: item?.createdAt
@@ -137,14 +148,15 @@ function Avatar({ name, color = "#AAB5C5", size = 34 }) {
   );
 }
 
-function IconButton({ children, onClick, label }) {
+function IconButton({ children, onClick, label, disabled = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/75 transition hover:bg-white/10 hover:text-white"
+      disabled={disabled}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/75 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -200,6 +212,17 @@ const fileInputRef = useRef(null);
 const [uploadingFile, setUploadingFile] = useState(false);
 const [saveMessage, setSaveMessage] = useState("");
 const [savedMessageIds, setSavedMessageIds] = useState(() => new Set());
+const [replyTarget, setReplyTarget] = useState(null);
+const [editingMessage, setEditingMessage] = useState(null);
+const [editDraft, setEditDraft] = useState("");
+const [forwardTargetMessageIds, setForwardTargetMessageIds] = useState([]);
+const [forwarding, setForwarding] = useState(false);
+const [messageActionError, setMessageActionError] = useState("");
+const [pendingDelete, setPendingDelete] = useState(null);
+const [selectedForwardIds, setSelectedForwardIds] = useState([]);
+const [renderTimestamp] = useState(() => Date.now());
+const [reactionPickerFor, setReactionPickerFor] = useState(null);
+const messageElementRefs = useRef({});
   const messageEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const searchRequestRef = useRef(0);
@@ -513,7 +536,6 @@ const handleMessageRead = (data) => {
       return;
     }
   
-    const loggedInUserId = currentUserId;
     if (String(data.userId) === String(currentUserId)) {
       return;
     }
@@ -554,7 +576,27 @@ const handleMessageRead = (data) => {
   
   socket.on("presence:online", handlePresenceOnline);
   socket.on("presence:offline", handlePresenceOffline);
-  
+
+    const handleReactionUpdated = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId)) return;
+      setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(payload.messageId) ? { ...item, reactions: payload.reactions || item.reactions || [] } : item));
+    };
+    const handleMessageUpdated = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId)) return;
+      setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(payload.id || payload.messageId) ? normalizeMessage({ ...item, ...payload }, currentUserId) : item));
+    };
+    const handleMessageDeleted = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId)) return;
+      const id = String(payload.messageId || payload.message?.id);
+      if (payload.deleteForEveryone) {
+        setMessages((previous) => previous.map((item) => String(getMessageId(item)) === id ? { ...item, ...(payload.message || {}), content: "", text: "", fileUrl: null, fileType: null, audioWaveform: [], isDeleted: true } : item));
+      } else if (payload.deletedForMe) {
+        setMessages((previous) => previous.filter((item) => String(getMessageId(item)) !== id));
+      }
+    };
+    socket.on("message:reaction_updated", handleReactionUpdated);
+    socket.on("message:updated", handleMessageUpdated);
+    socket.on("message:deleted", handleMessageDeleted);
 
     return () => {
       socket.emit("conversation:leave", { conversationId });
@@ -565,6 +607,9 @@ const handleMessageRead = (data) => {
       socket.off("message:read", handleMessageRead);
       socket.off("presence:online", handlePresenceOnline);
       socket.off("presence:offline", handlePresenceOffline);
+      socket.off("message:reaction_updated", handleReactionUpdated);
+      socket.off("message:updated", handleMessageUpdated);
+      socket.off("message:deleted", handleMessageDeleted);
     };
   }, [
     socket,
@@ -776,6 +821,7 @@ setMessages(normalizedList);
         clientMessageId,
         content,
         mentions: activeIsGroup ? selectedMentionUserIds : [],
+        ...(replyTarget?.id ? { replyToId: replyTarget.id } : {}),
       },
       (timeoutError, response) => {
         setSending(false);
@@ -809,6 +855,8 @@ setMessages(normalizedList);
         }
 
         setMessage("");
+        setReplyTarget(null);
+        setEditingMessage(null);
         setSelectedMentionUserIds([]);
         setMentionQuery(null);
         setMentionStart(-1);
@@ -883,6 +931,123 @@ setMessages(normalizedList);
         setUploadingFile(false);
     }
 }
+
+  function emitChatAction(eventName, payload) {
+    return new Promise((resolve, reject) => {
+      if (!socket || !connected) { reject(new Error("Chat server is disconnected. Please try again.")); return; }
+      socket.timeout(10000).emit(eventName, payload, (timeoutError, response) => {
+        if (timeoutError) { reject(new Error("The chat server did not respond. Please try again.")); return; }
+        if (!response?.success) { reject(new Error(response?.message || "The action could not be completed.")); return; }
+        resolve(response.data || response);
+      });
+    });
+  }
+
+  async function handleReaction(item, emoji) {
+    try {
+      setMessageActionError("");
+      const messageId = getMessageId(item);
+      const result = await emitChatAction("message:react", { conversationId: activeConversation.id, messageId, emoji });
+      if (result?.reactions) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(messageId) ? { ...entry, reactions: result.reactions } : entry));
+    } catch (err) {
+      try {
+        const result = await addMessageReaction(activeConversation.id, getMessageId(item), emoji);
+        if (result?.reactions) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(getMessageId(item)) ? { ...entry, reactions: result.reactions } : entry));
+      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+    }
+  }
+
+  function beginReply(item) {
+    setReplyTarget({ ...item, id: getMessageId(item), senderName: item.sender?.name || (item.mine ? "You" : "User"), content: item.text || item.content });
+    setEditingMessage(null);
+    messageInputRef.current?.focus();
+  }
+
+  function beginEdit(item) {
+    const createdAt = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    if (!createdAt || Date.now() - createdAt > 24 * 60 * 60 * 1000) {
+      setMessageActionError("Messages can only be edited within 24 hours of sending.");
+      return;
+    }
+    setEditingMessage(item);
+    setEditDraft(item.text || item.content || "");
+    setReplyTarget(null);
+  }
+
+  async function saveEditedMessage() {
+    const content = editDraft.trim();
+    if (!content || !editingMessage) return;
+    try {
+      const messageId = getMessageId(editingMessage);
+      const updated = await emitChatAction("message:edit", { conversationId: activeConversation.id, messageId, content });
+      setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(messageId) ? normalizeMessage({ ...item, ...(updated || {}), content, isEdited: true }, currentUserId) : item));
+      setEditingMessage(null);
+      setEditDraft("");
+    } catch (err) {
+      try {
+        const updated = await editConversationMessage(activeConversation.id, getMessageId(editingMessage), content);
+        setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(getMessageId(editingMessage)) ? normalizeMessage({ ...item, ...(updated || {}), content, isEdited: true }, currentUserId) : item));
+        setEditingMessage(null);
+      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+    }
+  }
+
+  async function confirmDeleteMessage(deleteForEveryoneOverride) {
+    if (!pendingDelete) return;
+    const { item } = pendingDelete;
+    const deleteForEveryone = Boolean(deleteForEveryoneOverride);
+    const messageId = getMessageId(item);
+    try {
+      await emitChatAction("message:delete", { conversationId: activeConversation.id, messageId, deleteForEveryone });
+      if (deleteForEveryone) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(messageId) ? { ...entry, text: "", content: "", fileUrl: null, fileType: null, audioWaveform: [], isDeleted: true } : entry));
+      else setMessages((previous) => previous.filter((entry) => String(getMessageId(entry)) !== String(messageId)));
+      setPendingDelete(null);
+    } catch (err) {
+      try {
+        await deleteConversationMessage(activeConversation.id, messageId, deleteForEveryone);
+        if (deleteForEveryone) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(messageId) ? { ...entry, text: "", content: "", fileUrl: null, fileType: null, audioWaveform: [], isDeleted: true } : entry));
+        else setMessages((previous) => previous.filter((entry) => String(getMessageId(entry)) !== String(messageId)));
+        setPendingDelete(null);
+      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+    }
+  }
+
+  async function forwardSelectedMessages(targetConversationIds) {
+    setForwarding(true);
+    try {
+      const messageIds = forwardTargetMessageIds;
+      try {
+        await emitChatAction("message:forward", { messageIds, targetConversationIds });
+      } catch {
+        await forwardConversationMessages(messageIds, targetConversationIds);
+      }
+      setForwardTargetMessageIds([]);
+      setSelectedForwardIds([]);
+      loadConversations();
+    } catch (err) {
+      setMessageActionError(err.response?.data?.message || err.message || "Messages could not be forwarded.");
+    } finally { setForwarding(false); }
+  }
+
+  async function sendVoiceMessage(recording) {
+    if (!activeConversation?.id || !socket || !connected) throw new Error("Connect to chat before sending a voice message.");
+    if (!recording?.blob?.size) throw new Error("The voice recording is empty.");
+    const extension = recording.mimeType?.includes("mp4") ? "m4a" : "webm";
+    const fileName = `voice_note_${Date.now()}.${extension}`;
+    const signature = await getVoiceUploadSignature({ conversationId: activeConversation.id, fileName, fileSize: recording.blob.size, fileType: "voice" });
+    const uploadUrl = signature?.uploadUrl;
+    const fileUrl = signature?.fileUrl;
+    if (!uploadUrl || !fileUrl) throw new Error("The voice upload signature is incomplete.");
+    const upload = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": signature.metadata?.contentType || recording.mimeType || "audio/webm" }, body: recording.blob });
+    if (!upload.ok) throw new Error("Voice upload failed. Please try again.");
+    const clientMessageId = crypto.randomUUID();
+    const saved = await emitChatAction("message:send", { conversationId: activeConversation.id, clientMessageId, content: "", fileUrl, fileType: "voice", fileName, fileSize: recording.blob.size, audioDuration: recording.duration, audioWaveform: recording.waveform });
+    if (saved?.id || saved?._id) {
+      const normalized = normalizeMessage({ ...saved, clientMessageId }, currentUserId);
+      setMessages((previous) => previous.some((item) => String(getMessageId(item)) === String(getMessageId(normalized)) || item.clientMessageId === clientMessageId) ? previous : [...previous, normalized]);
+    }
+    loadConversations();
+  }
 
   const visibleConversations = conversations.filter((conversation) =>
   getConversationName(conversation, currentUserId)
@@ -1683,10 +1848,9 @@ className={`h-1.5 w-1.5 rounded-full ${
                 )}
 
              <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 sm:py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <div className="mb-1 flex justify-center">
-                    <span className="rounded-full border border-white/25 bg-[#315A8A]/45 px-3 py-1 text-[9px] text-white/75">
-                      Messages
-                    </span>
+                  <div className="mb-1 flex items-center justify-center gap-2">
+                    <span className="rounded-full border border-white/25 bg-[#315A8A]/45 px-3 py-1 text-[9px] text-white/75">Messages</span>
+                    {selectedForwardIds.length > 0 && <button type="button" onClick={() => setForwardTargetMessageIds(selectedForwardIds)} className="rounded-full bg-blue-600 px-3 py-1 text-[9px] font-semibold text-white">Forward {selectedForwardIds.length} selected</button>}
                   </div>
                   {loadingMessages && (
                     <p className="text-center text-xs text-white/75">
@@ -1694,115 +1858,92 @@ className={`h-1.5 w-1.5 rounded-full ${
                     </p>
                   )}
                   {!loadingMessages &&
-                    messages.map((item, index) => (
-                      <div
-                        key={item.id || item.clientMessageId || index}
-                        className={`flex w-full ${
-                          item.mine ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`max-w-[92%] break-words rounded-md px-2.5 py-2 sm:max-w-[75%] sm:px-3 ${
-                            item.mine
-                              ? "rounded-br-sm border border-[#1267B6] bg-[#1A3048] text-white"
-                              : "rounded-bl-sm border border-white/25 bg-[#1A3048] text-[#E4ECF5]"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">
-                          {renderMessageText(item.text, item.mentionedUsers)}
-                            {item.fileUrl && item.fileType === "image" && (
-    <a href={item.fileUrl} target="_blank" rel="noreferrer">
-        <img
-            src={item.fileUrl}
-            alt="Chat attachment"
-            style={{
-                maxWidth: "240px",
-                maxHeight: "240px",
-                borderRadius: "12px",
-                objectFit: "contain",
-            }}
-        />
-    </a>
+                    messages.map((item, index) => {
+                      const messageId = getMessageId(item);
+                      const createdAt = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+                      const withinEditWindow = createdAt > 0 && renderTimestamp - createdAt <= 24 * 60 * 60 * 1000;
+                      const canEdit = item.mine && withinEditWindow && !item.isDeleted && !item.fileUrl && Boolean(messageId);
+                      const canDeleteForEveryone = item.mine || activeIsGroupAdmin;
+                      const reply = item.replyTo;
+                      return (
+                        <div key={messageId || item.clientMessageId || index} ref={(node) => { if (messageId) messageElementRefs.current[String(messageId)] = node; }} className={`flex w-full ${item.mine ? "justify-end" : "justify-start"}`}>
+                          <div className={`group relative max-w-[92%] break-words rounded-md px-2.5 py-2 sm:max-w-[75%] sm:px-3 ${item.mine ? "rounded-br-sm border border-[#1267B6] bg-[#1A3048] text-white" : "rounded-bl-sm border border-white/25 bg-[#1A3048] text-[#E4ECF5]"}`}>
+                            {reply && (
+                              <button type="button" onClick={() => messageElementRefs.current[String(reply.id || reply._id)]?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mb-2 block w-full rounded border-l-2 border-blue-400 bg-black/15 px-2 py-1 text-left">
+                                <span className="block text-[9px] font-semibold text-blue-200">{reply.sender?.name || "Reply"}</span>
+                                <span className="block truncate text-[10px] text-white/70">{reply.isDeleted ? "This message was deleted" : reply.content || reply.text || (reply.fileType === "voice" ? "Voice message" : "Attachment")}</span>
+                              </button>
+                            )}
+                            {item.isDeleted ? (
+                              <p className="text-[11px] italic text-white/55">This message was deleted</p>
+                            ) : (
+                              <>
+                                {item.isForwarded && <p className="mb-1 text-[9px] italic text-white/50">↗ Forwarded</p>}
+                                {item.text && <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">{renderMessageText(item.text, item.mentionedUsers)}</p>}
+                                {item.fileUrl && item.fileType === "voice" && <VoiceMessage message={item} />}
+                                {item.fileUrl && item.fileType === "image" && <a href={item.fileUrl} target="_blank" rel="noreferrer"><img src={item.fileUrl} alt="Chat attachment" className="max-h-60 max-w-[240px] rounded-xl object-contain" /></a>}
+                                {item.fileUrl && item.fileType === "video" && <video src={item.fileUrl} controls className="max-w-[260px]" />}
+                                {item.fileUrl && item.fileType === "audio" && <audio src={item.fileUrl} controls className="w-full max-w-full" />}
+                                {item.fileUrl && item.fileType === "file" && <a href={item.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-200 underline">Open attachment</a>}
+                                {item.isEdited && <span className="ml-1 text-[9px] italic text-white/45">edited</span>}
+                              </>
+                            )}
+                            {!item.isDeleted && <MessageReactions reactions={item.reactions || []} currentUserId={currentUserId} onReact={(emoji) => handleReaction(item, emoji)} onPick={() => setReactionPickerFor(reactionPickerFor === String(messageId) ? null : String(messageId))} />}
+                            {reactionPickerFor === String(messageId) && (
+  <div className="mt-2 flex gap-1 rounded-lg border border-white/15 bg-[#0b1730] p-2">
+    {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+      <button
+        key={emoji}
+        type="button"
+        onClick={() => {
+          handleReaction(item, emoji);
+          setReactionPickerFor(null);
+        }}
+        className="rounded-md p-1.5 text-lg transition hover:bg-white/10"
+      >
+        {emoji}
+      </button>
+    ))}
+  </div>
 )}
-
-{item.fileUrl && item.fileType === "video" && (
-    <video
-        src={item.fileUrl}
-        controls
-        style={{ maxWidth: "260px" }}
-    />
-)}
-
-{item.fileUrl && item.fileType === "audio" && (
-    <audio src={item.fileUrl} controls className="w-full max-w-full" />
-)}
-
-{item.fileUrl && item.fileType === "file" && (
-    <a href={item.fileUrl} target="_blank" rel="noreferrer">
-        Open attachment
-    </a>
-)}
-                          </p>
-                          <div
-                             className={`mt-1.5 flex items-center justify-between gap-2 text-[9px] ${
-                              item.mine ? "text-[#D2E9FF]" : "text-[#8FA5BB]"
-                            }`}
-                          >
-                       <button
-  type="button"
-  onClick={() => handleSaveMessage(item)}
-  title={
-    savedMessageIds.has(String(item.id || item._id))
-      ? "Bookmarked"
-      : "Save bookmark"
-  }
-  className={`transition ${
-    savedMessageIds.has(String(item.id || item._id))
-      ? "text-[#1687F8]"
-      : "text-white/60 hover:text-[#1687F8]"
-  }`}
->
-  <FiBookmark
-    size={13}
-    fill={
-      savedMessageIds.has(String(item.id || item._id))
-        ? "currentColor"
-        : "none"
-    }
-  />
-</button>
-<span className="flex items-center gap-1">
+                            <div className={`mt-1.5 flex items-center justify-end gap-1 text-[9px] ${item.mine ? "text-[#D2E9FF]" : "text-[#8FA5BB]"}`}>
   <span>{item.time}</span>
-
   {item.mine && (
     <span
-      title={
-        Number(item.seq || 0) > 0 &&
-        Number(item.seq) <=
-          Number(readBoundary[activeConversation.id]?.seq || 0)
-          ? "Read"
-          : "Sent"
-      }
-      className={
-        Number(item.seq || 0) > 0 &&
-        Number(item.seq) <=
-          Number(readBoundary[activeConversation.id]?.seq || 0)
-          ? "font-bold text-[#38BDF8]"
-          : "text-white/55"
-      }
+      title={Number(item.seq || 0) > 0 && Number(item.seq) <= Number(readBoundary[activeConversation.id]?.seq || 0) ? "Read" : "Sent"}
+      className={Number(item.seq || 0) > 0 && Number(item.seq) <= Number(readBoundary[activeConversation.id]?.seq || 0) ? "font-bold text-[#38BDF8]" : "text-white/55"}
     >
-      ✓{Number(item.seq || 0) > 0 &&
-      Number(item.seq) <=
-        Number(readBoundary[activeConversation.id]?.seq || 0)
-        ? "✓"
-        : ""}
+      ✓{Number(item.seq || 0) > 0 && Number(item.seq) <= Number(readBoundary[activeConversation.id]?.seq || 0) ? "✓" : ""}
     </span>
   )}
-</span>
+</div>
+
+{!item.isDeleted && (
+ <MessageActions
+ align={item.mine ? "right" : "left"}
+ canEdit={canEdit}
+ canDeleteForEveryone={canDeleteForEveryone}
+ isSaved={savedMessageIds.has(String(item.id || item._id))}
+ isSelected={selectedForwardIds.includes(String(messageId))}
+ onReply={() => beginReply(item)}
+ onReact={() => setReactionPickerFor(String(messageId))}
+ onEdit={() => beginEdit(item)}
+ onForward={() => setForwardTargetMessageIds([String(messageId)])}
+ onDelete={() => setPendingDelete({ item, deleteForEveryone: canDeleteForEveryone })}
+ onSave={() => handleSaveMessage(item)}
+ onSelectForward={() => {
+   setSelectedForwardIds((previous) =>
+     previous.includes(String(messageId))
+       ? previous.filter((id) => id !== String(messageId))
+       : [...previous, String(messageId)]
+   );
+ }}
+/>
+)}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   <div ref={messageEndRef} />
                 </div>
 
@@ -1810,6 +1951,9 @@ className={`h-1.5 w-1.5 rounded-full ${
                   onSubmit={sendMessage}
                   className="shrink-0 border-t border-white/20 bg-white/5 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3.5"
                 >
+                  {replyTarget && <ReplyPreview reply={replyTarget} onCancel={() => setReplyTarget(null)} />}
+                  {editingMessage && <div className="mb-2 flex items-center gap-2 rounded-lg border-l-2 border-amber-400 bg-white/5 px-3 py-2"><input value={editDraft} onChange={(event) => setEditDraft(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none" aria-label="Edit message" /><button type="button" onClick={saveEditedMessage} className="text-[10px] text-blue-200">Save</button><button type="button" onClick={() => setEditingMessage(null)} className="text-[10px] text-white/60">Cancel</button></div>}
+                  {messageActionError && <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-red-950/40 px-3 py-2 text-[10px] text-red-200"><span>{messageActionError}</span><button type="button" onClick={() => setMessageActionError("")} aria-label="Dismiss">×</button></div>}
                   <div className="flex min-h-[52px] items-center gap-2 rounded-xl border border-white/15 bg-[#0b1730]/80 px-2 shadow-inner transition-all focus-within:border-blue-400/60">
                   <IconButton
   label="Attach file"
@@ -1864,9 +2008,10 @@ className={`h-1.5 w-1.5 rounded-full ${
       </div>
     )}
 </div>
+                    <VoiceRecorder disabled={!activeConversation || !connected || uploadingFile || sending} onSend={sendVoiceMessage} onError={setMessageActionError} />
                     <button
                       type="submit"
-                      disabled={!message.trim() || sending || !connected}
+                      disabled={!message.trim() || sending || !connected || Boolean(editingMessage)}
                       aria-label="Send message"
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -1901,6 +2046,8 @@ className={`h-1.5 w-1.5 rounded-full ${
           </main>
 
          
+          {forwardTargetMessageIds.length > 0 && <ForwardMessagesModal conversations={conversations} getConversationName={(conversation) => getConversationName(conversation, currentUserId)} currentConversationId={activeConversation?.id} loading={forwarding} onClose={() => { setForwardTargetMessageIds([]); setSelectedForwardIds([]); }} onForward={forwardSelectedMessages} />}
+          {pendingDelete && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-3" role="dialog" aria-modal="true"><div className="w-full max-w-sm rounded-xl border border-white/20 bg-[#102842] p-4"><h3 className="text-sm font-semibold text-white">Delete message?</h3><p className="mt-2 text-xs text-white/70">Choose how you want to delete this message.</p><div className="mt-4 flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setPendingDelete(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Cancel</button><button type="button" onClick={() => confirmDeleteMessage(false)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Delete for me</button>{pendingDelete.item.mine || activeIsGroupAdmin ? <button type="button" onClick={() => confirmDeleteMessage(true)} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Delete for everyone</button> : null}</div></div></div>}
           {showInfo && activeConversation && (
  
 <aside className="fixed inset-0 z-40 flex w-full min-h-0 flex-col overflow-y-auto rounded-none border border-white/20 bg-[#102842]/95 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg sm:p-4 lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:bg-[#102842]/55 lg:p-3 xl:w-[260px]">
