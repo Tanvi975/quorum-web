@@ -165,3 +165,35 @@ export async function getConversationPresence(conversationId) {
 
     return response.data?.data ?? response.data;
 }
+
+export async function getVoiceUploadSignature({ conversationId, fileName, fileSize, fileType = "voice" }) {
+    const response = await api.post("/api/uploads/sign", {
+        conversationId,
+        fileName,
+        fileSize,
+        fileType,
+    }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}` },
+    });
+    return response.data?.data ?? response.data;
+}
+
+export async function addMessageReaction(conversationId, messageId, emoji) {
+    const response = await api.post(`/api/conversations/${conversationId}/messages/${messageId}/reactions`, { emoji });
+    return response.data?.data ?? response.data;
+}
+
+export async function editConversationMessage(conversationId, messageId, content) {
+    const response = await api.patch(`/api/conversations/${conversationId}/messages/${messageId}`, { content });
+    return response.data?.data ?? response.data;
+}
+
+export async function forwardConversationMessages(messageIds, targetConversationIds) {
+    const response = await api.post("/api/conversations/messages/forward", { messageIds, targetConversationIds });
+    return response.data?.data ?? response.data;
+}
+
+export async function deleteConversationMessage(conversationId, messageId, deleteForEveryone) {
+    const response = await api.delete(`/api/conversations/${conversationId}/messages/${messageId}`, { data: { deleteForEveryone } });
+    return response.data?.data ?? response.data;
+}
