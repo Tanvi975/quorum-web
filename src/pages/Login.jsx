@@ -227,6 +227,7 @@ function Login() {
           Sign Up
         </Link>
       </p>
+      
     </AuthLayout>
   );
 }
