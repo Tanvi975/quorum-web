@@ -1,5 +1,7 @@
-import { useState } from "react";
+
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Turnstile } from "@marsidev/react-turnstile";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
@@ -12,8 +14,11 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const turnstileRef = useRef(null);
   const navigate = useNavigate();
 
   function validate() {
@@ -27,7 +32,8 @@ function Signup() {
     if (!fullName) {
       newErrors.fullName = "Full name is required";
     } else if (!nameRegex.test(fullName)) {
-      newErrors.fullName = "Only letters and spaces allowed (2-20 characters)";
+      newErrors.fullName =
+        "Only letters and spaces allowed (2-20 characters)";
     }
 
     if (!email) {
@@ -50,21 +56,37 @@ function Signup() {
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   }
 
+  function resetCaptcha() {
+    setCaptchaToken("");
+    turnstileRef.current?.reset();
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-  
+
     if (isSubmitting || !validate()) return;
-  
+
+    if (!captchaToken) {
+      setErrors((prev) => ({
+        ...prev,
+        form: "Please complete the security verification.",
+      }));
+      return;
+    }
+
     setIsSubmitting(true);
-  
+
     try {
-      await registerUser(fullName.trim(), email.trim(), password);
-  
+      await registerUser(
+        fullName.trim(),
+        email.trim(),
+        password,
+        captchaToken
+      );
+
       navigate("/verify-code", {
         state: {
           email: email.trim(),
@@ -73,31 +95,38 @@ function Signup() {
         },
       });
     } catch (err) {
+      resetCaptcha();
+
       const status = err.response?.status;
       const backendMessage = err.response?.data?.message;
-  
+
       let message;
-  
-      if (status === 409) {
+
+      if (status === 403) {
+        message =
+          backendMessage || "Security verification failed. Please try again.";
+      } else if (status === 409) {
         message = "An account with this email already exists.";
       } else if (status === 400) {
         message = backendMessage || "Please check your details and try again.";
       } else if (status === 429) {
         message = "Too many attempts. Please try again after 15 minutes.";
       } else if (status >= 500) {
-        message = "We're having trouble. Please try again in a moment.";
+        message =
+          "We're having trouble. Please try again in a moment.";
       } else if (!err.response) {
-        message = "Unable to connect. Please check your internet connection.";
+        message =
+          "Unable to connect. Please check your internet connection.";
       } else {
-        message = backendMessage || "We couldn't create your account. Please try again.";
+        message =
+          backendMessage || "We couldn't create your account. Please try again.";
       }
-  
+
       setErrors((prev) => ({ ...prev, form: message }));
     } finally {
       setIsSubmitting(false);
     }
   }
-  
 
   return (
     <AuthLayout
@@ -148,33 +177,68 @@ function Signup() {
           placeholder="Re-enter your password"
           error={errors.confirmPassword}
         />
-<div className="mt-3 mb-2 flex items-center">
-  <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
-    <input
-      type="checkbox"
-      checked={rememberMe}
-      onChange={(e) => setRememberMe(e.target.checked)}
-      className="h-4 w-4 rounded border-gray-300 accent-[#2563EB]"
-    />
-    Remember me
-  </label>
-</div>
+
+        <div className="mt-3 mb-2 flex items-center">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 accent-[#2563EB]"
+            />
+            Remember me
+          </label>
+        </div>
+
+        {/* Cloudflare Turnstile CAPTCHA */}
+        <div className="my-4 flex justify-center">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onSuccess={(token) => {
+              setCaptchaToken(token);
+              setErrors((prev) => ({ ...prev, form: undefined }));
+            }}
+            onExpire={() => {
+              setCaptchaToken("");
+              setErrors((prev) => ({
+                ...prev,
+                form: "Verification expired. Please verify again.",
+              }));
+            }}
+            onError={() => {
+              setCaptchaToken("");
+              setErrors((prev) => ({
+                ...prev,
+                form: "Security check failed to load. Please refresh.",
+              }));
+            }}
+            options={{
+              theme: "auto",
+              size: "normal",
+            }}
+          />
+        </div>
+
         <div className="h-5 mb-2">
           {errors.form && (
-           <p className="w-full max-w-full break-words text-xs text-red-500 text-center">
-           {errors.form}
-         </p>
+            <p className="w-full max-w-full break-words text-xs text-red-500 text-center">
+              {errors.form}
+            </p>
           )}
         </div>
 
-        <AuthButton disabled={isSubmitting}>
-  {isSubmitting ? "Creating Account..." : "Create Account"}
-</AuthButton>
+        <AuthButton disabled={isSubmitting || !captchaToken}>
+          {isSubmitting ? "Creating Account..." : "Create Account"}
+        </AuthButton>
       </form>
 
       <p className="mt-4 w-full min-w-0 text-center text-sm text-gray-600 break-words">
         Already have an account?{" "}
-        <Link to="/login" className="text-[#2563EB] text-sm font-medium underline">
+        <Link
+          to="/login"
+          className="text-[#2563EB] text-sm font-medium underline"
+        >
           Sign In
         </Link>
       </p>

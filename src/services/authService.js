@@ -1,20 +1,22 @@
 import api, { resetRefreshState } from "./api";
 
-export async function registerUser(name, email, password) {
+export async function registerUser(name, email, password, captchaToken) {
     const res = await api.post("/api/auth/register", {
         name: name.trim(),
         email: email.trim(),
         password,
+        captchaToken,
     });
 
     return res.data;
 }
 
-export async function loginUser(email, password, rememberMe = false) {
+export async function loginUser(email, password, rememberMe = false, captchaToken) {
     const res = await api.post("/api/auth/login", {
         email: email.trim(),
         password,
         rememberMe,
+        captchaToken,
     });
 
     resetRefreshState();
