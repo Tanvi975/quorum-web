@@ -45,6 +45,9 @@ import MyJiraTicketsPage from "./pages/jira/MyJiraTicketsPage";
 import MyJoinRequests from "./pages/communities/MyJoinRequests";
 import MyGitHubPage from "./pages/github/MyGitHubPage";
 import GitHubPage from "./pages/github/GitHubPage";
+import ProjectsPage from "./pages/projects/ProjectsPage";
+import ProjectDetailsPage from "./pages/projects/ProjectDetailsPage";
+import InviteAcceptPage from "./components/projects/InviteAcceptPage";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -335,6 +338,32 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/projects"
+  element={
+    <ProtectedRoute>
+      <ProjectsPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/projects/:projectId"
+  element={
+    <ProtectedRoute>
+      <ProjectDetailsPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/accept-project-invite"
+  element={
+    <ProtectedRoute>
+      <InviteAcceptPage />
+    </ProtectedRoute>
+  }
+/>
           <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </BrowserRouter>
