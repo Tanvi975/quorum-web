@@ -7,19 +7,23 @@ export default function useChatSocket() {
     const [connectionError, setConnectionError] = useState("");
 
     useEffect(() => {
-        const accessToken = localStorage.getItem("accessToken");
+        const socketUrl =
+            import.meta.env.VITE_API_URL;
 
-        if (!accessToken) {
-            setConnectionError("Please log in to use chat.");
-            return;
-        }
+        const instance = io(socketUrl, {
+            auth: (callback) => {
+                const accessToken = localStorage.getItem("accessToken");
 
-        const instance = io(
-            import.meta.env.VITE_API_URL, {
-                auth: { token: accessToken },
-                transports: ["websocket", "polling"],
-                withCredentials: true,
-            });
+                callback(
+                    accessToken ? { token: accessToken } : {}
+                );
+            },
+            transports: ["websocket", "polling"],
+            withCredentials: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+        });
 
         setSocket(instance);
 
@@ -34,7 +38,9 @@ export default function useChatSocket() {
 
         instance.on("connect_error", (error) => {
             setConnected(false);
-            setConnectionError(error.message || "Unable to connect to chat.");
+            setConnectionError(
+                error.message || "Unable to connect to chat."
+            );
         });
 
         return () => {
@@ -44,5 +50,9 @@ export default function useChatSocket() {
         };
     }, []);
 
-    return { socket, connected, connectionError };
+    return {
+        socket,
+        connected,
+        connectionError,
+    };
 }

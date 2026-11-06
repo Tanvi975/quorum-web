@@ -177,6 +177,10 @@ export default function Chat() {
   const [searching, setSearching] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [olderMessagesCursor, setOlderMessagesCursor] = useState(null);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedMentionUserIds, setSelectedMentionUserIds] = useState([]);
 const [mentionQuery, setMentionQuery] = useState(null);
@@ -228,6 +232,7 @@ const messageElementRefs = useRef({});
   const searchRequestRef = useRef(0);
   const activeConversationRef = useRef(null);
   const messagesRef = useRef([]);
+  const typingTimeoutRef = useRef(null);
   const navigate = useNavigate();
 
   const activeContact = activeConversation
@@ -577,6 +582,31 @@ const handleMessageRead = (data) => {
   socket.on("presence:online", handlePresenceOnline);
   socket.on("presence:offline", handlePresenceOffline);
 
+  const handleTypingStart = (data) => {
+    if (String(data?.conversationId) !== String(conversationId)) return;
+    const typingUserId = data?.userId || data?.senderId;
+    if (!typingUserId || String(typingUserId) === String(currentUserId)) return;
+
+    setTypingUsers((previous) =>
+      previous.includes(String(typingUserId))
+        ? previous
+        : [...previous, String(typingUserId)]
+    );
+  };
+
+  const handleTypingStop = (data) => {
+    if (String(data?.conversationId) !== String(conversationId)) return;
+    const typingUserId = data?.userId || data?.senderId;
+    if (!typingUserId) return;
+
+    setTypingUsers((previous) =>
+      previous.filter((id) => id !== String(typingUserId))
+    );
+  };
+
+  socket.on("typing:start", handleTypingStart);
+  socket.on("typing:stop", handleTypingStop);
+
     const handleReactionUpdated = (payload) => {
       if (String(payload?.conversationId) !== String(conversationId)) return;
       setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(payload.messageId) ? { ...item, reactions: payload.reactions || item.reactions || [] } : item));
@@ -607,6 +637,8 @@ const handleMessageRead = (data) => {
       socket.off("message:read", handleMessageRead);
       socket.off("presence:online", handlePresenceOnline);
       socket.off("presence:offline", handlePresenceOffline);
+      socket.off("typing:start", handleTypingStart);
+      socket.off("typing:stop", handleTypingStop);
       socket.off("message:reaction_updated", handleReactionUpdated);
       socket.off("message:updated", handleMessageUpdated);
       socket.off("message:deleted", handleMessageDeleted);
@@ -626,6 +658,9 @@ const handleMessageRead = (data) => {
     }
 
     let cancelled = false;
+    setTypingUsers([]);
+    setOlderMessagesCursor(null);
+    setHasOlderMessages(false);
 
     async function loadHistory() {
       setLoadingMessages(true);
@@ -633,7 +668,7 @@ const handleMessageRead = (data) => {
 
       try {
         const response = await getMessages(activeConversation.id);
-        const result = response?.data?.data ?? response?.data;
+        const result = response?.data?.data ?? response?.data ?? response;
 
         const list = Array.isArray(result?.messages)
           ? result.messages
@@ -654,8 +689,9 @@ const normalizedList = list
 });
 
 setMessages(normalizedList);
+setOlderMessagesCursor(result?.nextCursor || null);
+setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
 
-  
     const lastIncomingMessage = [...normalizedList]
       .reverse()
       .find((item) => !item.mine && getMessageId(item));
@@ -686,6 +722,56 @@ setMessages(normalizedList);
       cancelled = true;
     };
 }, [activeConversation?.id, currentUserId, socket, connected]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (
+      !activeConversation?.id ||
+      !olderMessagesCursor ||
+      loadingOlderMessages ||
+      !hasOlderMessages
+    ) {
+      return;
+    }
+
+    setLoadingOlderMessages(true);
+    const conversationId = activeConversation.id;
+
+    try {
+      const response = await getMessages(conversationId, 50, olderMessagesCursor);
+      const result = response?.data?.data ?? response?.data ?? response;
+      const olderList = Array.isArray(result?.messages) ? result.messages : [];
+
+      const normalizedOlder = olderList
+        .map((item) => normalizeMessage(item, currentUserId))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      setMessages((previous) => {
+        const existingIds = new Set(
+          previous.map((item) => String(getMessageId(item) || item.clientMessageId))
+        );
+        const uniqueOlder = normalizedOlder.filter((item) => {
+          const id = String(getMessageId(item) || item.clientMessageId);
+          return id && !existingIds.has(id);
+        });
+        return [...uniqueOlder, ...previous];
+      });
+
+      setOlderMessagesCursor(result?.nextCursor || null);
+      setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not load older messages."
+      );
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [
+    activeConversation?.id,
+    olderMessagesCursor,
+    loadingOlderMessages,
+    hasOlderMessages,
+    currentUserId,
+  ]);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -852,6 +938,14 @@ setMessages(normalizedList);
 
             return exists ? previous : [...previous, savedMessage];
           });
+        }
+
+        socket.emit("typing:stop", {
+          conversationId: activeConversation.id,
+        });
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
         }
 
         setMessage("");
@@ -1048,6 +1142,14 @@ setMessages(normalizedList);
     }
     loadConversations();
   }
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const visibleConversations = conversations.filter((conversation) =>
   getConversationName(conversation, currentUserId)
@@ -1852,6 +1954,18 @@ className={`h-1.5 w-1.5 rounded-full ${
                     <span className="rounded-full border border-white/25 bg-[#315A8A]/45 px-3 py-1 text-[9px] text-white/75">Messages</span>
                     {selectedForwardIds.length > 0 && <button type="button" onClick={() => setForwardTargetMessageIds(selectedForwardIds)} className="rounded-full bg-blue-600 px-3 py-1 text-[9px] font-semibold text-white">Forward {selectedForwardIds.length} selected</button>}
                   </div>
+                  {hasOlderMessages && !loadingMessages && (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={loadOlderMessages}
+                        disabled={loadingOlderMessages}
+                        className="rounded-full border border-white/20 bg-[#102842]/70 px-3 py-1.5 text-[10px] text-white/80 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {loadingOlderMessages ? "Loading older messages..." : "Load older messages"}
+                      </button>
+                    </div>
+                  )}
                   {loadingMessages && (
                     <p className="text-center text-xs text-white/75">
                       Loading messages...
@@ -1944,6 +2058,11 @@ className={`h-1.5 w-1.5 rounded-full ${
                         </div>
                       );
                     })}
+                  {typingUsers.length > 0 && (
+                    <p className="px-2 py-1 text-[10px] italic text-white/70">
+                      Someone is typing...
+                    </p>
+                  )}
                   <div ref={messageEndRef} />
                 </div>
 
