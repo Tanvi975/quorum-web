@@ -103,6 +103,78 @@ function Loading({ children = "Working on it..." }) {
   );
 }
 
+function getAttachmentName(file) {
+  return file?.name || file?.originalName || file?.filename || "Attachment";
+}
+
+function getAttachmentUrl(file) {
+  return (
+    file?.url ||
+    file?.fileUrl ||
+    file?.file_url ||
+    file?.downloadUrl ||
+    file?.download_url ||
+    null
+  );
+}
+
+function AttachmentList({ files = [] }) {
+  if (!Array.isArray(files) || files.length === 0) return null;
+
+  function openAttachment(file) {
+    const savedUrl = getAttachmentUrl(file);
+
+    if (savedUrl) {
+      window.open(savedUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // Local File objects work only during the current browser session.
+    if (file instanceof File) {
+      const temporaryUrl = URL.createObjectURL(file);
+      window.open(temporaryUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(temporaryUrl), 60000);
+      return;
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {files.map((file, index) => {
+        const name = getAttachmentName(file);
+        const canOpen =
+          Boolean(getAttachmentUrl(file)) ||
+          (typeof File !== "undefined" && file instanceof File);
+
+        return (
+          <div
+            key={`${name}-${index}`}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/20 bg-black/10 px-3 py-2"
+          >
+            <span className="min-w-0 break-all text-xs text-white/90">
+              📎 {name}
+            </span>
+
+            {canOpen ? (
+              <button
+                type="button"
+                onClick={() => openAttachment(file)}
+                className="shrink-0 text-xs font-medium text-blue-200 underline hover:text-white"
+              >
+                Open file
+              </button>
+            ) : (
+              <span className="text-xs text-white/50">
+                File link unavailable
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function QuorumAIAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
   const [error, setError] = useState("");
@@ -232,10 +304,13 @@ async function handleChat(event) {
 
   const userMessage = text || `Attached files: ${selectedFiles.map((file) => file.name).join(", ")}`;
 
-  setSuggestions([]);
   setMessages((current) => [
     ...current,
-    { role: "user", text: userMessage },
+    {
+      role: "user",
+      text: userMessage,
+      attachments: selectedFiles,
+    },
   ]);
 
   await runRequest(async () => {
@@ -555,15 +630,16 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
                     }`}
                   >
                     <div
-                      className={`max-w-[90%] rounded-xl px-4 py-3 sm:max-w-[80%] ${
-                        message.role === "user"
-                          ? "bg-gradient-to-r from-[#0066FF] to-[#0148B3] text-white"
-                          : "border border-white/20 bg-[#142844] text-white/90"
-                      }`}
+                     className={`max-w-[90%] rounded-xl border border-white/20 px-4 py-3 text-white/90 sm:max-w-[80%] ${
+                      message.role === "user"
+                        ? "bg-[#193653]"
+                        : "bg-[#142844]"
+                    }`}
                     >
                       <p className="whitespace-pre-wrap break-words text-sm leading-7">
                       {formatAIResponse(message.text)}
                       </p>
+                      <AttachmentList files={message.attachments || []} />
                       {message.metadata?.model && (
                         <p className="mt-2 text-[11px] text-white/70">
                           Model: {message.metadata.model}
@@ -1092,11 +1168,15 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
 
                     {isExpanded && (
                       <>
-                        <div className="mt-4 border-t border-white/15 pt-4">
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
-                            {formatAIResponse(item.response)}
-                          </p>
-                        </div>
+                       <div className="mt-4 border-t border-white/15 pt-4">
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
+                    {formatAIResponse(item.response)}
+                   </p>
+
+                 <AttachmentList
+                   files={item.attachments || item.files || []}
+                  />
+                      </div>
                         <div className="mt-3 flex flex-wrap gap-3 text-xs text-white/60">
                           {item.createdAt && (
                             <span>{new Date(item.createdAt).toLocaleString()}</span>
