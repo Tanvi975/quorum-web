@@ -48,6 +48,8 @@ import GitHubPage from "./pages/github/GitHubPage";
 import ProjectsPage from "./pages/projects/ProjectsPage";
 import ProjectDetailsPage from "./pages/projects/ProjectDetailsPage";
 import InviteAcceptPage from "./components/projects/InviteAcceptPage";
+import TaskBoard from "./components/projects/TaskBoard";
+import ResourceList from "./components/projects/ResourceList";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -88,6 +90,56 @@ function ProfileRoute() {
     <Profile
       user={user || {}}
       onBack={() => navigate("/dashboard")}
+    />
+  );
+}
+function ProjectTasksRoute() {
+  const { projectId } = useParams();
+  const { user } = useAuth();
+
+  const currentUserId = user?.id || user?.userId || user?.sub;
+
+  const role = (
+    user?.role ||
+    user?.organizationRole ||
+    ""
+  ).toUpperCase();
+
+  const isManager = [
+    "PROJECT_MANAGER",
+    "ORG_ADMIN",
+    "ORGANIZATION_ADMIN"
+  ].includes(role);
+
+  return (
+    <TaskBoard
+      projectId={projectId}
+      isManager={isManager}
+      currentUserId={currentUserId}
+    />
+  );
+}
+
+function ProjectResourcesRoute() {
+  const { projectId } = useParams();
+  const { user } = useAuth();
+
+  const role = (
+    user?.role ||
+    user?.organizationRole ||
+    ""
+  ).toUpperCase();
+
+  const isManager = [
+    "PROJECT_MANAGER",
+    "ORG_ADMIN",
+    "ORGANIZATION_ADMIN"
+  ].includes(role);
+
+  return (
+    <ResourceList
+      projectId={projectId}
+      isManager={isManager}
     />
   );
 }
@@ -352,6 +404,23 @@ function App() {
   element={
     <ProtectedRoute>
       <ProjectDetailsPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/projects/:projectId/tasks"
+  element={
+    <ProtectedRoute>
+      <ProjectTasksRoute />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/projects/:projectId/resources"
+  element={
+    <ProtectedRoute>
+      <ProjectResourcesRoute />
     </ProtectedRoute>
   }
 />
