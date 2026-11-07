@@ -97,43 +97,25 @@ export default function MyGitHubPage() {
                   No repositories found.
                 </p>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {repositories.map((repo) => (
-                    <article
-                      key={repo.id || repo.full_name}
-                      className="rounded-2xl border border-white/15 bg-[#0B2F58]/35 p-4"
-                    >
-                      <div className="flex justify-between gap-3">
-                        <h3 className="break-all font-semibold">
-                          {repo.full_name}
-                        </h3>
-                        <span className="text-xs text-blue-200">
-                          {repo.private ? "Private" : "Public"}
-                        </span>
-                      </div>
+<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  {repositories.map((repo) => (
+    <a
+      key={repo.id || repo.full_name}
+      href={repo.html_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-between gap-3 rounded-xl border border-white/15 bg-[#0B2F58]/35 p-4 transition hover:border-sky-300/50 hover:bg-[#0B2F58]/70"
+    >
+      <span className="break-all font-semibold text-white">
+        {repo.full_name}
+      </span>
 
-                      <p className="mt-2 text-sm text-blue-100/70">
-                        {repo.description || "No description available."}
-                      </p>
-
-                      <div className="mt-3 flex justify-between text-xs text-blue-200/80">
-                        <span>{repo.language || "Unknown language"}</span>
-                        <span>{repo.default_branch || "main"}</span>
-                      </div>
-
-                      {repo.html_url && (
-                        <a
-                          href={repo.html_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-4 inline-block text-sm font-semibold text-sky-300 hover:text-white"
-                        >
-                          Open on GitHub ↗
-                        </a>
-                      )}
-                    </article>
-                  ))}
-                </div>
+      <span className="shrink-0 text-sky-300">
+        ↗
+      </span>
+    </a>
+  ))}
+</div>
               )}
             </section>
           ) : null}
