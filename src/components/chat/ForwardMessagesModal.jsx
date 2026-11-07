@@ -1,167 +1,156 @@
 
-import { useEffect, useRef, useState } from "react";
-import {
-  FiCornerUpLeft,
-  FiEdit2,
-  FiSmile,
-  FiMoreHorizontal,
-  FiShare,
-  FiTrash2,
-  FiBookmark,
-  FiCheckSquare,
-} from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
 
-export default function MessageActions({
-  canEdit,
-  canDeleteForEveryone,
-  isSaved,
-  isSelected,
-  align = "right",
-  onReply,
-  onReact,
-  onEdit,
+export default function ForwardMessagesModal({
+  conversations = [],
+  getConversationName,
+  currentConversationId,
+  loading = false,
+  onClose,
   onForward,
-  onDelete,
-  onSave,
-  onSelectForward,
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const availableConversations = useMemo(() => {
+    return conversations.filter(
+      (conversation) =>
+        String(conversation.id) !== String(currentConversationId)
+    );
+  }, [conversations, currentConversationId]);
+
+  const filteredConversations = availableConversations.filter(
+    (conversation) =>
+      (getConversationName?.(conversation) || "")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+  );
 
   useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuOpen(false);
-      }
-    };
-
     const handleEscape = (event) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape" && !loading) onClose?.();
     };
 
-    document.addEventListener("pointerdown", handleOutsideClick);
     document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [loading, onClose]);
 
-    return () => {
-      document.removeEventListener("pointerdown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  const runAction = (action) => {
-    setMenuOpen(false);
-    action?.();
-  };
-
-  const menuItems = [
-    { label: "Reply", icon: FiCornerUpLeft, action: onReply },
-    { label: "Forward", icon: FiShare, action: onForward },
-    {
-      label: isSaved ? "Remove bookmark" : "Save bookmark",
-      icon: FiBookmark,
-      action: onSave,
-    },
-    {
-      label: isSelected ? "Deselect message" : "Select to forward",
-      icon: FiCheckSquare,
-      action: onSelectForward,
-    },
-    ...(canEdit
-      ? [{ label: "Edit", icon: FiEdit2, action: onEdit }]
-      : []),
-    {
-      label: canDeleteForEveryone ? "Delete for everyone" : "Delete for me",
-      icon: FiTrash2,
-      action: onDelete,
-      danger: true,
-    },
-  ];
+  function toggleRecipient(id) {
+    setSelectedIds((previous) =>
+      previous.includes(String(id))
+        ? previous.filter((item) => item !== String(id))
+        : [...previous, String(id)]
+    );
+  }
 
   return (
-    <div
-      ref={menuRef}
-      className={`absolute top-0 z-30 -translate-y-full ${
-        align === "left" ? "left-2" : "right-2"
-      }`}
-    >
-      <div className="hidden items-center gap-0.5 rounded-lg border border-white/15 bg-[#0b1730] p-1 shadow-lg transition-opacity md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-        <button
-          type="button"
-          onClick={() => runAction(onReact)}
-          title="React"
-          aria-label="React"
-          className="rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white"
-        >
-          <FiSmile size={15} />
-        </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forward-modal-title"
+        className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#102842] shadow-2xl"
+      >
+        <header className="flex items-center justify-between border-b border-white/15 p-4">
+          <div>
+            <h2 id="forward-modal-title" className="text-base font-semibold text-white">
+              Forward messages
+            </h2>
+            <p className="mt-1 text-xs text-white/60">
+              Select one or more chats to forward to.
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => runAction(onReply)}
-          title="Reply"
-          aria-label="Reply"
-          className="rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white"
-        >
-          <FiCornerUpLeft size={15} />
-        </button>
-
-        {canEdit && (
           <button
             type="button"
-            onClick={() => runAction(onEdit)}
-            title="Edit"
-            aria-label="Edit"
-            className="rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-lg px-3 py-2 text-white/70 hover:bg-white/10"
           >
-            <FiEdit2 size={15} />
+            ✕
           </button>
-        )}
+        </header>
 
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          title="More actions"
-          aria-label="More message actions"
-          aria-expanded={menuOpen}
-          className="rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white"
-        >
-          <FiMoreHorizontal size={16} />
-        </button>
-      </div>
+        <div className="p-4">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search people or groups..."
+            className="w-full rounded-lg border border-white/20 bg-[#062C5F]/50 px-3 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-blue-400"
+          />
 
-      <button
-        type="button"
-        onClick={() => setMenuOpen((open) => !open)}
-        aria-label="More message actions"
-        aria-expanded={menuOpen}
-        className="rounded-lg border border-white/15 bg-[#0b1730] p-2 text-white shadow-lg md:hidden"
-      >
-        <FiMoreHorizontal size={16} />
-      </button>
-
-      {menuOpen && (
-        <div
-          className={`absolute top-full mt-1.5 w-[190px] overflow-hidden rounded-lg border border-white/15 bg-[#102842] p-1.5 shadow-xl ${
-            align === "left" ? "left-0" : "right-0"
-          }`}
-        >
-          {menuItems.map(({ label, icon: Icon, action, danger }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => runAction(action)}
-              className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs transition ${
-                danger
-                  ? "text-red-300 hover:bg-red-500/10"
-                  : "text-white/85 hover:bg-white/10"
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
+          <p className="mt-3 text-xs text-white/60">
+            {selectedIds.length} recipient(s) selected
+          </p>
         </div>
-      )}
+
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 pb-4">
+          {filteredConversations.length === 0 ? (
+            <p className="py-8 text-center text-sm text-white/60">
+              No conversations found.
+            </p>
+          ) : (
+            filteredConversations.map((conversation) => {
+              const id = String(conversation.id);
+              const selected = selectedIds.includes(id);
+
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleRecipient(id)}
+                  className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition ${
+                    selected
+                      ? "border-blue-400 bg-blue-500/20"
+                      : "border-white/10 bg-white/5 hover:bg-white/10"
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-white">
+                      {getConversationName?.(conversation) ||
+                        conversation.name ||
+                        "Conversation"}
+                    </span>
+                    <span className="text-xs text-white/50">
+                      {conversation.type === "group" ? "Group" : "Direct chat"}
+                    </span>
+                  </span>
+
+                  <span
+                    className={`ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                      selected
+                        ? "border-blue-400 bg-blue-500 text-white"
+                        : "border-white/40 text-transparent"
+                    }`}
+                  >
+                    ✓
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        <footer className="flex items-center justify-between gap-3 border-t border-white/15 p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-lg border border-white/20 px-4 py-2.5 text-sm text-white hover:bg-white/10 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={loading || selectedIds.length === 0}
+            onClick={() => onForward?.(selectedIds)}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {loading ? "Forwarding..." : `Forward (${selectedIds.length})`}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }
