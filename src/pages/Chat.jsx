@@ -13,10 +13,15 @@ import {
   updateGroupConversation,
   getConversationPresence,
   getVoiceUploadSignature,
+  getChatUploadSignature,
   addMessageReaction,
   editConversationMessage,
   forwardConversationMessages,
   deleteConversationMessage,
+  getMessageReactionDetails,
+  searchConversationMessages,
+  createChatPoll,
+  voteOnChatPoll,
 } from "../services/chatService";
 import {
   FiSearch,
@@ -29,11 +34,11 @@ import {
   FiBookmark,
   FiArrowLeft,
   FiMenu,
+  FiBarChart2,
 } from "react-icons/fi";
 import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
-import { getChatUploadSignature } from "../services/chatService";
 import { useNavigate } from "react-router-dom";
 import MessageActions from "../components/chat/MessageActions";
 import MessageReactions from "../components/chat/MessageReactions";
@@ -226,6 +231,17 @@ const [pendingDelete, setPendingDelete] = useState(null);
 const [selectedForwardIds, setSelectedForwardIds] = useState([]);
 const [renderTimestamp] = useState(() => Date.now());
 const [reactionPickerFor, setReactionPickerFor] = useState(null);
+const [reactionDetails, setReactionDetails] = useState(null);
+const [reactionDetailsLoading, setReactionDetailsLoading] = useState(false);
+const [showPollComposer, setShowPollComposer] = useState(false);
+const [pollQuestion, setPollQuestion] = useState("");
+const [pollOptions, setPollOptions] = useState(["", ""]);
+const [pollMultiple, setPollMultiple] = useState(false);
+const [creatingPoll, setCreatingPoll] = useState(false);
+const [messageSearchOpen, setMessageSearchOpen] = useState(false);
+const [messageSearchQuery, setMessageSearchQuery] = useState("");
+const [messageSearchResults, setMessageSearchResults] = useState([]);
+const [messageSearching, setMessageSearching] = useState(false);
 const messageElementRefs = useRef({});
   const messageEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -627,6 +643,15 @@ const handleMessageRead = (data) => {
     socket.on("message:reaction_updated", handleReactionUpdated);
     socket.on("message:updated", handleMessageUpdated);
     socket.on("message:deleted", handleMessageDeleted);
+    const handlePollUpdated = (payload) => {
+      if (String(payload?.conversationId) !== String(conversationId)) return;
+      setMessages((previous) => previous.map((item) =>
+        String(getMessageId(item)) === String(payload.messageId)
+          ? { ...item, poll: payload.poll || item.poll }
+          : item
+      ));
+    };
+    socket.on("poll:updated", handlePollUpdated);
 
     return () => {
       socket.emit("conversation:leave", { conversationId });
@@ -642,6 +667,7 @@ const handleMessageRead = (data) => {
       socket.off("message:reaction_updated", handleReactionUpdated);
       socket.off("message:updated", handleMessageUpdated);
       socket.off("message:deleted", handleMessageDeleted);
+      socket.off("poll:updated", handlePollUpdated);
     };
   }, [
     socket,
@@ -827,6 +853,14 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
     const cursorPosition = event.target.selectionStart;
   
     setMessage(value);
+    if (activeConversation?.id && socket && connected) {
+      socket.emit("typing:start", { conversationId: activeConversation.id });
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("typing:stop", { conversationId: activeConversation.id });
+        typingTimeoutRef.current = null;
+      }, 1800);
+    }
   
     setSelectedMentionUserIds((previous) =>
       previous.filter((id) => {
@@ -962,69 +996,60 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
   async function handleFileSelected(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-
     if (!file || !activeConversation?.id) return;
-
-    const getFileType = (file) => {
-        if (file.type.startsWith("image/")) return "image";
-        if (file.type.startsWith("video/")) return "video";
-        if (file.type.startsWith("audio/")) return "audio";
-        return "file";
-    };
+    if (!socket || !connected) {
+      setMessageActionError("Chat server is disconnected. Please try again.");
+      return;
+    }
+    const fileType = file.type.startsWith("image/") ? "image"
+      : file.type.startsWith("video/") ? "video"
+        : file.type.startsWith("audio/") ? "audio" : "file";
 
     setUploadingFile(true);
-
+    setMessageActionError("");
     try {
-        const signature = await getChatUploadSignature();
+      const signature = await getChatUploadSignature("chat_attachments");
+      const { uploadUrl, timestamp, signature: signedValue, apiKey, folder } = signature || {};
+      if (!uploadUrl || !timestamp || !signedValue || !apiKey || !folder) {
+        throw new Error("The attachment upload signature is incomplete.");
+      }
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", apiKey);
+      formData.append("timestamp", String(timestamp));
+      formData.append("signature", signedValue);
+      formData.append("folder", folder);
+      const uploadResponse = await fetch(uploadUrl, { method: "POST", body: formData });
+      const uploadedFile = await uploadResponse.json();
+      if (!uploadResponse.ok || !uploadedFile.secure_url) {
+        throw new Error(uploadedFile.error?.message || "Cloudinary upload failed.");
+      }
 
-        const { uploadUrl, timestamp, signature: signedValue, apiKey, folder } =
-            signature;
-
-        if (!uploadUrl || !timestamp || !signedValue || !apiKey || !folder) {
-            throw new Error("Upload signature response is incomplete");
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", apiKey);
-        formData.append("timestamp", String(timestamp));
-        formData.append("signature", signedValue);
-        formData.append("folder", folder);
-
-        const uploadResponse = await fetch(uploadUrl, {
-            method: "POST",
-            body: formData,
-        });
-
-        const uploadedFile = await uploadResponse.json();
-
-        if (!uploadResponse.ok || !uploadedFile.secure_url) {
-            throw new Error(
-                uploadedFile.error?.message || "Cloudinary upload failed"
-            );
-        }
-
-        const payload = {
-            conversationId: activeConversation.id,
-            clientMessageId: crypto.randomUUID(),
-            content: "",
-            fileUrl: uploadedFile.secure_url,
-            fileType: getFileType(file),
-        };
-
-        socket.emit("message:send", payload, (ack) => {
-            if (!ack?.success) {
-                console.error("Attachment message failed:", ack);
-                alert("File upload ho gayi, lekin message send nahi hua.");
-            }
-        });
-    } catch (error) {
-        console.error("Attachment upload failed:", error);
-        alert(error.message || "File upload nahi ho payi.");
+      const clientMessageId = crypto.randomUUID();
+      const saved = await emitChatAction("message:send", {
+        conversationId: activeConversation.id,
+        clientMessageId,
+        content: "",
+        fileUrl: uploadedFile.secure_url,
+        fileType,
+        fileName: file.name,
+        fileSize: file.size,
+      });
+      const savedMessage = normalizeMessage({
+        ...(saved?.data || saved), conversationId: activeConversation.id,
+        senderId: currentUserId, sender: user, clientMessageId,
+        fileUrl: uploadedFile.secure_url, fileType, fileName: file.name, fileSize: file.size,
+      }, currentUserId);
+      setMessages((previous) => previous.some((item) =>
+        String(getMessageId(item)) === String(getMessageId(savedMessage)) || item.clientMessageId === clientMessageId
+      ) ? previous : [...previous, savedMessage]);
+      loadConversations();
+    } catch (uploadError) {
+      setMessageActionError(uploadError.response?.data?.message || uploadError.message || "The attachment could not be sent.");
     } finally {
-        setUploadingFile(false);
+      setUploadingFile(false);
     }
-}
+  }
 
   function emitChatAction(eventName, payload) {
     return new Promise((resolve, reject) => {
@@ -1048,6 +1073,21 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
         const result = await addMessageReaction(activeConversation.id, getMessageId(item), emoji);
         if (result?.reactions) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(getMessageId(item)) ? { ...entry, reactions: result.reactions } : entry));
       } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+    }
+  }
+
+  async function openReactionDetails(item, emoji) {
+    if (!activeConversation?.id || !getMessageId(item)) return;
+    setReactionDetails({ message: item, emoji, data: null });
+    try {
+      setReactionDetailsLoading(true);
+      const details = await getMessageReactionDetails(activeConversation.id, getMessageId(item), emoji);
+      setReactionDetails({ message: item, emoji, data: details });
+    } catch (detailsError) {
+      setMessageActionError(detailsError.response?.data?.message || detailsError.message || "Could not load reaction details.");
+      setReactionDetails(null);
+    } finally {
+      setReactionDetailsLoading(false);
     }
   }
 
@@ -1127,20 +1167,92 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
     if (!activeConversation?.id || !socket || !connected) throw new Error("Connect to chat before sending a voice message.");
     if (!recording?.blob?.size) throw new Error("The voice recording is empty.");
     const extension = recording.mimeType?.includes("mp4") ? "m4a" : "webm";
-    const fileName = `voice_note_${Date.now()}.${extension}`;
-    const signature = await getVoiceUploadSignature({ conversationId: activeConversation.id, fileName, fileSize: recording.blob.size, fileType: "voice" });
-    const uploadUrl = signature?.uploadUrl;
-    const fileUrl = signature?.fileUrl;
-    if (!uploadUrl || !fileUrl) throw new Error("The voice upload signature is incomplete.");
-    const upload = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": signature.metadata?.contentType || recording.mimeType || "audio/webm" }, body: recording.blob });
-    if (!upload.ok) throw new Error("Voice upload failed. Please try again.");
+    const fileName = `voice_note_${crypto.randomUUID()}.${extension}`;
+    const signature = await getVoiceUploadSignature();
+    const { uploadUrl, timestamp, signature: signedValue, apiKey, folder } = signature || {};
+    if (!uploadUrl || !timestamp || !signedValue || !apiKey || !folder) throw new Error("The voice upload signature is incomplete.");
+    const formData = new FormData();
+    formData.append("file", recording.blob, fileName);
+    formData.append("api_key", apiKey);
+    formData.append("timestamp", String(timestamp));
+    formData.append("signature", signedValue);
+    formData.append("folder", folder);
+    const upload = await fetch(uploadUrl, { method: "POST", body: formData });
+    const uploaded = await upload.json();
+    if (!upload.ok || !uploaded.secure_url) throw new Error(uploaded.error?.message || "Voice upload failed. Please try again.");
     const clientMessageId = crypto.randomUUID();
-    const saved = await emitChatAction("message:send", { conversationId: activeConversation.id, clientMessageId, content: "", fileUrl, fileType: "voice", fileName, fileSize: recording.blob.size, audioDuration: recording.duration, audioWaveform: recording.waveform });
-    if (saved?.id || saved?._id) {
-      const normalized = normalizeMessage({ ...saved, clientMessageId }, currentUserId);
-      setMessages((previous) => previous.some((item) => String(getMessageId(item)) === String(getMessageId(normalized)) || item.clientMessageId === clientMessageId) ? previous : [...previous, normalized]);
-    }
+    const saved = await emitChatAction("message:send", {
+      conversationId: activeConversation.id, clientMessageId, content: "",
+      fileUrl: uploaded.secure_url, fileType: "voice", fileName, fileSize: recording.blob.size,
+      audioDuration: recording.duration, audioWaveform: recording.waveform,
+    });
+    const normalized = normalizeMessage({ ...(saved?.data || saved), conversationId: activeConversation.id,
+      senderId: currentUserId, sender: user, clientMessageId, fileUrl: uploaded.secure_url,
+      fileType: "voice", fileName, fileSize: recording.blob.size,
+      audioDuration: recording.duration, audioWaveform: recording.waveform,
+    }, currentUserId);
+    setMessages((previous) => previous.some((item) =>
+      String(getMessageId(item)) === String(getMessageId(normalized)) || item.clientMessageId === clientMessageId
+    ) ? previous : [...previous, normalized]);
     loadConversations();
+  }
+
+  async function handleCreatePoll(event) {
+    event.preventDefault();
+    const options = pollOptions.map((option) => option.trim()).filter(Boolean);
+    if (!activeConversation?.id || !pollQuestion.trim() || options.length < 2) {
+      setMessageActionError("Enter a poll question and at least two options.");
+      return;
+    }
+    try {
+      setCreatingPoll(true);
+      setMessageActionError("");
+      const response = await createChatPoll(activeConversation.id, {
+        question: pollQuestion.trim(), options, allowMultipleAnswers: pollMultiple,
+      });
+      const created = response?.message || response;
+      if (created?.id || created?._id) {
+        const normalized = normalizeMessage({ ...created, senderId: currentUserId, sender: user }, currentUserId);
+        setMessages((previous) => [...previous, normalized]);
+      } else {
+        const refreshed = await getMessages(activeConversation.id);
+        const data = refreshed?.data?.data ?? refreshed?.data ?? refreshed;
+        setMessages((data?.messages || []).map((item) => normalizeMessage(item, currentUserId)));
+      }
+      setShowPollComposer(false); setPollQuestion(""); setPollOptions(["", ""]); setPollMultiple(false);
+      loadConversations();
+    } catch (pollError) {
+      setMessageActionError(pollError.response?.data?.message || pollError.message || "Could not create the poll.");
+    } finally { setCreatingPoll(false); }
+  }
+
+  async function handleVotePoll(item, optionId) {
+    const poll = item.poll;
+    const pollId = poll?.id || item.pollId;
+    if (!pollId) return;
+    const selected = poll?.userVotedOptionIds || [];
+    const optionIds = poll?.allowMultipleAnswers
+      ? (selected.includes(optionId) ? selected.filter((id) => id !== optionId) : [...selected, optionId])
+      : (selected.includes(optionId) ? [] : [optionId]);
+    try {
+      const updated = await voteOnChatPoll(activeConversation.id, pollId, optionIds);
+      const nextPoll = updated?.poll || updated;
+      setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(getMessageId(item)) ? { ...entry, poll: nextPoll } : entry));
+    } catch (voteError) {
+      setMessageActionError(voteError.response?.data?.message || voteError.message || "Your vote could not be saved.");
+    }
+  }
+
+  async function runMessageSearch(query) {
+    setMessageSearchQuery(query);
+    if (!query.trim() || !activeConversation?.id) { setMessageSearchResults([]); return; }
+    try {
+      setMessageSearching(true);
+      const result = await searchConversationMessages(activeConversation.id, query.trim(), undefined, 20);
+      setMessageSearchResults(result?.messages || []);
+    } catch (searchError) {
+      setMessageActionError(searchError.response?.data?.message || searchError.message || "Message search failed.");
+    } finally { setMessageSearching(false); }
   }
 
   useEffect(() => {
@@ -1505,7 +1617,7 @@ const handleLeaveGroup = async () => {
 
     const conversationId = activeConversation.id;
 
-    await leaveGroupConversation(conversationId);
+    await leaveGroupConversation(conversationId, currentUserId);
 
     setConversations((previous) =>
       previous.filter(
@@ -1679,7 +1791,6 @@ const handleSaveConversation = async () => {
         </header>
 
         <div className="flex min-h-0 flex-1 gap-1.5 p-1.5 sm:gap-3 sm:p-3">
-        {true && (
             <aside
               className={`${
                 showMobileContacts ? "flex" : "hidden"
@@ -1788,8 +1899,6 @@ const handleSaveConversation = async () => {
                     )}
                     {!loadingConversations &&
                    visibleConversations.map((conversation) => {
-                    const isGroup = conversation.type === "group";
-                    const contact = getOtherParticipant(conversation, currentUserId);
                     const conversationName = getConversationName(
                       conversation,
                       currentUserId
@@ -1874,7 +1983,6 @@ const handleSaveConversation = async () => {
                 </>
               )}
             </aside>
-          )}
 
 <main
   className={`${
@@ -1907,6 +2015,8 @@ className={`h-1.5 w-1.5 rounded-full ${
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-0 sm:gap-0.5">
+                    <IconButton label="Search messages" onClick={() => setMessageSearchOpen((open) => !open)}><FiSearch size={16} /></IconButton>
+                    <IconButton label="Create a poll" onClick={() => setShowPollComposer(true)}><FiBarChart2 size={16} /></IconButton>
                   {activeIsGroupAdmin && (
                    <IconButton
                   label="Add members"
@@ -1939,6 +2049,17 @@ className={`h-1.5 w-1.5 rounded-full ${
            </IconButton>
                   </div>
                 </div>
+
+                {messageSearchOpen && (
+                  <div className="shrink-0 border-b border-white/15 bg-[#102842]/70 p-3">
+                    <input autoFocus value={messageSearchQuery} onChange={(event) => runMessageSearch(event.target.value)} placeholder="Search messages in this chat..." className="w-full rounded-xl border border-white/15 bg-[#0b1730]/80 px-3 py-2.5 text-xs text-white outline-none placeholder:text-white/45 focus:border-blue-400/70" />
+                    {messageSearchQuery.trim() && <div className="mt-2 max-h-36 space-y-1 overflow-y-auto">
+                      {messageSearching && <p className="px-2 py-1 text-[11px] text-white/60">Searching...</p>}
+                      {!messageSearching && messageSearchResults.map((result) => <button key={result.id || result._id} type="button" onClick={() => messageElementRefs.current[String(result.id || result._id)]?.scrollIntoView({ behavior: "smooth", block: "center" })} className="block w-full truncate rounded-lg px-2 py-2 text-left text-[11px] text-white/80 hover:bg-white/10">{result.content || result.text || result.fileName || "Attachment"}</button>)}
+                      {!messageSearching && messageSearchResults.length === 0 && <p className="px-2 py-1 text-[11px] text-white/50">No matching messages.</p>}
+                    </div>}
+                  </div>
+                )}
 
                 {error && (
                   <div className="flex items-center justify-between gap-3 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-xs text-red-200">
@@ -1981,7 +2102,7 @@ className={`h-1.5 w-1.5 rounded-full ${
                       const reply = item.replyTo;
                       return (
                         <div key={messageId || item.clientMessageId || index} ref={(node) => { if (messageId) messageElementRefs.current[String(messageId)] = node; }} className={`flex w-full ${item.mine ? "justify-end" : "justify-start"}`}>
-                          <div className={`group relative max-w-[92%] break-words rounded-md px-2.5 py-2 sm:max-w-[75%] sm:px-3 ${item.mine ? "rounded-br-sm border border-[#1267B6] bg-[#1A3048] text-white" : "rounded-bl-sm border border-white/25 bg-[#1A3048] text-[#E4ECF5]"}`}>
+                          <div className={`group relative max-w-[92%] break-words rounded-2xl px-3 py-2.5 shadow-md sm:max-w-[75%] sm:px-4 ${item.mine ? "rounded-br-md border border-[#1267B6] bg-[#1A3048] text-white" : "rounded-bl-md border border-white/20 bg-[#1A3048] text-[#E4ECF5]"}`}>
                             {reply && (
                               <button type="button" onClick={() => messageElementRefs.current[String(reply.id || reply._id)]?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mb-2 block w-full rounded border-l-2 border-blue-400 bg-black/15 px-2 py-1 text-left">
                                 <span className="block text-[9px] font-semibold text-blue-200">{reply.sender?.name || "Reply"}</span>
@@ -1998,11 +2119,20 @@ className={`h-1.5 w-1.5 rounded-full ${
                                 {item.fileUrl && item.fileType === "image" && <a href={item.fileUrl} target="_blank" rel="noreferrer"><img src={item.fileUrl} alt="Chat attachment" className="max-h-60 max-w-[240px] rounded-xl object-contain" /></a>}
                                 {item.fileUrl && item.fileType === "video" && <video src={item.fileUrl} controls className="max-w-[260px]" />}
                                 {item.fileUrl && item.fileType === "audio" && <audio src={item.fileUrl} controls className="w-full max-w-full" />}
-                                {item.fileUrl && item.fileType === "file" && <a href={item.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-200 underline">Open attachment</a>}
+                                {item.fileUrl && item.fileType === "file" && <a href={item.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-xs text-blue-200 underline">{item.fileName || "Open attachment"}</a>}
+                                {item.poll && <div className="mt-2 min-w-[220px] max-w-full rounded-xl border border-white/15 bg-[#0b1730]/65 p-3 sm:min-w-[260px]">
+                                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white"><FiBarChart2 className="text-blue-300" />{item.poll.question}</div>
+                                  <div className="space-y-2">{(item.poll.options || []).map((option) => {
+                                    const voted = (item.poll.userVotedOptionIds || []).includes(option.id);
+                                    const percentage = Math.max(0, Math.min(100, Number(option.percentage || 0)));
+                                    return <button key={option.id} type="button" onClick={() => handleVotePoll(item, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-[11px] ${voted ? "border-blue-300/70" : "border-white/15 hover:border-white/35"}`}><span className="absolute inset-y-0 left-0 bg-blue-500/20" style={{ width: `${percentage}%` }} /><span className="relative flex items-center justify-between gap-2 text-white"><span>{option.text}</span><span className="shrink-0 text-white/70">{percentage}% · {option.voteCount || 0}</span></span></button>;
+                                  })}</div>
+                                  <p className="mt-2 text-[9px] text-white/45">{item.poll.totalVotes || 0} votes · {item.poll.allowMultipleAnswers ? "Multiple choices" : "Choose one"}</p>
+                                </div>}
                                 {item.isEdited && <span className="ml-1 text-[9px] italic text-white/45">edited</span>}
                               </>
                             )}
-                            {!item.isDeleted && <MessageReactions reactions={item.reactions || []} currentUserId={currentUserId} onReact={(emoji) => handleReaction(item, emoji)} onPick={() => setReactionPickerFor(reactionPickerFor === String(messageId) ? null : String(messageId))} />}
+                            {!item.isDeleted && <MessageReactions reactions={item.reactions || []} currentUserId={currentUserId} onReact={(emoji) => handleReaction(item, emoji)} onDetails={(emoji) => openReactionDetails(item, emoji)} />}
                             {reactionPickerFor === String(messageId) && (
   <div className="mt-2 flex gap-1 rounded-lg border border-white/15 bg-[#0b1730] p-2">
     {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
@@ -2127,6 +2257,7 @@ className={`h-1.5 w-1.5 rounded-full ${
       </div>
     )}
 </div>
+                    <IconButton label="Create poll" onClick={() => setShowPollComposer(true)} disabled={!activeConversation}><FiBarChart2 size={16} /></IconButton>
                     <VoiceRecorder disabled={!activeConversation || !connected || uploadingFile || sending} onSend={sendVoiceMessage} onError={setMessageActionError} />
                     <button
                       type="submit"
@@ -2165,6 +2296,28 @@ className={`h-1.5 w-1.5 rounded-full ${
           </main>
 
          
+          {reactionDetails && (
+            <div className="fixed inset-0 z-[98] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-3" role="dialog" aria-modal="true" aria-labelledby="reaction-details-title">
+              <section className="max-h-[75vh] w-full max-w-sm overflow-hidden rounded-t-2xl border border-white/15 bg-[#102842] shadow-2xl sm:rounded-2xl">
+                <header className="flex items-center justify-between border-b border-white/10 px-4 py-3"><div><h3 id="reaction-details-title" className="text-sm font-semibold text-white">Reactions {reactionDetails.emoji || ""}</h3><p className="text-[10px] text-white/50">People who reacted to this message</p></div><button type="button" onClick={() => setReactionDetails(null)} className="rounded-lg p-2 text-white/60 hover:bg-white/10" aria-label="Close reactions"><FiX /></button></header>
+                <div className="max-h-[55vh] overflow-y-auto p-3">
+                  {reactionDetailsLoading ? <p className="py-6 text-center text-xs text-white/60">Loading reactions...</p> : (reactionDetails.data?.reactions || []).length ? reactionDetails.data.reactions.map((reaction) => <div key={reaction.id || `${reaction.userId}-${reaction.emoji}`} className="flex items-center gap-3 rounded-lg px-2 py-2"><Avatar name={reaction.user?.name || reaction.user?.email || "User"} size={32} /><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-white">{reaction.user?.name || "User"}</p><p className="text-[10px] text-white/45">{reaction.isMe ? "You" : "Participant"}</p></div><span>{reaction.emoji}</span></div>) : <p className="py-6 text-center text-xs text-white/55">No reaction details available.</p>}
+                </div>
+              </section>
+            </div>
+          )}
+          {showPollComposer && <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 p-3" role="dialog" aria-modal="true" aria-labelledby="chat-poll-title">
+            <form onSubmit={handleCreatePoll} className="w-full max-w-md rounded-2xl border border-white/20 bg-[#102842] p-4 shadow-2xl sm:p-5">
+              <div className="mb-4 flex items-center justify-between"><div><h3 id="chat-poll-title" className="text-sm font-semibold text-white">Create a poll</h3><p className="mt-1 text-[11px] text-white/55">Ask your chat and collect votes.</p></div><button type="button" onClick={() => setShowPollComposer(false)} className="rounded-lg p-2 text-white/65 hover:bg-white/10" aria-label="Close poll composer"><FiX /></button></div>
+              <label className="mb-2 block text-[11px] font-medium text-white/75">Question</label><input value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={180} placeholder="Ask a question..." className="mb-4 w-full rounded-xl border border-white/15 bg-[#0b1730]/80 px-3 py-2.5 text-xs text-white outline-none focus:border-blue-400" />
+              <div className="mb-2 flex items-center justify-between"><label className="text-[11px] font-medium text-white/75">Options</label><span className="text-[10px] text-white/40">At least 2</span></div>
+              <div className="space-y-2">{pollOptions.map((option, index) => <div key={index} className="flex gap-2"><input value={option} onChange={(event) => setPollOptions((previous) => previous.map((value, i) => i === index ? event.target.value : value))} maxLength={100} placeholder={`Option ${index + 1}`} className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#0b1730]/80 px-3 py-2.5 text-xs text-white outline-none focus:border-blue-400" />{pollOptions.length > 2 && <button type="button" onClick={() => setPollOptions((previous) => previous.filter((_, i) => i !== index))} className="rounded-lg px-2 text-white/50 hover:bg-white/10" aria-label="Remove option"><FiX /></button>}</div>)}</div>
+              {pollOptions.length < 6 && <button type="button" onClick={() => setPollOptions((previous) => [...previous, ""])} className="mt-2 text-[11px] font-medium text-blue-200 hover:text-white">+ Add option</button>}
+              <label className="mt-4 flex items-center gap-2 text-[11px] text-white/70"><input type="checkbox" checked={pollMultiple} onChange={(event) => setPollMultiple(event.target.checked)} /> Allow multiple answers</label>
+              {messageActionError && <p className="mt-3 text-[11px] text-red-200">{messageActionError}</p>}
+              <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setShowPollComposer(false)} className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/75">Cancel</button><button type="submit" disabled={creatingPoll} className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">{creatingPoll ? "Creating..." : "Create poll"}</button></div>
+            </form>
+          </div>}
           {forwardTargetMessageIds.length > 0 && <ForwardMessagesModal conversations={conversations} getConversationName={(conversation) => getConversationName(conversation, currentUserId)} currentConversationId={activeConversation?.id} loading={forwarding} onClose={() => { setForwardTargetMessageIds([]); setSelectedForwardIds([]); }} onForward={forwardSelectedMessages} />}
           {pendingDelete && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-3" role="dialog" aria-modal="true"><div className="w-full max-w-sm rounded-xl border border-white/20 bg-[#102842] p-4"><h3 className="text-sm font-semibold text-white">Delete message?</h3><p className="mt-2 text-xs text-white/70">Choose how you want to delete this message.</p><div className="mt-4 flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setPendingDelete(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Cancel</button><button type="button" onClick={() => confirmDeleteMessage(false)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Delete for me</button>{pendingDelete.item.mine || activeIsGroupAdmin ? <button type="button" onClick={() => confirmDeleteMessage(true)} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Delete for everyone</button> : null}</div></div></div>}
           {showInfo && activeConversation && (

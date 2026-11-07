@@ -53,9 +53,6 @@ export async function createGroupConversation({
         name: name.trim(),
         avatar: avatar || undefined,
         participantIds,
-        userIds: participantIds,
-        members: participantIds,
-        memberIds: participantIds,
     });
 
     return res.data;
@@ -65,8 +62,6 @@ export async function addGroupParticipants(conversationId, participantIds = []) 
     const res = await api.post(
         `/api/conversations/${conversationId}/participants`, {
             participantIds,
-            userIds: participantIds,
-            members: participantIds,
         }
     );
 
@@ -97,9 +92,9 @@ export async function removeGroupParticipant(conversationId, userId) {
     return res.data;
 }
 
-export async function leaveGroupConversation(conversationId) {
+export async function leaveGroupConversation(conversationId, userId) {
     const res = await api.delete(
-        `/api/conversations/${conversationId}/participants/me`
+        `/api/conversations/${conversationId}/participants/${userId}`
     );
 
     return res.data;
@@ -118,11 +113,8 @@ export async function updateGroupConversation(
     return res.data;
 }
 
-export async function getChatUploadSignature() {
-    const response = await api.post("/api/uploads/sign", {
-        folder: "chat",
-    });
-
+export async function getChatUploadSignature(folder = "chat_attachments") {
+    const response = await api.post("/api/uploads/sign", { folder });
     return response.data?.data ?? response.data;
 }
 
@@ -166,15 +158,33 @@ export async function getConversationPresence(conversationId) {
     return response.data?.data ?? response.data;
 }
 
-export async function getVoiceUploadSignature({ conversationId, fileName, fileSize, fileType = "voice" }) {
-    const response = await api.post("/api/uploads/sign", {
-        conversationId,
-        fileName,
-        fileSize,
-        fileType,
-    }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}` },
+export async function getVoiceUploadSignature() {
+    return getChatUploadSignature("chat_attachments");
+}
+
+export async function searchConversationMessages(conversationId, query, cursor, limit = 20) {
+    const response = await api.get(`/api/conversations/${conversationId}/search`, {
+        params: { q: query, ...(cursor ? { cursor } : {}), limit },
     });
+    return response.data?.data ?? response.data;
+}
+
+export async function getMessageReactionDetails(conversationId, messageId, emoji) {
+    const response = await api.get(
+        `/api/conversations/${conversationId}/messages/${messageId}/reactions`, { params: emoji ? { emoji } : {} }
+    );
+    return response.data?.data ?? response.data;
+}
+
+export async function createChatPoll(conversationId, poll) {
+    const response = await api.post(`/api/conversations/${conversationId}/polls`, poll);
+    return response.data?.data ?? response.data;
+}
+
+export async function voteOnChatPoll(conversationId, pollId, optionIds) {
+    const response = await api.post(
+        `/api/conversations/${conversationId}/polls/${pollId}/vote`, { optionIds }
+    );
     return response.data?.data ?? response.data;
 }
 
