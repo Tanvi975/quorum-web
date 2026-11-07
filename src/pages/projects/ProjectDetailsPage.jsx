@@ -2,10 +2,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getProjectById } from "../../services/projectService";
+import ProjectMembers from "../../components/projects/ProjectMembers";
+import { useAuth } from "../../context/AuthContext";
 
 export default function ProjectDetailsPage() {
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -18,6 +21,7 @@ export default function ProjectDetailsPage() {
                 setError("");
 
                 const response = await getProjectById(projectId);
+
                 const projectData =
                     response?.data?.data ??
                     response?.data ??
@@ -55,6 +59,25 @@ export default function ProjectDetailsPage() {
     const members = project.members || [];
     const taskCount = project._count?.tasks ?? 0;
 
+    const currentUserId = user?.id || user?.userId || user?.sub;
+
+    const currentMember = members.find(
+        (member) => member.user?.id === currentUserId
+    );
+
+    const memberRole = currentMember?.role?.toUpperCase();
+
+    const userRole = (
+        user?.role ||
+        user?.organizationRole ||
+        ""
+    ).toUpperCase();
+
+    const isManager =
+        memberRole === "PROJECT_MANAGER" ||
+        userRole === "ORG_ADMIN" ||
+        userRole === "ORGANIZATION_ADMIN";
+
     return (
         <div className="project-details-page">
             <header className="project-details-header">
@@ -70,13 +93,17 @@ export default function ProjectDetailsPage() {
                     <span>{project.status}</span>
                 </div>
 
-                <p>{project.description || "No project description."}</p>
+                <p>
+                    {project.description || "No project description."}
+                </p>
             </header>
 
             <section className="project-overview-grid">
                 <div className="project-overview-card">
                     <h3>Organization</h3>
-                    <p>{project.organization?.name || "Not available"}</p>
+                    <p>
+                        {project.organization?.name || "Not available"}
+                    </p>
                 </div>
 
                 <div className="project-overview-card">
@@ -100,41 +127,11 @@ export default function ProjectDetailsPage() {
             </section>
 
             <section className="project-details-section">
-                <div className="project-section-header">
-                    <h2>Project Members</h2>
-                </div>
-
-                {members.length === 0 ? (
-                    <p>No members found.</p>
-                ) : (
-                    <div className="project-members-list">
-                        {members.map((member) => (
-                            <div
-                                className="project-member-card"
-                                key={member.id || member.user?.id}
-                            >
-                                <div>
-                                    <h3>
-                                        {member.user?.name || "Unknown User"}
-                                    </h3>
-                                    <p>{member.user?.email || ""}</p>
-                                </div>
-
-                                <span>{member.role}</span>
-
-                                {member.companyName && (
-                                    <span>{member.companyName}</span>
-                                )}
-
-                                {member.hourlyRate != null && (
-                                    <span>
-                                        {member.hourlyRate} / hr
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <ProjectMembers
+                    projectId={projectId}
+                    initialMembers={members}
+                    isManager={isManager}
+                />
             </section>
 
             <section className="project-details-section">

@@ -9,7 +9,8 @@ import {
   FiGlobe,
   FiCpu,
   FiUsers,
-  FiUser
+  FiUser,
+  FiBriefcase,
 } from "react-icons/fi";
 import { SiGithub, SiJira } from "react-icons/si";
 
@@ -31,6 +32,7 @@ function MobileBottomNav() {
     { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
     { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
     { label: "Organizations", icon: FiUsers, path: "/organization" },
+    { label: "Projects", icon: FiBriefcase, path: "/projects" },
     { label: "My Jira", icon: SiJira, path: "/jira/my-tickets" },
     { label: "My GitHub", icon: SiGithub, path: "/github" },
     { label: "Chat", icon: FiMessageCircle, path: "/chat" },
