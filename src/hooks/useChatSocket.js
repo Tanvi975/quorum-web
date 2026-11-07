@@ -39,7 +39,7 @@ export default function useChatSocket() {
         instance.on("connect_error", (error) => {
             setConnected(false);
             setConnectionError(
-                error.message || "Unable to connect to chat."
+                "Chat connection failed. Reconnecting..."
             );
         });
 

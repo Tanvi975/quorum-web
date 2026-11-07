@@ -96,7 +96,7 @@ export default function VoiceRecorder({ disabled, onSend, onError }) {
     if (!preview || sending) return;
     setSending(true);
     try { await onSend(preview); setPreview(null); setSeconds(0); }
-    catch (error) { onError?.(error.message || "Could not send voice message."); }
+    catch { onError?.("Could not send the voice message. Please try again."); }
     finally { setSending(false); }
   };
   return (

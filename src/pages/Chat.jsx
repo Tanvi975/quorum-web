@@ -137,20 +137,37 @@ function normalizeMessage(item, currentUserId) {
   };
 }
 
-function Avatar({ name, color = "#AAB5C5", size = 34 }) {
+function Avatar({ name, src, color = "#AAB5C5", size = 34, rounded = "rounded-full" }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg font-semibold text-[#172A40]"
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: color,
-        fontSize: size * 0.35,
-      }}
+      className={`flex shrink-0 items-center justify-center overflow-hidden ${rounded} font-semibold text-[#172A40]`}
+      style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.35 }}
+      aria-label={`${name || "User"} avatar`}
     >
-      {name?.charAt(0)?.toUpperCase() || "?"}
+      {src ? (
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        name?.charAt(0)?.toUpperCase() || "?"
+      )}
     </div>
   );
+}
+
+function getAvatarUrl(person) {
+  return person?.avatarUrl || person?.avatar || person?.profilePicture ||
+    person?.profileImage || person?.photoUrl || person?.imageUrl || "";
+}
+
+function getFriendlyError(error, fallback = "Something went wrong. Please try again.") {
+  const status = error?.response?.status;
+  if (!navigator.onLine) return "You are offline. Check your connection.";
+  if (status === 401 || status === 403) return "You do not have permission to do that.";
+  if (status === 404) return "This item is no longer available.";
+  if (status === 413) return "This file is too large.";
+  if (status === 429) return "Please wait a moment and try again.";
+  if (status >= 500) return "Chat is temporarily unavailable. Try again soon.";
+  if (error?.name === "TimeoutError") return "The request timed out. Please try again.";
+  return fallback;
 }
 
 function IconButton({ children, onClick, label, disabled = false }) {
@@ -785,9 +802,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       setOlderMessagesCursor(result?.nextCursor || null);
       setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.message || "Could not load older messages."
-      );
+      setError(getFriendlyError(err, "Could not load older messages."));
     } finally {
       setLoadingOlderMessages(false);
     }
@@ -952,7 +967,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
         }
 
         if (!response?.success) {
-          setError(response?.message || "Message could not be sent.");
+          setError("Message could not be sent. Please try again.");
           return;
         }
 
@@ -1022,7 +1037,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       const uploadResponse = await fetch(uploadUrl, { method: "POST", body: formData });
       const uploadedFile = await uploadResponse.json();
       if (!uploadResponse.ok || !uploadedFile.secure_url) {
-        throw new Error(uploadedFile.error?.message || "Cloudinary upload failed.");
+        throw new Error("ATTACHMENT_UPLOAD_FAILED");
       }
 
       const clientMessageId = crypto.randomUUID();
@@ -1045,7 +1060,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       ) ? previous : [...previous, savedMessage]);
       loadConversations();
     } catch (uploadError) {
-      setMessageActionError(uploadError.response?.data?.message || uploadError.message || "The attachment could not be sent.");
+      setMessageActionError(getFriendlyError(uploadError, "Could not send the attachment."));
     } finally {
       setUploadingFile(false);
     }
@@ -1056,7 +1071,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       if (!socket || !connected) { reject(new Error("Chat server is disconnected. Please try again.")); return; }
       socket.timeout(10000).emit(eventName, payload, (timeoutError, response) => {
         if (timeoutError) { reject(new Error("The chat server did not respond. Please try again.")); return; }
-        if (!response?.success) { reject(new Error(response?.message || "The action could not be completed.")); return; }
+        if (!response?.success) { reject(new Error("ACTION_FAILED")); return; }
         resolve(response.data || response);
       });
     });
@@ -1072,7 +1087,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       try {
         const result = await addMessageReaction(activeConversation.id, getMessageId(item), emoji);
         if (result?.reactions) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(getMessageId(item)) ? { ...entry, reactions: result.reactions } : entry));
-      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+      } catch (fallbackError) { setMessageActionError(getFriendlyError(fallbackError, "Could not complete this action.")); }
     }
   }
 
@@ -1084,7 +1099,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       const details = await getMessageReactionDetails(activeConversation.id, getMessageId(item), emoji);
       setReactionDetails({ message: item, emoji, data: details });
     } catch (detailsError) {
-      setMessageActionError(detailsError.response?.data?.message || detailsError.message || "Could not load reaction details.");
+      setMessageActionError(getFriendlyError(detailsError, "Could not load reactions."));
       setReactionDetails(null);
     } finally {
       setReactionDetailsLoading(false);
@@ -1122,7 +1137,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
         const updated = await editConversationMessage(activeConversation.id, getMessageId(editingMessage), content);
         setMessages((previous) => previous.map((item) => String(getMessageId(item)) === String(getMessageId(editingMessage)) ? normalizeMessage({ ...item, ...(updated || {}), content, isEdited: true }, currentUserId) : item));
         setEditingMessage(null);
-      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+      } catch (fallbackError) { setMessageActionError(getFriendlyError(fallbackError, "Could not complete this action.")); }
     }
   }
 
@@ -1142,7 +1157,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
         if (deleteForEveryone) setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(messageId) ? { ...entry, text: "", content: "", fileUrl: null, fileType: null, audioWaveform: [], isDeleted: true } : entry));
         else setMessages((previous) => previous.filter((entry) => String(getMessageId(entry)) !== String(messageId)));
         setPendingDelete(null);
-      } catch (fallbackError) { setMessageActionError(fallbackError.response?.data?.message || fallbackError.message || err.message); }
+      } catch (fallbackError) { setMessageActionError(getFriendlyError(fallbackError, "Could not complete this action.")); }
     }
   }
 
@@ -1159,7 +1174,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       setSelectedForwardIds([]);
       loadConversations();
     } catch (err) {
-      setMessageActionError(err.response?.data?.message || err.message || "Messages could not be forwarded.");
+      setMessageActionError(getFriendlyError(err, "Could not forward the messages."));
     } finally { setForwarding(false); }
   }
 
@@ -1179,7 +1194,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
     formData.append("folder", folder);
     const upload = await fetch(uploadUrl, { method: "POST", body: formData });
     const uploaded = await upload.json();
-    if (!upload.ok || !uploaded.secure_url) throw new Error(uploaded.error?.message || "Voice upload failed. Please try again.");
+    if (!upload.ok || !uploaded.secure_url) throw new Error("VOICE_UPLOAD_FAILED");
     const clientMessageId = crypto.randomUUID();
     const saved = await emitChatAction("message:send", {
       conversationId: activeConversation.id, clientMessageId, content: "",
@@ -1222,7 +1237,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       setShowPollComposer(false); setPollQuestion(""); setPollOptions(["", ""]); setPollMultiple(false);
       loadConversations();
     } catch (pollError) {
-      setMessageActionError(pollError.response?.data?.message || pollError.message || "Could not create the poll.");
+      setMessageActionError(getFriendlyError(pollError, "Could not create the poll."));
     } finally { setCreatingPoll(false); }
   }
 
@@ -1239,7 +1254,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       const nextPoll = updated?.poll || updated;
       setMessages((previous) => previous.map((entry) => String(getMessageId(entry)) === String(getMessageId(item)) ? { ...entry, poll: nextPoll } : entry));
     } catch (voteError) {
-      setMessageActionError(voteError.response?.data?.message || voteError.message || "Your vote could not be saved.");
+      setMessageActionError(getFriendlyError(voteError, "Your vote could not be saved."));
     }
   }
 
@@ -1347,11 +1362,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
       setSelectedGroupUsers([]);
       setShowMobileContacts(false);
     } catch (err) {
-      setGroupError(
-        err.response?.data?.message ||
-          err.message ||
-          "Could not create group."
-      );
+      setGroupError(getFriendlyError(err, "Could not create the group."));
     } finally {
       setCreatingGroup(false);
     }
@@ -1471,11 +1482,7 @@ const handleAddMembers = async (event) => {
     setAddMemberUsers([]);
     setSelectedAddMembers([]);
   } catch (err) {
-    setAddMembersError(
-      err.response?.data?.message ||
-        err.message ||
-        "Could not add members."
-    );
+    setAddMembersError(getFriendlyError(err, "Could not add members."));
   } finally {
     setAddingMembers(false);
   }
@@ -2100,9 +2107,29 @@ className={`h-1.5 w-1.5 rounded-full ${
                       const canEdit = item.mine && withinEditWindow && !item.isDeleted && !item.fileUrl && Boolean(messageId);
                       const canDeleteForEveryone = item.mine || activeIsGroupAdmin;
                       const reply = item.replyTo;
+                      const senderKey = String(item.senderId || getUserId(item.sender) || "unknown");
+                      const previousItem = messages[index - 1];
+                      const previousSenderKey = previousItem
+                        ? String(previousItem.senderId || getUserId(previousItem.sender) || "unknown")
+                        : "";
+                      const showSenderAvatar = !item.mine && (
+                        index === 0 || previousItem?.mine || previousSenderKey !== senderKey
+                      );
+                      const senderName = getUserName(item.sender);
+                      const senderAvatar = getAvatarUrl(item.sender);
                       return (
-                        <div key={messageId || item.clientMessageId || index} ref={(node) => { if (messageId) messageElementRefs.current[String(messageId)] = node; }} className={`flex w-full ${item.mine ? "justify-end" : "justify-start"}`}>
+                        <div key={messageId || item.clientMessageId || index} ref={(node) => { if (messageId) messageElementRefs.current[String(messageId)] = node; }} className={`flex w-full items-end gap-2 ${item.mine ? "justify-end" : "justify-start"}`}>
+                          {!item.mine && (
+                            <div className="w-8 shrink-0">
+                              {showSenderAvatar && (
+                                <Avatar name={senderName} src={senderAvatar} size={30} />
+                              )}
+                            </div>
+                          )}
                           <div className={`group relative max-w-[92%] break-words rounded-2xl px-3 py-2.5 shadow-md sm:max-w-[75%] sm:px-4 ${item.mine ? "rounded-br-md border border-[#1267B6] bg-[#1A3048] text-white" : "rounded-bl-md border border-white/20 bg-[#1A3048] text-[#E4ECF5]"}`}>
+                            {activeIsGroup && !item.mine && showSenderAvatar && (
+                              <p className="mb-1 text-[10px] font-semibold text-sky-200">{senderName}</p>
+                            )}
                             {reply && (
                               <button type="button" onClick={() => messageElementRefs.current[String(reply.id || reply._id)]?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mb-2 block w-full rounded border-l-2 border-blue-400 bg-black/15 px-2 py-1 text-left">
                                 <span className="block text-[9px] font-semibold text-blue-200">{reply.sender?.name || "Reply"}</span>

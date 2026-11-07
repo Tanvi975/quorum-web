@@ -12,16 +12,18 @@ export default function ForwardMessagesModal({
   const [selectedIds, setSelectedIds] = useState([]);
   const [search, setSearch] = useState("");
 
+  const getConversationId = (conversation) =>
+    conversation?.id || conversation?._id || conversation?.conversationId;
+
   const availableConversations = useMemo(() => {
-    return conversations.filter(
-      (conversation) =>
-        String(conversation.id) !== String(currentConversationId)
+    return conversations.filter((conversation) =>
+      String(getConversationId(conversation)) !== String(currentConversationId)
     );
   }, [conversations, currentConversationId]);
 
   const filteredConversations = availableConversations.filter(
     (conversation) =>
-      (getConversationName?.(conversation) || "")
+      (getConversationName?.(conversation) || conversation.name || "")
         .toLowerCase()
         .includes(search.toLowerCase())
   );
@@ -91,7 +93,7 @@ export default function ForwardMessagesModal({
             </p>
           ) : (
             filteredConversations.map((conversation) => {
-              const id = String(conversation.id);
+              const id = String(getConversationId(conversation));
               const selected = selectedIds.includes(id);
 
               return (
@@ -112,7 +114,7 @@ export default function ForwardMessagesModal({
                         "Conversation"}
                     </span>
                     <span className="text-xs text-white/50">
-                      {conversation.type === "group" ? "Group" : "Direct chat"}
+                      {conversation.type === "group" || conversation.isGroup ? "Group" : "Direct chat"}
                     </span>
                   </span>
 
