@@ -399,11 +399,14 @@ function VideoCall() {
 )}
 
 {reactions
-    .filter((reaction) => reaction.userId === user?.id)
+    .filter((reaction) => String(reaction.userId) === String(user?.id))
     .map((reaction) => (
         <div
             key={reaction.id}
-            className="absolute right-1/2 top-1/3 animate-bounce text-5xl"
+            className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl"
+            style={{
+                animation: "quorum-reaction-float 1.8s ease-out forwards",
+            }}
         >
             {reaction.emoji}
         </div>
@@ -444,11 +447,17 @@ function VideoCall() {
 )}
 
 {reactions
-    .filter((reaction) => reaction.userId === participant?.userId)
+    .filter(
+        (reaction) =>
+            String(reaction.userId) === String(participant?.userId)
+    )
     .map((reaction) => (
         <div
             key={reaction.id}
-            className="absolute right-1/2 top-1/3 animate-bounce text-5xl"
+            className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl"
+            style={{
+                animation: "quorum-reaction-float 1.8s ease-out forwards",
+            }}
         >
             {reaction.emoji}
         </div>

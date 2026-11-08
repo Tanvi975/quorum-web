@@ -37,7 +37,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [reactions, setReactions] = useState([]);
     const [isHandRaised, setIsHandRaised] = useState(false);
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc?.remoteDescription) return;
+        if (!pc ?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
@@ -60,11 +60,11 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const stopMedia = useCallback(() => {
         const socket = socketRef.current;
 
-        if (socket ?.connected && meetingCode) {
+        if (socket?.connected && meetingCode) {
             socket.emit("sfu:leave", { roomCode: meetingCode });
         }
 
-        publisherRef.current ?.close();
+        publisherRef.current?.close();
         publisherRef.current = null;
 
         subscribersRef.current.forEach((pc) => pc.close());
@@ -77,7 +77,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         });
         remoteMediaRef.current.clear();
 
-        localStreamRef.current ?.getTracks().forEach((track) => {
+        localStreamRef.current?.getTracks().forEach((track) => {
             track.stop();
         });
 
@@ -93,7 +93,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const startMedia = useCallback(async() => {
         const socket = socketRef.current;
 
-        if (!socket ?.connected ||
+        if (!socket?.connected ||
             startedRef.current ||
             sfuAccessDeniedRef.current
         ) {
@@ -163,7 +163,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                 const handleSfuError = (data) => {
                     cleanup();
-                    reject(new Error(data ?.message || "SFU room join failed."));
+                    reject(new Error(data?.message || "SFU room join failed."));
                 };
 
                 socket.once("sfu:joined", handleJoined);
@@ -242,7 +242,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         }
 
         const sender = pc.getSenders().find(
-            (item) => item.track ?.kind === "video"
+            (item) => item.track?.kind === "video"
         );
 
         if (!sender) {
@@ -256,7 +256,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         async(trackId, kind, peerId) => {
             const socket = socketRef.current;
 
-            if (!socket ?.connected ||
+            if (!socket?.connected ||
                 !trackId ||
                 !kind ||
                 !peerId ||
@@ -336,7 +336,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     useEffect(() => {
         mountedRef.current = true;
 
-        if (!meetingCode || !user ?.id || !user ?.name) {
+        if (!meetingCode || !user?.id || !user?.name) {
             setError("Meeting code or user details are missing.");
             setStatus("Unable to join");
 
@@ -363,18 +363,28 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             setError("");
 
             socket.emit("meeting:join", { meetingCode }, (ack) => {
-                if (!ack ?.success) {
+                if (!ack?.success) {
                     setStatus("Unable to join");
-                    setError(ack ?.message || "Meeting join failed.");
+                    setError(ack?.message || "Meeting join failed.");
                     return;
                 }
 
-                if (ack.data ?.status === "waiting_room") {
+                if (ack.data?.status === "waiting_room") {
                     setIsMeetingHost(false);
                     setStatus("Waiting for host approval");
                 } else {
-                    setIsMeetingHost(ack.data ?.role === "host");
-                    setParticipants(ack.data ?.participants || []);
+                    setIsMeetingHost(ack.data?.role === "host");
+                    const initialParticipants = ack.data ?.participants || [];
+
+                    setParticipants(initialParticipants);
+
+                    const currentParticipant = initialParticipants.find(
+                        (participant) =>
+                        String(participant.userId) === String(user.id)
+                    );
+
+                    setIsHandRaised(Boolean(currentParticipant ?.isHandRaised));
+
                     setStatus("In call");
                     startMedia();
                 }
@@ -497,7 +507,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 setReactions((previous) =>
                     previous.filter((item) => item.id !== reaction.id)
                 );
-            }, 2500);
+            }, 2000);
         });
 
         socket.on("meeting:hand-raise-status", (data) => {
@@ -507,8 +517,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
             setParticipants((previous) =>
                 previous.map((person) =>
-                    person.userId === userId ?
-                    {...person, isHandRaised } :
+                    person.userId === userId ? {...person, isHandRaised } :
                     person
                 )
             );
@@ -615,8 +624,8 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         };
     }, [
         meetingCode,
-        user ?.id,
-        user ?.name,
+        user?.id,
+        user?.name,
         isHost,
         startMedia,
         subscribeToTrack,
@@ -666,13 +675,13 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const sendReaction = (emoji) => {
         const socket = socketRef.current;
 
-        if (!socket ?.connected || !meetingCode || !emoji) return;
+        if (!socket?.connected || !meetingCode || !emoji) return;
 
         socket.emit(
             "meeting:reaction", { meetingCode, emoji },
             (ack) => {
-                if (!ack ?.success) {
-                    console.error("Reaction failed:", ack ?.message);
+                if (!ack?.success) {
+                    console.error("Reaction failed:", ack?.message);
                 }
             }
         );
@@ -691,7 +700,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const admitGuest = (userId) => {
         const socket = socketRef.current;
 
-        if (!meetingCode || !userId || !socket ?.connected) {
+        if (!meetingCode || !userId || !socket?.connected) {
             setError("Meeting connection or guest details are unavailable.");
             return;
         }
@@ -699,13 +708,13 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.emit(
             "meeting:admit-participant", { meetingCode, targetUserId: userId },
             (ack) => {
-                if (ack ?.success) {
+                if (ack?.success) {
                     setWaitingList((previous) =>
                         previous.filter((guest) => guest.userId !== userId)
                     );
                     setError("");
                 } else {
-                    setError(ack ?.message || "Could not admit participant.");
+                    setError(ack?.message || "Could not admit participant.");
                 }
             }
         );
@@ -727,7 +736,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const leaveMeeting = () => {
         const socket = socketRef.current;
 
-        if (socket ?.connected) {
+        if (socket?.connected) {
             if (isMeetingHost) {
                 socket.emit("meeting:end", { meetingCode });
             } else {
