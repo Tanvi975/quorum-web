@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -60,7 +59,6 @@ export default function ProjectsPage() {
         } else {
             setProjects([]);
             setError(
-                projectResult.reason?.response?.data?.message ||
                 "Unable to load projects. Please try again."
             );
         }
@@ -128,8 +126,7 @@ export default function ProjectsPage() {
             await loadData();
         } catch (err) {
             setError(
-                err.response?.data?.message ||
-                "Unable to create project."
+                "Could not create the project. Please try again."
             );
         } finally {
             setCreating(false);

@@ -39,7 +39,7 @@ import {
 import { saveItem } from "../services/savedItemsService";
 import { useAuth } from "../context/AuthContext";
 import useChatSocket from "../hooks/useChatSocket";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import MessageActions from "../components/chat/MessageActions";
 import MessageReactions from "../components/chat/MessageReactions";
 import ReplyPreview from "../components/chat/ReplyPreview";
@@ -267,6 +267,8 @@ const messageElementRefs = useRef({});
   const messagesRef = useRef([]);
   const typingTimeoutRef = useRef(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+const requestedConversationId = searchParams.get("conversationId");
 
   const activeContact = activeConversation
   ? getOtherParticipant(activeConversation, currentUserId)
@@ -333,39 +335,58 @@ const filteredMentionUsers =
           : Array.isArray(response)
             ? response
             : [];
+           
+const normalizedList = list.map((item) => ({
+  ...item,
+  id: item.id || item._id || item.conversationId
+}));
 
-          setConversations(
-            list.map((item) =>
-              String(item.id) === String(activeConversationRef.current?.id)
-                ? { ...item, unreadCount: 0 }
-                : item
-            )
-          );
+const requestedConversation = requestedConversationId
+  ? normalizedList.find(
+      (item) =>
+          String(item.id) === String(requestedConversationId)
+    )
+  : null;
 
-      setActiveConversation((previous) => {
-        if (!list.length) return null;
+setConversations(
+  normalizedList.map((item) =>
+      String(item.id) === String(activeConversationRef.current?.id)
+          ? { ...item, unreadCount: 0 }
+          : item
+  )
+);
 
-        if (previous) {
+if (requestedConversationId && !requestedConversation) {
+  setActiveConversation(null);
+  setError("This project conversation is not available.");
+} else {
+  setActiveConversation((previous) => {
+      if (requestedConversation) {
+          return requestedConversation;
+      }
+
+      if (!normalizedList.length) {
+          return null;
+      }
+
+      if (previous) {
           return (
-            list.find(
-              (item) => String(item.id) === String(previous.id)
-            ) || previous
+              normalizedList.find(
+                  (item) => String(item.id) === String(previous.id)
+              ) || previous
           );
-        }
+      }
 
-        return list[0];
-      });
+      return normalizedList[0];
+  });
 
-      setError("");
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Could not load conversations."
-      );
-    } finally {
-      setLoadingConversations(false);
-    }
-  }, []);
+  setError("");
+}}catch (err) {
+  setError("Could not load conversations.");
+} finally {
+  setLoadingConversations(false);
+}
+  }, [requestedConversationId]);
 
   useEffect(() => {
     loadConversations();

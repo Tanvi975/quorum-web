@@ -1,6 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { getProjectById } from "../../services/projectService";
+import useProjectSocket from "../../hooks/useProjectSocket";
 import {
     FiArrowLeft,
     FiPlus,
@@ -30,6 +32,9 @@ export default function ResourceList({
     isManager = false
 }) {
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const [conversationId, setConversationId] = useState("");
+    const [canManage, setCanManage] = useState(isManager);
 
     const [resources, setResources] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,9 +52,9 @@ export default function ResourceList({
         fileSize: ""
     });
 
-    const loadResources = async () => {
+    const loadResources = async (showLoader = true) => {
         try {
-            setLoading(true);
+            if (showLoader) setLoading(true);
             setError("");
 
             const response = await getProjectResources(projectId);
@@ -64,17 +69,35 @@ export default function ResourceList({
             );
         } catch (err) {
             setError(
-                err.response?.data?.message ||
-                "Unable to load project resources."
+                "Unable to load project resources. Please try again."
             );
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
     useEffect(() => {
+        let active = true;
         loadResources();
-    }, [projectId]);
+        getProjectById(projectId).then((response) => {
+            if (!active) return;
+            const project = response?.data?.data ?? response?.data ?? response;
+            setConversationId(project?.conversation?.id || project?.conversationId || "");
+            const members = Array.isArray(project?.members) ? project.members : [];
+            const currentId = String(user?.id || user?.userId || user?.sub || "");
+            const member = members.find((item) => String(item.user?.id || item.user?._id || "") === currentId);
+            const role = String(member?.role || "").toUpperCase();
+            setCanManage(isManager || role === "PROJECT_MANAGER" || ["ORG_ADMIN", "ORGANIZATION_ADMIN"].includes(String(user?.role || user?.organizationRole || "").toUpperCase()));
+        }).catch(() => {
+            if (active) setCanManage(isManager);
+        });
+        return () => { active = false; };
+    }, [projectId, user, isManager]);
+
+    useProjectSocket({
+        conversationId,
+        onResourceUpdated: () => loadResources(false)
+    });
 
     const handleChange = (e) => {
         setForm((prev) => ({
@@ -117,8 +140,7 @@ export default function ResourceList({
             await loadResources();
         } catch (err) {
             setError(
-                err.response?.data?.message ||
-                "Unable to add project resource."
+                "Could not add the resource. Please try again."
             );
         } finally {
             setUploading(false);
@@ -141,8 +163,7 @@ export default function ResourceList({
             );
         } catch (err) {
             setError(
-                err.response?.data?.message ||
-                "Unable to delete resource."
+                "Could not delete the resource. Please try again."
             );
         } finally {
             setDeletingId(null);
@@ -251,7 +272,7 @@ export default function ResourceList({
                         </p>
                     </div>
 
-                    {isManager && (
+                    {canManage && (
                         <button
                             type="button"
                             onClick={() => {
@@ -346,7 +367,7 @@ export default function ResourceList({
                     </div>
                 </div>
 
-                {showForm && isManager && (
+                {showForm && canManage && (
                     <form
                         onSubmit={handleAddResource}
                         className="mb-8 rounded-2xl border border-white/20 bg-white/[0.10] p-5 shadow-xl backdrop-blur-md sm:p-7"
@@ -520,7 +541,7 @@ export default function ResourceList({
                                 : "Shared documents and files will appear here once they are added to this project."}
                         </p>
 
-                        {!search && isManager && (
+                        {!search && canManage && (
                             <button
                                 type="button"
                                 onClick={() => setShowForm(true)}
@@ -590,7 +611,7 @@ export default function ResourceList({
                                             Open Resource
                                         </a>
 
-                                        {isManager && (
+                                        {canManage && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(resource.id)}

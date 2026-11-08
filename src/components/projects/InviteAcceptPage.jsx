@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { acceptProjectInvite } from "../../services/projectService";
@@ -28,8 +27,7 @@ export default function InviteAcceptPage() {
             setSuccess(true);
         } catch (err) {
             setError(
-                err.response?.data?.message ||
-                "Unable to accept invitation. The invitation may have expired."
+                "Could not accept the invitation. It may have expired or already been used."
             );
         } finally {
             setLoading(false);

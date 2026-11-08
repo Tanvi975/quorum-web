@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     FiArrowLeft,
@@ -18,6 +17,7 @@ import {
 import { getProjectById } from "../../services/projectService";
 import ProjectMembers from "../../components/projects/ProjectMembers";
 import { useAuth } from "../../context/AuthContext";
+import useProjectSocket from "../../hooks/useProjectSocket";
 
 export default function ProjectDetailsPage() {
     const { projectId } = useParams();
@@ -28,7 +28,7 @@ export default function ProjectDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const loadProject = async () => {
+    const loadProject = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
@@ -42,18 +42,26 @@ export default function ProjectDetailsPage() {
 
             setProject(projectData);
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Unable to load project details."
-            );
+            setError("Unable to load project details. Please try again.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    const refreshProject = useCallback(() => {
+        loadProject();
+    }, [loadProject]);
+
+    useProjectSocket({
+        conversationId: project?.conversation?.id || project?.conversationId || "",
+        onMemberUpdated: refreshProject,
+        onTaskUpdated: refreshProject,
+        onResourceUpdated: refreshProject
+    });
 
     useEffect(() => {
         loadProject();
-    }, [projectId]);
+    }, [loadProject]);
 
     const formatDate = (date) => {
         if (!date) return "Not specified";
@@ -180,7 +188,13 @@ export default function ProjectDetailsPage() {
             description: "Communicate with collaborators in this project.",
             icon: FiMessageCircle,
             count: "Project conversation",
-            path: `/projects/${projectId}/chat`
+            path: project?.conversation?.id || project?.conversation?._id || project?.conversationId
+                ? `/chat?conversationId=${encodeURIComponent(
+                    project.conversation?.id ||
+                    project.conversation?._id ||
+                    project.conversationId
+                )}`
+                : null
         }
     ];
 
@@ -327,7 +341,13 @@ export default function ProjectDetailsPage() {
                                 <button
                                     key={item.title}
                                     type="button"
-                                    onClick={() => navigate(item.path)}
+                                    onClick={() => {
+                                        if (item.path) {
+                                            navigate(item.path);
+                                        } else {
+                                            window.alert("Project chat is not available yet.");
+                                        }
+                                    }}
                                     className="group rounded-2xl border border-white/15 bg-white/[0.09] p-5 text-left shadow-lg shadow-[#102C50]/10 backdrop-blur-sm transition hover:-translate-y-1 hover:border-blue-200/35 hover:bg-white/[0.13]"
                                 >
                                     <div className="flex items-center justify-between">
