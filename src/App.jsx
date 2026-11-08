@@ -50,7 +50,7 @@ import ProjectDetailsPage from "./pages/projects/ProjectDetailsPage";
 import InviteAcceptPage from "./components/projects/InviteAcceptPage";
 import TaskBoard from "./components/projects/TaskBoard";
 import ResourceList from "./components/projects/ResourceList";
-import DocumentsPage from "./pages/documents/DocumentsPage";
+import DocumentsPage from "./components/documents/DocumentsPage";
 
 function MeetRedirect() {
   const { code } = useParams();
