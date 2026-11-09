@@ -1,11 +1,10 @@
-
 import { useCallback, useState } from "react";
 import { FiArrowLeft, FiFileText } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-
 import { useAuth } from "../../context/AuthContext";
-import DocumentsList from "../../components/documents/DocumentsList";
-import DocumentEditor from "../../components/documents/DocumentEditor";
+import OnboardingLayout from "../OnboardingLayout";
+import DocumentsList from "./DocumentsList";
+import DocumentEditor from "./DocumentEditor";
 import { getDocumentById } from "../../services/documentService";
 
 export default function DocumentsPage() {
@@ -37,19 +36,27 @@ export default function DocumentsPage() {
             const result = await getDocumentById(documentId);
 
             if (!result?.id && !result?._id) {
-                throw new Error("Invalid document details.");
+                throw new Error(
+                    "The document details are incomplete."
+                );
             }
 
             setSelectedDocument(result);
-        } catch (err) {
-            console.error("Document details loading failed:", err);
+        } catch (requestError) {
+            console.error(
+                "Document details loading failed:",
+                requestError
+            );
+
+            const status = requestError?.response?.status;
 
             setError(
-                err.response?.status === 403
+                status === 403
                     ? "You don't have permission to open this document."
-                    : err.response?.status === 404
-                      ? "This document could not be found."
-                      : "Unable to open the document. Please try again."
+                    : status === 404
+                        ? "This document could not be found."
+                        : requestError?.response?.data?.message ||
+                            "Unable to open the document. Please try again."
             );
         } finally {
             setLoadingDocument(false);
@@ -62,10 +69,7 @@ export default function DocumentsPage() {
     };
 
     const handleOpenWhiteboard = (boardId) => {
-        if (!boardId) {
-            setError("Whiteboard information is unavailable.");
-            return;
-        }
+        if (!boardId) return;
 
         const query = organizationId
             ? `?organizationId=${encodeURIComponent(organizationId)}`
@@ -77,14 +81,14 @@ export default function DocumentsPage() {
     };
 
     return (
-        <main className="min-h-screen min-w-0 bg-gray-50 px-3 py-5 dark:bg-gray-950 sm:px-5 lg:px-8">
-            <div className="mx-auto w-full max-w-[1500px] space-y-5">
+        <OnboardingLayout fullWidth>
+        <div className="relative z-10 mx-auto w-full max-w-[1500px] space-y-5 px-3 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
                 {selectedDocument ? (
                     <>
                         <button
                             type="button"
                             onClick={handleBack}
-                            className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#52789E] bg-[#102D4B]/90 px-3 text-sm font-medium text-[#D8E7F8] transition hover:bg-[#24476B]"
                         >
                             <FiArrowLeft />
                             Back to documents
@@ -97,33 +101,37 @@ export default function DocumentsPage() {
                     </>
                 ) : (
                     <>
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                                <FiFileText size={21} />
+                        <section className="flex flex-col gap-4 rounded-xl border border-[#355D83] bg-[#173B60]/95 px-4 py-5 shadow-[0_10px_35px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:px-6">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#52789E] bg-[#102D4B] text-[#8CC4FF]">
+                                <FiFileText size={22} />
                             </span>
 
                             <div className="min-w-0">
-                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8CC4FF]">
+                                    Workspace
+                                </p>
+
+                                <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
                                     Collaborative Documents
                                 </h1>
 
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    Access and collaborate on your documents.
+                                <p className="mt-1 text-sm text-[#C2D5E8]">
+                                    Your team documents, all in one place.
                                 </p>
                             </div>
-                        </div>
+                        </section>
 
                         {error && (
                             <div
                                 role="alert"
-                                className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 sm:flex-row sm:items-center sm:justify-between"
+                                className="flex flex-col gap-3 rounded-xl border border-red-400/30 bg-red-950/40 p-4 text-sm text-red-200 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <span>{error}</span>
 
                                 <button
                                     type="button"
                                     onClick={() => setError("")}
-                                    className="self-start rounded-lg px-3 py-1.5 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 sm:self-auto"
+                                    className="self-start rounded-lg px-3 py-1.5 font-medium transition hover:bg-red-400/10 sm:self-auto"
                                 >
                                     Dismiss
                                 </button>
@@ -132,13 +140,13 @@ export default function DocumentsPage() {
 
                         {loadingDocument ? (
                             <div
-                                className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-900"
                                 role="status"
                                 aria-live="polite"
+                                className="rounded-xl border border-[#355D83] bg-[#142B45]/95 p-8 text-center"
                             >
-                                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#55A0FF] border-t-transparent" />
 
-                                <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                                <p className="mt-3 text-sm text-[#A9BED6]">
                                     Opening document...
                                 </p>
                             </div>
@@ -151,6 +159,6 @@ export default function DocumentsPage() {
                     </>
                 )}
             </div>
-        </main>
+        </OnboardingLayout>
     );
 }

@@ -1,62 +1,49 @@
 import api from "./api";
 
-const unwrapResponse = (response) => {
+function unwrapResponse(response) {
+    const body = response ?.data;
+    if (body && body.data !== undefined) return body.data;
+    return body ?? response;
+}
+
+function requireDocumentId(documentId) {
     if (
-        response &&
-        response.data &&
-        response.data.data !== undefined
+        documentId === undefined ||
+        documentId === null ||
+        !String(documentId).trim()
     ) {
-        return response.data.data;
-    }
-
-    if (response && response.data !== undefined) {
-        return response.data;
-    }
-
-    return response;
-};
-
-const validateId = (id) => {
-    if (id === undefined || id === null || !String(id).trim()) {
         throw new Error("Document ID is required.");
     }
-};
+}
 
-export async function getDocuments(options = {}) {
-    const organizationId = options.organizationId;
-
-    const params = {};
-
-    if (organizationId) {
-        params.organizationId = organizationId;
-    }
-
+export async function getDocuments({ organizationId } = {}) {
+    const params = organizationId ? { organizationId } : {};
     const response = await api.get("/api/documents", { params });
     const data = unwrapResponse(response);
 
-    if (Array.isArray(data)) {
-        return data;
-    }
-
-    if (data && Array.isArray(data.documents)) {
-        return data.documents;
-    }
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data ?.documents)) return data.documents;
+    if (Array.isArray(data ?.items)) return data.items;
 
     return [];
 }
 
 export async function getDocumentById(documentId) {
-    validateId(documentId);
+    requireDocumentId(documentId);
 
     const response = await api.get(
-        "/api/documents/" + encodeURIComponent(documentId)
+        `/api/documents/${encodeURIComponent(documentId)}`
     );
 
     const data = unwrapResponse(response);
+    const document = data ?.document ?? data;
 
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
-        throw new Error("Invalid document response.");
+    if (!document ||
+        typeof document !== "object" ||
+        Array.isArray(document)
+    ) {
+        throw new Error("The server returned an invalid document.");
     }
 
-    return data;
+    return document;
 }

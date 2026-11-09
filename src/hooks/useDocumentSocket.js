@@ -2,20 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 const SOCKET_URL =
-    import.meta.env.VITE_SOCKET_URL ||
-    import.meta.env.VITE_API_URL ||
-    window.location.origin;
+    import.meta.env.VITE_API_URL || window.location.origin;
 
 function readAccessToken() {
     try {
+        const storedUser = JSON.parse(
+            localStorage.getItem("user") || "null"
+        );
+
         return (
             localStorage.getItem("accessToken") ||
             localStorage.getItem("token") ||
-            JSON.parse(localStorage.getItem("user") || "null") ?.accessToken ||
+            storedUser ?.accessToken ||
             ""
         );
     } catch {
-        return "";
+        return (
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("token") ||
+            ""
+        );
     }
 }
 
@@ -26,8 +32,9 @@ export default function useDocumentSocket({
 }) {
     const socketRef = useRef(null);
     const callbackRef = useRef(onDocumentUpdate);
+    const pendingContentRef = useRef(null);
 
-    const [status, setStatus] = useState("disconnected");
+    const [status, setStatus] = useState("connecting");
     const [error, setError] = useState("");
 
     useEffect(() => {
@@ -35,24 +42,15 @@ export default function useDocumentSocket({
     }, [onDocumentUpdate]);
 
     useEffect(() => {
-        if (!documentId || !enabled) {
-            return undefined;
-        }
+        if (!documentId || !enabled) return undefined;
 
         let disposed = false;
-
-
         const token = readAccessToken();
 
         const socket = io(SOCKET_URL, {
             withCredentials: true,
             transports: ["websocket", "polling"],
-            ...(token ? {
-                auth: {
-                    token: token.startsWith("Bearer ") ?
-                        token : `Bearer ${token}`,
-                },
-            } : {}),
+            auth: (callback) => callback(token ? { token } : {}),
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
@@ -65,34 +63,46 @@ export default function useDocumentSocket({
 
             setStatus("connected");
             setError("");
+
+            if (pendingContentRef.current !== null) {
+                socket.emit("document:update", {
+                    documentId,
+                    content: pendingContentRef.current,
+                });
+
+                pendingContentRef.current = null;
+            }
         };
 
         const handleDisconnect = () => {
-            if (disposed) return;
-
-            setStatus("disconnected");
+            if (!disposed) {
+                setStatus("disconnected");
+            }
         };
 
-        const handleConnectError = () => {
+        const handleConnectError = (connectError) => {
             if (disposed) return;
 
             setStatus("error");
-            setError("Document connection failed. Reconnecting...");
+            setError(
+                connectError ?.message ||
+                "Document connection failed. Reconnecting..."
+            );
         };
 
         const handleDocumentUpdate = (payload = {}) => {
             if (disposed) return;
 
-            const incomingId =
-                payload.documentId || payload.id;
+            const incomingId = payload.documentId ?? payload.id;
 
-            if (!incomingId ||
+            if (
+                incomingId == null ||
                 String(incomingId) !== String(documentId)
             ) {
                 return;
             }
 
-            callbackRef.current?.(payload);
+            callbackRef.current ?.(payload);
         };
 
         socket.on("connect", handleConnect);
@@ -118,19 +128,22 @@ export default function useDocumentSocket({
 
     const emitDocumentUpdate = useCallback(
         (content) => {
+            if (!documentId || !enabled) return false;
+
+            pendingContentRef.current = content;
+
             const socket = socketRef.current;
 
-            if (!documentId || !socket?.connected) {
-                return false;
-            }
+            if (!socket ?.connected) return false;
 
             socket.emit("document:update", {
                 documentId,
                 content,
             });
 
+            pendingContentRef.current = null;
             return true;
-        }, [documentId]
+        }, [documentId, enabled]
     );
 
     return {

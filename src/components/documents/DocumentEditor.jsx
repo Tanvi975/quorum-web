@@ -1,5 +1,9 @@
-
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -11,7 +15,6 @@ import {
     FiShare2,
     FiType,
 } from "react-icons/fi";
-
 import useDocumentSocket from "../../hooks/useDocumentSocket";
 import DocumentDetailsPanel from "./DocumentDetailsPanel";
 
@@ -37,8 +40,8 @@ function ToolbarButton({
             onClick={onClick}
             className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 transition disabled:cursor-not-allowed disabled:opacity-40 ${
                 active
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                    ? "bg-[#2878D5] text-white"
+                    : "text-[#D8E7F8] hover:bg-[#24476B]"
             }`}
         >
             {children}
@@ -61,14 +64,13 @@ export default function DocumentEditor({
     const canWrite = canEditPermission(permission);
 
     const editorRef = useRef(null);
-
     const [connectionError, setConnectionError] = useState("");
 
     const handleRemoteUpdate = useCallback((payload) => {
         const currentEditor = editorRef.current;
         const remoteContent = payload?.content;
 
-        if (!remoteContent || !currentEditor) return;
+        if (remoteContent == null || !currentEditor) return;
 
         const currentContent = currentEditor.getJSON();
 
@@ -76,9 +78,10 @@ export default function DocumentEditor({
             JSON.stringify(currentContent) !==
             JSON.stringify(remoteContent)
         ) {
-            currentEditor.commands.setContent(remoteContent, {
-                emitUpdate: false,
-            });
+            currentEditor.commands.setContent(
+                remoteContent,
+                { emitUpdate: false }
+            );
         }
     }, []);
 
@@ -88,51 +91,51 @@ export default function DocumentEditor({
         emitDocumentUpdate,
     } = useDocumentSocket({
         documentId,
-        enabled: Boolean(documentId),
+        enabled: Boolean(documentId && canWrite),
         onDocumentUpdate: handleRemoteUpdate,
     });
 
-    const editor = useEditor({
-        extensions: [StarterKit],
-        content: document?.content || "",
-        editable: canWrite,
-        immediatelyRender: false,
+    const editor = useEditor(
+        {
+            extensions: [StarterKit],
+            content: document?.content || "",
+            editable: canWrite,
+            immediatelyRender: false,
 
-        onUpdate: ({ editor: currentEditor }) => {
-            const content = currentEditor.getJSON();
-
-            const emitted = emitDocumentUpdate(content);
-
-            if (!emitted) {
-                setConnectionError(
-                    "Live connection unavailable. Your latest changes may not be shared."
+            onUpdate: ({ editor: currentEditor }) => {
+                const sent = emitDocumentUpdate(
+                    currentEditor.getJSON()
                 );
-            } else {
-                setConnectionError("");
-            }
-        },
 
-        editorProps: {
-            attributes: {
-                class:
-                    "min-h-[360px] w-full max-w-none px-4 py-5 text-sm leading-7 text-gray-800 outline-none dark:text-gray-100 sm:px-6",
-                "aria-label": "Document editor",
+                setConnectionError(
+                    sent
+                        ? ""
+                        : "Not connected. Your latest edit is queued and will be sent after reconnection."
+                );
+            },
+
+            editorProps: {
+                attributes: {
+                    class: "min-h-[420px] w-full max-w-none px-4 py-5 text-sm leading-7 text-[#EAF2FF] outline-none sm:px-6",
+                    "aria-label": "Document editor",
+                },
             },
         },
-    });
+        [documentId]
+    );
 
     useEffect(() => {
         editorRef.current = editor;
     }, [editor]);
 
     useEffect(() => {
-        if (!editor) return;
-
-        editor.setEditable(canWrite);
+        if (editor) {
+            editor.setEditable(canWrite);
+        }
     }, [editor, canWrite]);
 
     useEffect(() => {
-        if (!editor || !document?.content) return;
+        if (!editor || document?.content == null) return;
 
         const currentContent = editor.getJSON();
 
@@ -140,9 +143,10 @@ export default function DocumentEditor({
             JSON.stringify(currentContent) !==
             JSON.stringify(document.content)
         ) {
-            editor.commands.setContent(document.content, {
-                emitUpdate: false,
-            });
+            editor.commands.setContent(
+                document.content,
+                { emitUpdate: false }
+            );
         }
     }, [editor, document?.content, documentId]);
 
@@ -150,7 +154,7 @@ export default function DocumentEditor({
         return (
             <div
                 role="alert"
-                className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
+                className="rounded-xl border border-red-400/30 bg-red-950/40 p-5 text-sm text-red-200"
             >
                 Document information is unavailable.
             </div>
@@ -160,12 +164,12 @@ export default function DocumentEditor({
     if (!editor) {
         return (
             <div
-                className="animate-pulse rounded-xl border border-gray-200 p-6 dark:border-gray-700"
+                className="animate-pulse rounded-xl border border-[#355D83] bg-[#142B45] p-6"
                 aria-label="Loading editor"
                 aria-busy="true"
             >
-                <div className="h-6 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
-                <div className="mt-6 h-64 rounded bg-gray-100 dark:bg-gray-800" />
+                <div className="h-6 w-1/3 rounded bg-[#355574]" />
+                <div className="mt-6 h-64 rounded bg-[#102D4B]" />
             </div>
         );
     }
@@ -180,21 +184,21 @@ export default function DocumentEditor({
     return (
         <section className="w-full min-w-0 space-y-4">
             <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-                    <header className="flex flex-col gap-3 border-b border-gray-200 p-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#355D83] bg-[#142B45]/95 shadow-[0_10px_35px_rgba(0,0,0,0.2)]">
+                    <header className="flex flex-col gap-3 border-b border-[#355D83] p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                            <h1 className="break-words text-lg font-semibold text-gray-900 dark:text-white">
+                            <h1 className="break-words text-lg font-semibold text-white">
                                 {document.title || "Untitled document"}
                             </h1>
 
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <p className="mt-1 text-xs text-[#A9BED6]">
                                 Version {document.version ?? "—"}
                             </p>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
                             {!canWrite && (
-                                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
                                     View Only
                                 </span>
                             )}
@@ -203,7 +207,7 @@ export default function DocumentEditor({
                                 <button
                                     type="button"
                                     onClick={() => onAI(editor)}
-                                    className="min-h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                    className="min-h-9 rounded-lg border border-[#52789E] bg-[#102D4B] px-3 text-sm font-medium text-[#D8E7F8] transition hover:bg-[#24476B]"
                                 >
                                     AI Assistant
                                 </button>
@@ -213,7 +217,7 @@ export default function DocumentEditor({
                                 <button
                                     type="button"
                                     onClick={() => onShare(document)}
-                                    className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white transition hover:bg-blue-700"
+                                    className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#2878E8] px-3 text-sm font-semibold text-white transition hover:bg-[#3D8BFA]"
                                 >
                                     <FiShare2 />
                                     Share
@@ -222,7 +226,7 @@ export default function DocumentEditor({
                         </div>
                     </header>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#355D83] bg-[#102D4B]/70 px-3 py-2">
                         <div className="flex flex-wrap items-center gap-1">
                             <ToolbarButton
                                 label="Bold"
@@ -251,7 +255,8 @@ export default function DocumentEditor({
                                 active={editor.isActive("heading", { level: 2 })}
                                 disabled={!canWrite}
                                 onClick={() =>
-                                    editor.chain().focus().toggleHeading({ level: 2 }).run()
+                                    editor.chain().focus()
+                                        .toggleHeading({ level: 2 }).run()
                                 }
                             >
                                 <FiType />
@@ -262,7 +267,8 @@ export default function DocumentEditor({
                                 active={editor.isActive("bulletList")}
                                 disabled={!canWrite}
                                 onClick={() =>
-                                    editor.chain().focus().toggleBulletList().run()
+                                    editor.chain().focus()
+                                        .toggleBulletList().run()
                                 }
                             >
                                 <FiList />
@@ -290,34 +296,34 @@ export default function DocumentEditor({
                         </div>
 
                         <span
-                            className={`text-xs ${
-                                socketStatus === "connected"
-                                    ? "text-green-600 dark:text-green-400"
-                                    : "text-amber-600 dark:text-amber-400"
-                            }`}
                             role="status"
                             aria-live="polite"
+                            className={`text-xs ${
+                                socketStatus === "connected"
+                                    ? "text-emerald-300"
+                                    : "text-amber-200"
+                            }`}
                         >
-                            {connectionLabel}
+                            {canWrite ? connectionLabel : "Read-only"}
                         </span>
                     </div>
 
                     {(socketError || connectionError) && canWrite && (
                         <div
                             role="status"
-                            className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"
+                            className="border-b border-amber-300/20 bg-amber-400/10 px-4 py-2 text-xs text-amber-100"
                         >
                             {connectionError || socketError}
                         </div>
                     )}
 
-                    <div className="min-h-[360px] min-w-0 flex-1 overflow-y-auto">
+                    <div className="min-h-[420px] min-w-0 flex-1 overflow-y-auto bg-[#102842]/65">
                         <EditorContent editor={editor} />
                     </div>
 
-                    <footer className="border-t border-gray-200 px-4 py-2 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    <footer className="border-t border-[#355D83] px-4 py-2 text-xs text-[#A9BED6]">
                         {canWrite
-                            ? "Changes are shared through the live document connection."
+                            ? "Document changes are sent through the live document connection."
                             : "You have read-only access to this document."}
                     </footer>
                 </div>

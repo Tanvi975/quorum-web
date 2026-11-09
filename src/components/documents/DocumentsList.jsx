@@ -1,9 +1,21 @@
-
-import { useCallback, useEffect, useState } from "react";
-import { FiFileText, FiRefreshCw, FiSearch } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import {
+    FiFileText,
+    FiRefreshCw,
+    FiSearch,
+    FiUsers,
+} from "react-icons/fi";
 import { getDocuments } from "../../services/documentService";
 
-const formatDate = (value) => {
+const scopeLabels = {
+    PERSONAL: "Personal",
+    TEAM: "Team",
+    ORGANIZATION: "Organization",
+    PROJECT: "Project",
+    MEETING: "Meeting",
+};
+
+function formatDate(value) {
     if (!value) return "Date unavailable";
 
     const date = new Date(value);
@@ -15,15 +27,18 @@ const formatDate = (value) => {
     return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
     }).format(date);
-};
+}
 
-const scopeLabels = {
-    PERSONAL: "Personal",
-    TEAM: "Team",
-    ORGANIZATION: "Organization",
-    PROJECT: "Project",
-    MEETING: "Meeting",
-};
+function getErrorMessage(error) {
+    if (error?.response?.status === 403) {
+        return "You don't have permission to view these documents.";
+    }
+
+    return (
+        error?.response?.data?.message ||
+        "Unable to load documents. Please try again."
+    );
+}
 
 export default function DocumentsList({
     organizationId,
@@ -33,53 +48,71 @@ export default function DocumentsList({
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
-    const loadDocuments = useCallback(async () => {
-        setLoading(true);
-        setError("");
-
-        try {
-            const result = await getDocuments({ organizationId });
-            setDocuments(Array.isArray(result) ? result : []);
-        } catch (err) {
-            console.error("Document loading failed:", err);
-            setError(
-                err.response?.status === 403
-                    ? "You don't have permission to view these documents."
-                    : "Unable to load documents. Please try again."
-            );
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId]);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
-        loadDocuments();
-    }, [loadDocuments]);
+        let active = true;
+
+        getDocuments({ organizationId })
+            .then((result) => {
+                if (active) {
+                    setDocuments(Array.isArray(result) ? result : []);
+                    setError("");
+                }
+            })
+            .catch((requestError) => {
+                console.error(
+                    "Document loading failed:",
+                    requestError
+                );
+
+                if (active) {
+                    setError(getErrorMessage(requestError));
+                }
+            })
+            .finally(() => {
+                if (active) {
+                    setLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [organizationId, refreshKey]);
+
+    const refreshDocuments = () => {
+        setLoading(true);
+        setError("");
+        setRefreshKey((current) => current + 1);
+    };
+
+    const query = search.trim().toLowerCase();
 
     const filteredDocuments = documents.filter((document) =>
-        String(document.title || "")
-            .toLowerCase()
-            .includes(search.trim().toLowerCase())
+        String(
+            document.title || "Untitled document"
+        ).toLowerCase().includes(query)
     );
 
     return (
         <section className="w-full min-w-0 space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        Documents
+                    <h2 className="text-xl font-semibold text-white">
+                        Your documents
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        View and access your collaborative documents.
+
+                    <p className="mt-1 text-sm text-[#A9BED6]">
+                        Open a document to read or collaborate with your team.
                     </p>
                 </div>
 
                 <button
                     type="button"
-                    onClick={loadDocuments}
+                    onClick={refreshDocuments}
                     disabled={loading}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#52789E] bg-[#102D4B] px-4 py-2 text-sm font-medium text-[#D8E7F8] transition hover:bg-[#24476B] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <FiRefreshCw
                         className={loading ? "animate-spin" : ""}
@@ -89,15 +122,17 @@ export default function DocumentsList({
             </div>
 
             <div className="relative w-full sm:max-w-md">
-                <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9EB5CF]" />
 
                 <input
                     type="search"
                     value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(event) =>
+                        setSearch(event.target.value)
+                    }
                     placeholder="Search documents..."
                     aria-label="Search documents"
-                    className="min-h-11 w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    className="min-h-11 w-full rounded-lg border border-[#52789E] bg-[#102D4B] py-2 pl-10 pr-3 text-sm text-white outline-none placeholder:text-[#9EB5CF] transition focus:border-[#55A0FF] focus:ring-2 focus:ring-[#3988F5]/25"
                 />
             </div>
 
@@ -110,39 +145,37 @@ export default function DocumentsList({
                     {[1, 2, 3].map((item) => (
                         <div
                             key={item}
-                            className="h-36 animate-pulse rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
+                            className="h-36 animate-pulse rounded-xl border border-[#355D83] bg-[#173B60]/80"
                         />
                     ))}
                 </div>
             ) : error ? (
                 <div
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/30"
+                    className="rounded-xl border border-red-400/30 bg-red-950/40 p-5"
                 >
-                    <p className="text-sm text-red-700 dark:text-red-300">
-                        {error}
-                    </p>
+                    <p className="text-sm text-red-200">{error}</p>
 
                     <button
                         type="button"
-                        onClick={loadDocuments}
-                        className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+                        onClick={refreshDocuments}
+                        className="mt-3 rounded-lg bg-[#2878E8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3D8BFA]"
                     >
                         Try again
                     </button>
                 </div>
             ) : filteredDocuments.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-300 px-5 py-12 text-center dark:border-gray-700">
-                    <FiFileText className="mx-auto text-3xl text-gray-400" />
+                <div className="rounded-xl border border-dashed border-[#52789E] bg-[#142B45]/70 px-5 py-12 text-center">
+                    <FiFileText className="mx-auto text-3xl text-[#8FB4D8]" />
 
-                    <h3 className="mt-3 text-base font-semibold text-gray-800 dark:text-white">
-                        {search
+                    <h3 className="mt-3 text-base font-semibold text-white">
+                        {query
                             ? "No matching documents"
                             : "No documents yet"}
                     </h3>
 
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {search
+                    <p className="mt-1 text-sm text-[#A9BED6]">
+                        {query
                             ? "Try another search term."
                             : "Documents shared with you will appear here."}
                     </p>
@@ -150,52 +183,71 @@ export default function DocumentsList({
             ) : (
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {filteredDocuments.map((document) => {
-                        const documentId = document.id || document._id;
+                        const documentId =
+                            document.id || document._id;
+
+                        const scope = String(
+                            document.scopeType || ""
+                        ).toUpperCase();
+
+                        const collaboratorCount =
+                            typeof document.collaboratorsCount === "number"
+                                ? document.collaboratorsCount
+                                : Array.isArray(document.collaborators)
+                                    ? document.collaborators.length
+                                    : null;
 
                         return (
                             <button
-                                key={documentId}
+                                key={documentId || document.title}
                                 type="button"
-                                disabled={!documentId || !onSelectDocument}
+                                disabled={
+                                    !documentId || !onSelectDocument
+                                }
                                 onClick={() =>
                                     onSelectDocument?.(document)
                                 }
-                                className="group min-w-0 rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md disabled:cursor-default dark:border-gray-700 dark:bg-gray-900 dark:hover:border-blue-700"
+                                className="group min-w-0 rounded-xl border border-[#355D83] bg-[#173B60]/95 p-4 text-left shadow-[0_10px_35px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#65A7FF] hover:bg-[#1B456E] hover:shadow-lg disabled:cursor-default"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#52789E] bg-[#102D4B] text-[#8CC4FF]">
                                             <FiFileText size={19} />
                                         </span>
 
                                         <div className="min-w-0">
-                                            <h3 className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                                                {document.title || "Untitled document"}
+                                            <h3 className="truncate text-sm font-semibold text-white">
+                                                {document.title ||
+                                                    "Untitled document"}
                                             </h3>
 
-                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                {formatDate(document.updatedAt)}
+                                            <p className="mt-1 text-xs text-[#A9BED6]">
+                                                Updated{" "}
+                                                {formatDate(
+                                                    document.updatedAt
+                                                )}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                                        {scopeLabels[document.scopeType] ||
+                                    <span className="shrink-0 rounded-full border border-[#52789E] bg-[#102D4B] px-2 py-1 text-[11px] text-[#C6EAFF]">
+                                        {scopeLabels[scope] ||
                                             document.scopeType ||
                                             "Document"}
                                     </span>
                                 </div>
 
-                                <div className="mt-5 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="mt-5 flex items-center justify-between gap-2 border-t border-[#355D83]/70 pt-3 text-xs text-[#A9BED6]">
                                     <span className="truncate">
                                         {document.createdBy?.name
                                             ? `Created by ${document.createdBy.name}`
                                             : "Collaborative document"}
                                     </span>
 
-                                    {typeof document.collaboratorsCount === "number" && (
-                                        <span className="shrink-0">
-                                            {document.collaboratorsCount} collaborators
+                                    {collaboratorCount !== null && (
+                                        <span className="inline-flex shrink-0 items-center gap-1">
+                                            <FiUsers />
+                                            {collaboratorCount}
                                         </span>
                                     )}
                                 </div>
