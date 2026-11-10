@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   forgotPassword,
   verifyEmailOTP,
+  verifyPasswordResetOTP,
   sendVerificationOTP,
 } from "../services/authService";
 
@@ -90,30 +91,46 @@ function VerifyCode() {
     setError("");
     setInfo("");
 
+
     try {
       if (from === "signup") {
         const res = await verifyEmailOTP(email, otp);
         const payload = res?.data ?? res;
         const verifiedUser = payload?.user ?? payload?.data?.user;
-
+    
         if (!verifiedUser) {
           throw new Error("User information was not returned.");
         }
-
+    
         login(verifiedUser);
         navigate("/dashboard", { replace: true });
       } else {
+        const res = await verifyPasswordResetOTP(email, otp);
+      
+        const payload = res?.data ?? res;
+      
+        const isVerified =
+          payload?.success === true ||
+          payload?.valid === true ||
+          payload?.verified === true;
+      
+        if (!isVerified) {
+          setError("Invalid or expired verification code");
+          return;
+        }
+      
         navigate("/set-new-password", {
           state: {
             email,
             otp,
             from,
+            verified: true,
           },
         });
       }
     } catch (err) {
       const status = err.response?.status;
-
+    
       if (status === 400) {
         setError("Invalid or expired verification code");
       } else if (status === 401) {
@@ -125,12 +142,14 @@ function VerifyCode() {
       } else {
         setError(
           err.response?.data?.message ||
+            err.message ||
             "Verification failed. Please try again."
         );
       }
     } finally {
       setIsSubmitting(false);
     }
+    
   }
 
   async function handleResend() {

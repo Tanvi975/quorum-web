@@ -13,10 +13,10 @@ function SetNewPassword() {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { email, otp } = location.state || {};
+  const { email, otp, verified } = location.state || {};
 
 
-  if (!email || !otp) {
+  if (!email || !otp || verified !== true) {
     return <Navigate to="/forgot-password" replace />;
   }
 
