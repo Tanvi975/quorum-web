@@ -20,7 +20,12 @@ function ForgotPassword() {
     }
     try {
       await forgotPassword(email);
-      navigate("/verify-code", { state: { email } });
+      navigate("/verify-code", {
+        state: {
+          email,
+          from: "forgot-password",
+        },
+      });
     } catch (err) {
       const status = err.response && err.response.status;
       let message;
