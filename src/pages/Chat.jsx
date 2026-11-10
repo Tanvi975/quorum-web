@@ -270,7 +270,7 @@ const messageElementRefs = useRef({});
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 const requestedConversationId = searchParams.get("conversationId");
-
+const [previewFile, setPreviewFile] = useState(null);
   const activeContact = activeConversation
   ? getOtherParticipant(activeConversation, currentUserId)
   : {};
@@ -2165,10 +2165,42 @@ className={`h-1.5 w-1.5 rounded-full ${
                                 {item.isForwarded && <p className="mb-1 text-[9px] italic text-white/50">↗ Forwarded</p>}
                                 {item.text && <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.65] sm:text-xs">{renderMessageText(item.text, item.mentionedUsers)}</p>}
                                 {item.fileUrl && item.fileType === "voice" && <VoiceMessage message={item} />}
-                                {item.fileUrl && item.fileType === "image" && <a href={item.fileUrl} target="_blank" rel="noreferrer"><img src={item.fileUrl} alt="Chat attachment" className="max-h-60 max-w-[240px] rounded-xl object-contain" /></a>}
-                                {item.fileUrl && item.fileType === "video" && <video src={item.fileUrl} controls className="max-w-[260px]" />}
-                                {item.fileUrl && item.fileType === "audio" && <audio src={item.fileUrl} controls className="w-full max-w-full" />}
-                                {item.fileUrl && item.fileType === "file" && <a href={item.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-xs text-blue-200 underline">{item.fileName || "Open attachment"}</a>}
+                                {item.fileUrl && item.fileType === "image" && (
+  <button
+    type="button"
+    onClick={() =>
+      setPreviewFile({
+        url: item.fileUrl,
+        name: item.fileName || "Image",
+        type: "image",
+      })
+    }
+    className="block"
+  >
+    <img
+      src={item.fileUrl}
+      alt={item.fileName || "Chat attachment"}
+      className="max-h-60 max-w-[240px] rounded-xl object-contain"
+    />
+  </button>
+)}
+   {item.fileUrl && item.fileType === "video" && <video src={item.fileUrl} controls className="max-w-[260px]" />}
+ {item.fileUrl && item.fileType === "audio" && <audio src={item.fileUrl} controls className="w-full max-w-full" />}
+   {item.fileUrl && item.fileType === "file" && (
+  <button
+    type="button"
+    onClick={() =>
+      setPreviewFile({
+        url: item.fileUrl,
+        name: item.fileName || "Attachment",
+        type: "file",
+      })
+    }
+    className="inline-flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-xs text-blue-200 underline"
+  >
+    {item.fileName || "Open attachment"}
+  </button>
+)}
                                 {item.poll && <div className="mt-2 min-w-[220px] max-w-full rounded-xl border border-white/15 bg-[#0b1730]/65 p-3 sm:min-w-[260px]">
                                   <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white"><FiBarChart2 className="text-blue-300" />{item.poll.question}</div>
                                   <div className="space-y-2">{(item.poll.options || []).map((option) => {
@@ -2808,8 +2840,68 @@ className={`h-1.5 w-1.5 rounded-full ${
     </form>
   </div>
 )}
+{previewFile && (
+  <div
+    className="fixed inset-0 z-[120] flex flex-col bg-[#061426]/95"
+    role="dialog"
+    aria-modal="true"
+    aria-label="File preview"
+  >
+    <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 bg-[#102842] px-4 py-3">
+      <p className="min-w-0 truncate text-sm font-semibold text-white">
+        {previewFile.name}
+      </p>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <a
+          href={previewFile.url}
+          download={previewFile.name}
+          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white"
+        >
+          Download
+        </a>
+
+        <button
+          type="button"
+          onClick={() => setPreviewFile(null)}
+          className="rounded-lg p-2 text-white hover:bg-white/10"
+          aria-label="Close preview"
+        >
+          <FiX size={20} />
+        </button>
+      </div>
+    </header>
+
+    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
+      {previewFile.type === "image" ? (
+        <img
+          src={previewFile.url}
+          alt={previewFile.name}
+          className="max-h-full max-w-full object-contain"
+        />
+      ) : /\.pdf($|\?)/i.test(previewFile.name) ||
+        /\.pdf($|\?)/i.test(previewFile.url) ? (
+        <iframe
+          src={previewFile.url}
+          title={previewFile.name}
+          className="h-full w-full rounded-lg bg-white"
+        />
+      ) : (
+        <div className="text-center">
+          <p className="text-sm text-white">
+            Preview is not supported for this file format.
+          </p>
+          <p className="mt-2 text-xs text-white/60">
+            Download the file to open it.
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
         </div>
       </div>
+
     </div>
   );
 }
