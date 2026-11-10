@@ -46,6 +46,7 @@ import ReplyPreview from "../components/chat/ReplyPreview";
 import VoiceRecorder from "../components/chat/VoiceRecorder";
 import VoiceMessage from "../components/chat/VoiceMessage";
 import ForwardMessagesModal from "../components/chat/ForwardMessagesModal";
+import ContactInfoPanel from "../components/chat/ContactInfoPanel";
 
 function getUser(participant) {
   return participant?.user || participant || {};
@@ -2513,27 +2514,14 @@ className={`h-1.5 w-1.5 rounded-full ${
           {leavingGroup ? "Leaving..." : "Leave Group"}
         </button>
       </div>
-    ) : (
-      <>
-        <div className="flex flex-col items-center border-b border-white/25 pb-5 text-center">
-          <Avatar name={getUserName(activeContact)} size={52} />
-          <h3 className="mt-3 text-sm font-semibold text-white">
-            {getUserName(activeContact)}
-          </h3>
-        </div>
-
-        <div className="border-b border-white/25 py-4">
-          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[1px] text-white/65">
-            Contact details
-          </p>
-          <p className="mb-1 text-[10px] text-white/65">Name</p>
-          <p className="break-words text-xs text-[#E6EDF5]">
-            {getUserName(activeContact)}
-          </p>
-        </div>
-
-      </>
-    )}
+) : (
+  <ContactInfoPanel
+    contact={activeContact}
+    name={getUserName(activeContact)}
+    avatar={getAvatarUrl(activeContact)}
+    presence={activeContactStatus}
+  />
+)}
   </aside>
 )}
 

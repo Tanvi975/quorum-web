@@ -6,7 +6,7 @@ export function getFileCategory(file) {
     if (!file) return "file";
 
     const mime = (file.type || "").toLowerCase();
-    const ext = (file.name || "").split(".").pop()?.toLowerCase();
+    const ext = (file.name || "").split(".").pop() ?.toLowerCase();
 
     if (mime.startsWith("image/")) return "image";
     if (mime.startsWith("video/")) return "video";
@@ -49,7 +49,7 @@ export async function uploadAttachment(file) {
             fileType,
         });
 
-        const signData = signResponse.data?.data ?? signResponse.data;
+        const signData = signResponse.data ?.data ?? signResponse.data;
 
         if (signData ?.uploadUrl && signData.signature && signData.apiKey) {
             const formData = new FormData();
@@ -478,6 +478,32 @@ export async function rejectCommunityJoinRequest(
     const response = await api.post(
         `/api/communities/${communityId}/join-requests/${requestId}/reject`,
         reason ? { reason } : {}
+    );
+
+    return response.data;
+}
+export async function getCommunityProfilePicture(communityId) {
+    const response = await api.get(
+        `/api/v1/communities/${communityId}/profile-picture`
+    );
+    return response.data;
+}
+
+export async function uploadCommunityProfilePicture(communityId, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post(
+        `/api/v1/communities/${communityId}/profile-picture`,
+        formData
+    );
+
+    return response.data;
+}
+
+export async function deleteCommunityProfilePicture(communityId) {
+    const response = await api.delete(
+        `/api/v1/communities/${communityId}/profile-picture`
     );
 
     return response.data;

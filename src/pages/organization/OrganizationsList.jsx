@@ -11,6 +11,7 @@ import {
   FiTrash2,
   FiX,
   FiRefreshCw,
+  FiUpload,
 } from "react-icons/fi";
 import api from "../../services/api";
 import OnboardingLayout from "../../components/OnboardingLayout";
@@ -54,6 +55,8 @@ export default function OrganizationsList() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const [searchScope, setSearchScope] = useState("my");
+const [searchLoading, setSearchLoading] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null);
   const [editingOrg, setEditingOrg] = useState(null);
   const [editName, setEditName] = useState("");
@@ -61,6 +64,10 @@ export default function OrganizationsList() {
   const [confirmDeleteOrg, setConfirmDeleteOrg] = useState(null);
   const [notice, setNotice] = useState(null);
   const [modalError, setModalError] = useState("");
+  const [uploadingOrgId, setUploadingOrgId] = useState(null);
+const [logoError, setLogoError] = useState("");
+const logoInputRef = useRef(null);
+const uploadTargetRef = useRef(null);
 
   const noticeTimer = useRef(null);
   const menuRef = useRef(null);
@@ -127,23 +134,24 @@ export default function OrganizationsList() {
       };
     }
   };
-
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
     setLoadError("");
-
+  
     try {
-      const response = await api.get("/api/organizations");
-      const payload = response?.data?.data ?? response?.data;
-
-      const orgs = Array.isArray(payload)
-        ? payload
-        : payload?.organizations ?? [];
-
+      const response = await api.get("/api/v1/organizations", {
+        params: {
+          scope: "my",
+          limit: 50,
+        },
+      });
+  
+      const orgs = getItems(response, "organizations");
+  
       const orgsWithCounts = await Promise.all(
         orgs.map(async (org) => {
           const organizationId = getOrganizationId(org);
-
+  
           if (!organizationId) {
             return {
               ...org,
@@ -151,9 +159,9 @@ export default function OrganizationsList() {
               teamsCount: null,
             };
           }
-
+  
           const counts = await fetchCounts(organizationId);
-
+  
           return {
             ...org,
             membersCount: counts.membersCount,
@@ -161,7 +169,7 @@ export default function OrganizationsList() {
           };
         })
       );
-
+  
       setOrganizations(orgsWithCounts);
     } catch (error) {
       setLoadError(getErrorMessage(error));
@@ -173,15 +181,58 @@ export default function OrganizationsList() {
   useEffect(() => {
     fetchOrganizations();
   }, [fetchOrganizations]);
-
-  const filteredOrganizations = organizations.filter((org) => {
-    const query = search.trim().toLowerCase();
-
-    return (
-      (org?.name || "").toLowerCase().includes(query) ||
-      (org?.slug || "").toLowerCase().includes(query)
-    );
-  });
+  const searchOrganizations = useCallback(async () => {
+    const query = search.trim();
+  
+    if (!query) {
+      if (searchScope === "my") {
+        fetchOrganizations();
+      } else {
+        setOrganizations([]);
+      }
+      return;
+    }
+  
+    setSearchLoading(true);
+    setLoadError("");
+  
+    try {
+      const response =
+        searchScope === "all"
+          ? await api.get("/api/v1/organizations/search", {
+              params: {
+                scope: "all",
+                q: query,
+                limit: 50,
+              },
+            })
+          : await api.get("/api/v1/organizations", {
+              params: {
+                scope: "my",
+                q: query,
+                limit: 50,
+              },
+            });
+  
+      setOrganizations(getItems(response, "organizations"));
+    } catch (error) {
+      setLoadError(getErrorMessage(error));
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [search, searchScope, fetchOrganizations]);
+  
+  useEffect(() => {
+    if (!search.trim() && searchScope === "my") {
+      fetchOrganizations();
+      return;
+    }
+  
+    const timer = setTimeout(searchOrganizations, 400);
+  
+    return () => clearTimeout(timer);
+  }, [search, searchScope, searchOrganizations, fetchOrganizations]);
+  const filteredOrganizations = organizations;
 
   const openEditModal = (org) => {
     setEditingOrg(org);
@@ -247,7 +298,99 @@ export default function OrganizationsList() {
     setConfirmDeleteOrg(org);
     setActiveMenu(null);
   };
-
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    const organizationId = uploadTargetRef.current;
+  
+    event.target.value = "";
+  
+    if (!file || !organizationId) return;
+  
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+  
+    if (!allowedTypes.includes(file.type)) {
+      setLogoError("Please select a JPG, PNG, WEBP or GIF image.");
+      return;
+    }
+  
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError("Image size must not exceed 5 MB.");
+      return;
+    }
+  
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    setUploadingOrgId(organizationId);
+    setLogoError("");
+  
+    try {
+      const response = await api.post(
+        `/api/v1/organizations/${encodeURIComponent(organizationId)}/profile-picture`,
+        formData
+      );
+  
+      const payload = response?.data?.data ?? response?.data ?? {};
+      const logo =
+        payload.logo ||
+        payload.profilePicture ||
+        payload.avatarUrl ||
+        payload.url;
+  
+      if (logo) {
+        setOrganizations((current) =>
+          current.map((org) =>
+            getOrganizationId(org) === organizationId
+              ? { ...org, logo }
+              : org
+          )
+        );
+      } else {
+        await fetchOrganizations();
+      }
+  
+      showNotice("Organization logo updated successfully.");
+    } catch (error) {
+      setLogoError(getErrorMessage(error));
+    } finally {
+      setUploadingOrgId(null);
+      uploadTargetRef.current = null;
+    }
+  };
+  
+  const handleLogoDelete = async (org) => {
+    const organizationId = getOrganizationId(org);
+  
+    if (!organizationId) return;
+  
+    setUploadingOrgId(organizationId);
+    setLogoError("");
+  
+    try {
+      await api.delete(
+        `/api/v1/organizations/${encodeURIComponent(organizationId)}/profile-picture`
+      );
+  
+      setOrganizations((current) =>
+        current.map((item) =>
+          getOrganizationId(item) === organizationId
+            ? { ...item, logo: null }
+            : item
+        )
+      );
+  
+      showNotice("Organization logo removed successfully.");
+    } catch (error) {
+      setLogoError(getErrorMessage(error));
+    } finally {
+      setUploadingOrgId(null);
+    }
+  };
   const handleDeleteOrganization = () => {
     setConfirmDeleteOrg(null);
 
@@ -279,6 +422,13 @@ export default function OrganizationsList() {
 
   return (
     <OnboardingLayout wide>
+      <input
+  ref={logoInputRef}
+  type="file"
+  accept="image/jpeg,image/png,image/webp,image/gif"
+  className="hidden"
+  onChange={handleLogoUpload}
+/>
       <div className="w-full min-w-0 text-[#EDEFF7]">
         {/* Page heading */}
         <header className="mb-6 border-b border-white/20 pb-6 sm:mb-7">
@@ -317,29 +467,65 @@ export default function OrganizationsList() {
           </div>
         </header>
 
-        {/* Search */}
-        <section className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/75 px-4 shadow-sm transition focus-within:border-[#C6EAFF] focus-within:ring-2 focus-within:ring-[#38BDF8]/20 sm:max-w-md">
-            <FiSearch className="shrink-0 text-[#EDEFF7]" size={17} />
+{/* Search */}
+<section className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex w-full flex-col gap-2 sm:max-w-md">
+    <select
+      value={searchScope}
+      onChange={(event) => setSearchScope(event.target.value)}
+      aria-label="Organization search scope"
+      className="min-h-10 w-full rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/75 px-4 text-sm text-white outline-none transition focus:border-[#C6EAFF] focus:ring-2 focus:ring-[#38BDF8]/20"
+    >
+      <option value="my" className="bg-[#315A8A] text-white">
+        My Organizations
+      </option>
+      <option value="all" className="bg-[#315A8A] text-white">
+        Explore All Organizations
+      </option>
+    </select>
 
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search organizations..."
-              aria-label="Search organizations"
-              className="w-full min-w-0 bg-transparent py-2 text-sm text-white outline-none placeholder:text-white/70"
-            />
-          </label>
+    <label className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/75 px-4 shadow-sm transition focus-within:border-[#C6EAFF] focus-within:ring-2 focus-within:ring-[#38BDF8]/20">
+      <FiSearch className="shrink-0 text-[#EDEFF7]" size={17} />
 
-          <p className="text-sm font-medium text-white/90 sm:text-right">
-            {filteredOrganizations.length} of {organizations.length}{" "}
-            {organizations.length === 1
-              ? "organization"
-              : "organizations"}
-          </p>
-        </section>
+      <input
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={
+          searchScope === "my"
+            ? "Search my organizations..."
+            : "Search all organizations..."
+        }
+        aria-label="Search organizations"
+        className="w-full min-w-0 bg-transparent py-2 text-sm text-white outline-none placeholder:text-white/70"
+      />
+    </label>
+  </div>
 
+  <p className="text-sm font-medium text-white/90 sm:text-right">
+    {searchLoading
+      ? "Searching..."
+      : `${filteredOrganizations.length} of ${organizations.length} ${
+          organizations.length === 1 ? "organization" : "organizations"
+        }`}
+  </p>
+</section>
+{logoError && (
+  <div
+    role="alert"
+    className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-red-200/40 bg-red-400/15 px-4 py-3 text-sm text-red-50"
+  >
+    <p>{logoError}</p>
+    <button
+      type="button"
+      onClick={() => setLogoError("")}
+      aria-label="Dismiss logo error"
+      className="rounded-md p-1"
+    >
+      <FiX size={16} />
+    </button>
+  </div>
+)}
         {/* Notifications */}
         {notice && (
           <div
@@ -441,12 +627,64 @@ export default function OrganizationsList() {
                             {org.slug}
                           </p>
                         )}
-
+                          {org.description && (
+                           <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/75">
+                           {org.description}
+                         </p>
+                       )}
+                       
+                       {org.industry && (
+                         <p className="mt-2 text-xs text-[#C6EAFF]">
+                           {org.industry}
+                         </p>
+                       )}
+                       
+                       {org.memberCount !== undefined && (
+                         <p className="mt-1 text-xs text-white/70">
+                           {org.memberCount} members
+                         </p>
+                       )}
                         {org.role && (
                           <span className="mt-2 inline-flex max-w-full items-center rounded-md border border-white/30 bg-[#315A8A]/45 px-2.5 py-1 text-xs font-medium text-white">
                             {getRoleLabel(org.role)}
                           </span>
                         )}
+                        {org.role === "ORG_ADMIN" && (
+  <div
+    className="mt-3 flex flex-wrap items-center gap-2"
+    onClick={(event) => event.stopPropagation()}
+    onKeyDown={(event) => event.stopPropagation()}
+  >
+    <button
+      type="button"
+      disabled={uploadingOrgId === organizationId}
+      onClick={() => {
+        uploadTargetRef.current = organizationId;
+        logoInputRef.current?.click();
+      }}
+      className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/30 bg-[#315A8A]/60 px-3 py-2 text-xs font-medium text-white transition hover:bg-[#315A8A] disabled:opacity-60"
+    >
+      <FiUpload size={14} />
+      {uploadingOrgId === organizationId
+        ? "Uploading..."
+        : org.logo
+          ? "Change logo"
+          : "Upload logo"}
+    </button>
+
+    {org.logo && (
+      <button
+        type="button"
+        disabled={uploadingOrgId === organizationId}
+        onClick={() => handleLogoDelete(org)}
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-red-200/30 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-100 transition hover:bg-red-400/20 disabled:opacity-60"
+      >
+        <FiTrash2 size={14} />
+        Remove logo
+      </button>
+    )}
+  </div>
+)}
                       </div>
                     </div>
 

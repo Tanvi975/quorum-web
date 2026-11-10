@@ -1,6 +1,6 @@
 
 import { useNavigate, useParams } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import CommunityChannels from "./CommunityChannels";
 import CommunityPostComposer from "./CommunityPostComposer";
@@ -29,6 +29,9 @@ import {
     getCommunityJoinRequests,
     acceptCommunityJoinRequest,
     rejectCommunityJoinRequest,
+    getCommunityProfilePicture,
+    uploadCommunityProfilePicture,
+    deleteCommunityProfilePicture,
 } from "../../services/communityService";
 import {
     FiArrowLeft,
@@ -56,7 +59,20 @@ const tabs = [
     { label: "About", icon: FiInfo },
     { label: "Join Requests", icon: FiUsers, adminOnly: true },
 ];
+function getPictureUrl(response) {
+    const result = response?.data?.data ?? response?.data ?? response;
 
+    const picture =
+        result?.profilePicture?.url ||
+        result?.profilePicture ||
+        result?.avatarUrl ||
+        result?.avatar?.url ||
+        result?.avatar ||
+        result?.imageUrl ||
+        result?.url;
+
+    return typeof picture === "string" ? picture : "";
+}
 const glassCard =
     "rounded-2xl border border-white/15 bg-[#2A4F74]/95 shadow-lg";
 
@@ -80,6 +96,10 @@ function CommunityDetails() {
     const [searchingMembers, setSearchingMembers] = useState(false);
 
     const [community, setCommunity] = useState(null);
+    const [communityPicture, setCommunityPicture] = useState("");
+const [pictureLoading, setPictureLoading] = useState(false);
+const [pictureError, setPictureError] = useState("");
+const pictureInputRef = useRef(null);
     const [posts, setPosts] = useState([]);
     const [members, setMembers] = useState([]);
 
@@ -206,6 +226,30 @@ function CommunityDetails() {
                 detailsResponse;
 
             setCommunity(detailsResult?.community ?? detailsResult);
+            const loadedCommunity = detailsResult?.community ?? detailsResult;
+
+setCommunityPicture(
+    loadedCommunity?.profilePicture ||
+    loadedCommunity?.avatar ||
+    loadedCommunity?.avatarUrl ||
+    ""
+);
+
+try {
+    const pictureResponse = await getCommunityProfilePicture(communityId);
+    const pictureUrl = getPictureUrl(pictureResponse);
+
+    if (pictureUrl) {
+        setCommunityPicture(pictureUrl);
+    }
+} catch {
+    setCommunityPicture(
+        loadedCommunity?.profilePicture ||
+        loadedCommunity?.avatar ||
+        loadedCommunity?.avatarUrl ||
+        ""
+    );
+}
 
             const membersResponse = await getCommunityMembers(communityId, {
                 limit: 100,
@@ -533,7 +577,95 @@ function CommunityDetails() {
             },
         });
     }
-
+    async function refreshCommunityPicture() {
+        try {
+            const response = await getCommunityProfilePicture(communityId);
+            setCommunityPicture(getPictureUrl(response));
+        } catch {
+            setCommunityPicture(
+                community?.profilePicture ||
+                community?.avatar ||
+                community?.avatarUrl ||
+                ""
+            );
+        }
+    }
+    
+    async function handleCommunityPictureUpload(event) {
+        const file = event.target.files?.[0];
+    
+        if (!file) return;
+    
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+        ];
+    
+        if (!allowedTypes.includes(file.type)) {
+            setPictureError("Please select a JPG, PNG, WEBP or GIF image.");
+            event.target.value = "";
+            return;
+        }
+    
+        if (file.size > 5 * 1024 * 1024) {
+            setPictureError("Image size must be 5 MB or less.");
+            event.target.value = "";
+            return;
+        }
+    
+        setPictureLoading(true);
+        setPictureError("");
+    
+        try {
+            const response = await uploadCommunityProfilePicture(
+                communityId,
+                file
+            );
+    
+            const uploadedUrl = getPictureUrl(response);
+    
+            if (uploadedUrl) {
+                setCommunityPicture(uploadedUrl);
+            } else {
+                await refreshCommunityPicture();
+            }
+    
+            setNotice("Community picture updated successfully.");
+        } catch (err) {
+            setPictureError(
+                err.response?.data?.message ||
+                "Could not upload community picture. Please try again."
+            );
+        } finally {
+            setPictureLoading(false);
+    
+            if (pictureInputRef.current) {
+                pictureInputRef.current.value = "";
+            }
+        }
+    }
+    
+    async function handleCommunityPictureDelete() {
+        if (!communityPicture || pictureLoading) return;
+    
+        setPictureLoading(true);
+        setPictureError("");
+    
+        try {
+            await deleteCommunityProfilePicture(communityId);
+            setCommunityPicture("");
+            setNotice("Community picture removed successfully.");
+        } catch (err) {
+            setPictureError(
+                err.response?.data?.message ||
+                "Could not remove community picture. Please try again."
+            );
+        } finally {
+            setPictureLoading(false);
+        }
+    }
     async function handleUpdateCommunity(event) {
         event.preventDefault();
 
@@ -677,14 +809,39 @@ function CommunityDetails() {
                     </button>
                 </div>
             </header>
-
+            {pictureError && (
+    <div
+        role="alert"
+        className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+    >
+        <p>{pictureError}</p>
+        <button
+            type="button"
+            onClick={() => setPictureError("")}
+            aria-label="Dismiss picture error"
+            className="shrink-0"
+        >
+            <FiX size={17} />
+        </button>
+    </div>
+)}
             <main className="relative z-10 mx-auto w-full min-w-0 max-w-7xl flex-1 px-3 pb-8 pt-4 sm:px-5 sm:pt-6 lg:px-8">
                 <section className="min-w-0 overflow-hidden rounded-3xl border border-white/15 bg-[#2A4F74]/95 p-4 shadow-[0_12px_40px_rgba(15,35,75,0.12)] sm:p-6 lg:p-8">
                     <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-[#365F86]/70 text-white shadow-inner sm:h-16 sm:w-16">
-                                <FiUsers size={30} />
-                            </div>
+                        <div className="relative h-14 w-14 shrink-0 sm:h-16 sm:w-16">
+    {communityPicture ? (
+        <img
+            src={communityPicture}
+            alt={`${community?.name || "Community"} profile`}
+            className="h-full w-full rounded-2xl border border-white/20 object-cover shadow-inner"
+        />
+    ) : (
+        <div className="flex h-full w-full items-center justify-center rounded-2xl border border-white/15 bg-[#365F86]/70 text-white shadow-inner">
+            <FiUsers size={30} />
+        </div>
+    )}
+</div>
 
                             <div className="min-w-0">
                                 <h1 className="break-words text-2xl font-extrabold tracking-tight text-white sm:text-3xl lg:text-4xl">
@@ -719,6 +876,43 @@ function CommunityDetails() {
                                 <FiUserPlus size={17} />
                                 Invite members
                             </button>
+                            {canManageMembers && (
+    <>
+        <input
+            ref={pictureInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleCommunityPictureUpload}
+        />
+
+        <button
+            type="button"
+            disabled={pictureLoading}
+            onClick={() => pictureInputRef.current?.click()}
+            className={secondaryButton}
+        >
+            {pictureLoading ? (
+                <FiRefreshCw className="animate-spin" size={16} />
+            ) : (
+                <FiCamera size={16} />
+            )}
+            {communityPicture ? "Change picture" : "Upload picture"}
+        </button>
+
+        {communityPicture && (
+            <button
+                type="button"
+                disabled={pictureLoading}
+                onClick={handleCommunityPictureDelete}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-200/30 bg-red-500/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500/30 disabled:opacity-50"
+            >
+                <FiTrash2 size={16} />
+                Remove
+            </button>
+        )}
+    </>
+)}
                         </div>
                     </div>
                 </section>
