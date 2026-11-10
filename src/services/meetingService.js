@@ -20,7 +20,31 @@ export async function createScopedMeeting(payload) {
     return unwrap(response);
 }
 
-export async function validateMeeting(code) {
+export async function validateMeeting(input) {
+    const value = input.trim();
+    let code = value;
+
+    if (/^https?:\/\//i.test(value)) {
+        try {
+            const url = new URL(value);
+
+            code = url.searchParams.get("code") || "";
+
+            if (!code) {
+                const parts = url.pathname.split("/").filter(Boolean);
+                code = parts[parts.length - 1] || "";
+            }
+
+            code = decodeURIComponent(code).trim();
+        } catch {
+            throw new Error("Invalid meeting link");
+        }
+    }
+
+    if (!code) {
+        throw new Error("Please enter a valid meeting code or link");
+    }
+
     const response = await api.get(
         `/api/meetings/${encodeURIComponent(code)}`
     );
