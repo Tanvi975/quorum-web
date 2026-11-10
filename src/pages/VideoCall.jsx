@@ -48,7 +48,21 @@ function RemoteVideo({ stream }) {
     />
   );
 }
+function getParticipantPhoto(person) {
+  const photo =
+    person?.profilePicture?.url ||
+    person?.profilePicture ||
+    person?.avatar?.url ||
+    person?.avatar ||
+    person?.avatarUrl ||
+    person?.profileImage ||
+    person?.profileImageUrl ||
+    person?.imageUrl ||
+    person?.photoUrl ||
+    person?.photo;
 
+  return typeof photo === "string" ? photo : "";
+}
 function VideoCall() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -376,17 +390,24 @@ function VideoCall() {
                   playsInline
                   className="h-full w-full object-cover"
                 />
-
-                {isVideoOff && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
-                    <span className="text-3xl font-semibold">
-                      {(user?.name || user?.username || "You")
-                        .trim()
-                        .charAt(0)
-                        .toUpperCase()}
-                    </span>
-                  </div>
-                )}
+{isVideoOff && (
+  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
+    {getParticipantPhoto(user) ? (
+     <img
+     src={getParticipantPhoto(user)}
+     alt={user?.name || "Your profile"}
+     className="h-28 w-28 rounded-full border-2 border-white/20 object-cover"
+   />
+    ) : (
+      <span className="text-3xl font-semibold">
+        {(user?.name || user?.username || "You")
+          .trim()
+          .charAt(0)
+          .toUpperCase()}
+      </span>
+    )}
+  </div>
+)}
 
                 <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-md bg-black/60 px-3 py-1.5 text-xs">
                   {!isMuted ? <FiMic size={13} /> : <FiMicOff size={13} />}
@@ -425,17 +446,24 @@ function VideoCall() {
                     className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/40 bg-[#0B2344]"
                   >
                     <RemoteVideo stream={remoteStream} />
-
                     {(participant?.isVideoOff || participant?.cameraOff) && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C4D7C] text-2xl font-semibold">
-                          {(participant?.name || "Guest")
-                            .trim()
-                            .charAt(0)
-                            .toUpperCase()}
-                        </div>
-                      </div>
-                    )}
+  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
+    {getParticipantPhoto(participant) ? (
+      <img
+  src={getParticipantPhoto(participant)}
+  alt={participant?.name || "Participant"}
+  className="h-28 w-28 rounded-full border-2 border-white/20 object-cover"
+/>
+    ) : (
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C4D7C] text-2xl font-semibold">
+        {(participant?.name || "Guest")
+          .trim()
+          .charAt(0)
+          .toUpperCase()}
+      </div>
+    )}
+  </div>
+)}
 
                     <div className="absolute bottom-3 left-3 rounded-md bg-black/60 px-3 py-1.5 text-xs">
                       {participant?.name || "Guest"}
