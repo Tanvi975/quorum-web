@@ -40,7 +40,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [polls, setPolls] = useState([]);
 
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc?.remoteDescription) return;
+        if (!pc ?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
@@ -506,8 +506,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             ({ userId, isMuted }) => {
                 setParticipants((previous) =>
                     previous.map((person) =>
-                        person.userId === userId ?
-                        {...person, isMuted } :
+                        person.userId === userId ? {...person, isMuted } :
                         person
                     )
                 );
@@ -519,8 +518,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             ({ userId, isVideoOff }) => {
                 setParticipants((previous) =>
                     previous.map((person) =>
-                        person.userId === userId ?
-                        {...person, isVideoOff } :
+                        person.userId === userId ? {...person, isVideoOff } :
                         person
                     )
                 );
@@ -528,7 +526,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         );
 
         socket.on("meeting:muted-by-host", () => {
-            localStreamRef.current?.getAudioTracks()
+            localStreamRef.current ?.getAudioTracks()
                 .forEach((track) => {
                     track.enabled = false;
                 });
@@ -568,8 +566,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                         if (event.type === "vote") {
                             return previous.map((poll) =>
                                 poll.id !== event.pollId ?
-                                poll :
-                                {
+                                poll : {
                                     ...poll,
                                     votes: {
                                         ...(poll.votes || {}),
@@ -581,8 +578,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                         if (event.type === "close") {
                             return previous.map((poll) =>
-                                poll.id === event.pollId ?
-                                {...poll, closed: true } :
+                                poll.id === event.pollId ? {...poll, closed: true } :
                                 poll
                             );
                         }
@@ -625,8 +621,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
             setParticipants((previous) =>
                 previous.map((person) =>
-                    person.userId === userId ?
-                    {...person, isHandRaised } :
+                    person.userId === userId ? {...person, isHandRaised } :
                     person
                 )
             );
@@ -638,8 +633,16 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         socket.on("meeting:ended", ({ message } = {}) => {
             setStatus("Meeting ended");
-            setError(message || "");
+            setError(message || "The meeting has ended.");
+
             stopMedia();
+            socket.disconnect();
+
+            if (socketRef.current === socket) {
+                socketRef.current = null;
+            }
+
+            window.location.href = "/dashboard";
         });
 
         socket.on("sfu:answer", async({ sdp } = {}) => {
@@ -841,14 +844,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const toggleMic = () => {
         const next = !isMuted;
 
-        localStreamRef.current?.getAudioTracks()
+        localStreamRef.current ?.getAudioTracks()
             .forEach((track) => {
                 track.enabled = !next;
             });
 
         setIsMuted(next);
 
-        socketRef.current?.emit("meeting:toggle-mic", {
+        socketRef.current ?.emit("meeting:toggle-mic", {
             meetingCode,
             isMuted: next,
         });
@@ -857,14 +860,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const toggleCamera = () => {
         const next = !isVideoOff;
 
-        localStreamRef.current?.getVideoTracks()
+        localStreamRef.current ?.getVideoTracks()
             .forEach((track) => {
                 track.enabled = !next;
             });
 
         setIsVideoOff(next);
 
-        socketRef.current?.emit("meeting:toggle-cam", {
+        socketRef.current ?.emit("meeting:toggle-cam", {
             meetingCode,
             isVideoOff: next,
         });
@@ -878,7 +881,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             return;
         }
 
-        socketRef.current?.emit("meeting:send-message", {
+        socketRef.current ?.emit("meeting:send-message", {
             meetingCode,
             content: content.trim(),
         });
@@ -934,7 +937,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         setIsHandRaised(next);
 
-        socketRef.current?.emit("meeting:toggle-hand", {
+        socketRef.current ?.emit("meeting:toggle-hand", {
             meetingCode,
             isHandRaised: next,
         });
@@ -977,7 +980,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const rejectGuest = (userId) => {
         if (!userId) return;
 
-        socketRef.current?.emit(
+        socketRef.current ?.emit(
             "meeting:reject-participant", {
                 meetingCode,
                 userId,
@@ -995,11 +998,22 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         const socket = socketRef.current;
 
         if (socket ?.connected) {
-            if (isMeetingHost) {
-                socket.emit("meeting:end", { meetingCode });
-            } else {
-                socket.emit("meeting:leave", { meetingCode });
-            }
+            socket.emit("meeting:leave", { meetingCode });
+        }
+
+        stopMedia();
+        socket ?.disconnect();
+        socketRef.current = null;
+        window.location.href = "/dashboard";
+    };
+
+    const endMeeting = () => {
+        const socket = socketRef.current;
+
+        if (!isMeetingHost) return;
+
+        if (socket ?.connected) {
+            socket.emit("meeting:end", { meetingCode });
         }
 
         stopMedia();
@@ -1030,6 +1044,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         admitGuest,
         rejectGuest,
         leaveMeeting,
+        endMeeting,
         isHost: isMeetingHost,
         polls,
         sendPollEvent,

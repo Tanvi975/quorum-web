@@ -261,12 +261,6 @@ import {
               <p className="mt-2 text-sm font-medium text-red-100">
                 End meeting for everyone
               </p>
-  
-              <p className="mt-1 text-sm leading-5 text-[#C4D2E3]">
-                {warningMessage ||
-                  "Only the meeting organizer can end the call for all participants. Leaving does not stop the meeting."}
-              </p>
-  
               {onEndForEveryone && (
                 <button
                   type="button"

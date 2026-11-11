@@ -106,6 +106,7 @@ const [pollOptions, setPollOptions] = useState(["", ""]);
     admitGuest,
     rejectGuest,
     leaveMeeting,
+    endMeeting,
     isHost,
     polls,
 sendPollEvent,
@@ -329,7 +330,24 @@ function closePoll(pollId) {
     setShowLeaveDialog(false);
     leaveCall();
   }
+  function confirmEndMeeting() {
+    setShowLeaveDialog(false);
 
+    if (screenTrackRef.current) {
+        screenTrackRef.current.onended = null;
+        screenTrackRef.current.stop();
+    }
+
+    screenStreamRef.current?.getTracks().forEach((track) => {
+        track.stop();
+    });
+
+    screenTrackRef.current = null;
+    screenStreamRef.current = null;
+    setScreenSharing(false);
+
+    endMeeting();
+}
   const remoteEntries = Object.entries(remoteStreams || {});
   const featuredPeerId = screenSharerPeerId;
   const isLocalScreenFeatured = Boolean(
@@ -893,16 +911,22 @@ function closePoll(pollId) {
         </section>
     </div>
 )}
-      <ConfirmDialog
-        open={showLeaveDialog}
-        type="leave"
-        title="Leave meeting?"
-        message="Are you sure you want to leave this meeting?"
-        confirmText="Leave meeting"
-        cancelText="Stay in meeting"
-        onConfirm={confirmLeaveMeeting}
-        onCancel={() => setShowLeaveDialog(false)}
-      />
+     <ConfirmDialog
+    open={showLeaveDialog}
+    type="leave"
+    title={isHost ? "Leave or end meeting?" : "Leave meeting?"}
+    message={
+        isHost
+            ? "You can leave while the meeting continues for everyone else, or end the meeting for all participants."
+            : "Are you sure you want to leave this meeting? The meeting will continue for everyone else."
+    }
+    confirmText="Leave Meet"
+    cancelText="Stay Meet"
+    onConfirm={confirmLeaveMeeting}
+    onCancel={() => setShowLeaveDialog(false)}
+    showOrganizerWarning={isHost}
+    onEndForEveryone={confirmEndMeeting}
+/>
     </div>
   );
 }
