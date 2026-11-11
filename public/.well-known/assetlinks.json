@@ -1,0 +1,12 @@
+[{
+    "relation": [
+        "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+        "namespace": "android_app",
+        "package_name": "com.example.quorum_app",
+        "sha256_cert_fingerprints": [
+            "A0:F8:17:2E:67:93:32:AE:4D:6C:11:2B:50:65:97:56:99:69:81:77:FB:4C:0A:19:37:79:4B:6A:D2:BE:EC:8D"
+        ]
+    }
+}]
