@@ -2,6 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { aiService } from "../../services/aiService";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import {
+  FiPlus,
+  FiSend,
+  FiArrowLeft,
+} from "react-icons/fi";
 const tabs = [
   { id: "chat", label: "AI Chat" },
   { id: "search", label: "Workspace Search" },
@@ -129,7 +134,6 @@ function AttachmentList({ files = [] }) {
       return;
     }
 
-    // Local File objects work only during the current browser session.
     if (file instanceof File) {
       const temporaryUrl = URL.createObjectURL(file);
       window.open(temporaryUrl, "_blank", "noopener,noreferrer");
@@ -722,33 +726,40 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
       />
     </div>
 
-    <div className="flex items-end gap-2">
-      <textarea
-        value={prompt}
-        onChange={(event) => setPrompt(event.target.value)}
-        maxLength={20000}
-        rows={1}
-        placeholder="Message Quorum AI..."
-        aria-label="Message Quorum AI"
-        className="min-h-10 max-h-24 min-w-0 flex-1 resize-y overflow-y-auto rounded-lg border border-white/25 bg-[#062C5F]/35 px-3 py-2 text-xs text-white/90 outline-none focus:border-blue-300 sm:text-sm"
-      />
+    <div className="flex items-end gap-2 rounded-xl border border-white/25 bg-[#062C5F]/50 px-3 py-2">
   <button
     type="button"
     onClick={() => fileInputRef.current?.click()}
     disabled={busy || attachments.length >= 5}
-    className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-white/25 px-3 text-sm text-white hover:bg-white/10 disabled:opacity-50 sm:h-11"
+    className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-2xl font-light text-white transition hover:bg-white/10 disabled:opacity-50"
     title="Attach files"
+    aria-label="Attach files"
   >
-    📎
+   <FiPlus size={16} /> 
   </button>
-      <button
-        type="submit"
-        disabled={busy || (!prompt.trim() && attachments.length === 0)}
-        className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50 sm:h-11 sm:px-5"
-      >
-        {busy ? "..." : "Send"}
-      </button>
-    </div>
+
+  <textarea
+    value={prompt}
+    onChange={(e) => setPrompt(e.target.value)}
+    placeholder="Ask me anything..."
+    rows={1}
+    className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2 text-sm text-white outline-none placeholder:text-white/50"
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleChat(e);
+      }
+    }}
+  />
+
+  <button
+    type="submit"
+    disabled={busy || (!prompt.trim() && attachments.length === 0)}
+    className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#062C5F] transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    <FiSend size={20} /> 
+  </button>
+</div>
 
     <p className="text-right text-xs text-white/60">
       {prompt.length}/10,000

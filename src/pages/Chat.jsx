@@ -155,8 +155,21 @@ function Avatar({ name, src, color = "#AAB5C5", size = 34, rounded = "rounded-fu
 }
 
 function getAvatarUrl(person) {
-  return person?.avatarUrl || person?.avatar || person?.profilePicture ||
-    person?.profileImage || person?.photoUrl || person?.imageUrl || "";
+  const photo =
+    person?.profilePicture?.url ||
+    person?.profilePicture ||
+    person?.avatar?.url ||
+    person?.avatar ||
+    person?.avatarUrl ||
+    person?.profileImage?.url ||
+    person?.profileImage ||
+    person?.profileImageUrl ||
+    person?.photoUrl ||
+    person?.imageUrl ||
+    person?.image?.url ||
+    person?.image;
+
+  return typeof photo === "string" ? photo : "";
 }
 
 function getFriendlyError(error, fallback = "Something went wrong. Please try again.") {
@@ -1265,7 +1278,7 @@ setHasOlderMessages(Boolean(result?.hasNextPage && result?.nextCursor));
 
   async function handleVotePoll(item, optionId) {
     const poll = item.poll;
-    const pollId = poll?.id || item.pollId;
+    const pollId = poll?.id || poll?._id || item.pollId || item.poll?._id;
     if (!pollId) return;
     const selected = poll?.userVotedOptionIds || [];
     const optionIds = poll?.allowMultipleAnswers
@@ -1868,7 +1881,7 @@ const handleSaveConversation = async () => {
              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-white/65">
              Find people
              </p>
-             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {search.trim() && searching && (
               <p className="p-2 text-xs text-white/75">
               Searching users...
@@ -1881,7 +1894,7 @@ const handleSaveConversation = async () => {
             onClick={() => openUserChat(person)}
              className="flex w-full items-center gap-2.5 rounded-md border border-transparent p-2 text-left hover:bg-white/10"
               >
-             <Avatar name={getUserName(person)} size={31} />
+            <Avatar name={getUserName(person)} src={getAvatarUrl(person)} size={31} />
              <div className="min-w-0 flex-1">
              <p className="truncate text-[11px] font-semibold text-white">
                {getUserName(person)}
@@ -1920,7 +1933,7 @@ const handleSaveConversation = async () => {
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[1.2px] text-white/65">
                     Direct conversations
                   </p>
-                  <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+                  <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {loadingConversations && (
                       <p className="p-2 text-xs text-white/75">
                         Loading conversations...
@@ -1961,7 +1974,15 @@ const handleSaveConversation = async () => {
                       : "border-transparent hover:bg-white/10"
                         }`}
                           >
-                            <Avatar name={conversationName} size={31} />
+                          <Avatar
+  name={conversationName}
+  src={
+    conversation?.type === "group"
+      ? getAvatarUrl(conversation)
+      : getAvatarUrl(getOtherParticipant(conversation, currentUserId))
+  }
+  size={31}
+/>
                             <div className="min-w-0 flex-1">
                            <div className="flex items-center justify-between gap-1">
                            <span className="truncate text-[11px] font-semibold text-white">
@@ -2022,7 +2043,15 @@ const handleSaveConversation = async () => {
               <>
                <div className="flex min-h-[58px] shrink-0 items-center justify-between gap-1 border-b border-white/20 bg-[#102842]/55 px-2 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <Avatar name={activeConversationName} size={35} />
+                  <Avatar
+  name={activeConversationName}
+  src={
+    activeConversation?.type === "group"
+      ? getAvatarUrl(activeConversation)
+      : getAvatarUrl(getOtherParticipant(activeConversation, currentUserId))
+  }
+  size={35}
+/>
                     <div className="min-w-0">
                     <h2 className="truncate text-xs font-semibold text-white sm:text-sm">
                    {activeConversationName}
@@ -2205,8 +2234,7 @@ className={`h-1.5 w-1.5 rounded-full ${
                                   <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white"><FiBarChart2 className="text-blue-300" />{item.poll.question}</div>
                                   <div className="space-y-2">{(item.poll.options || []).map((option) => {
                                     const voted = (item.poll.userVotedOptionIds || []).includes(option.id);
-                                    const percentage = Math.max(0, Math.min(100, Number(option.percentage || 0)));
-                                    return <button key={option.id} type="button" onClick={() => handleVotePoll(item, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-[11px] ${voted ? "border-blue-300/70" : "border-white/15 hover:border-white/35"}`}><span className="absolute inset-y-0 left-0 bg-blue-500/20" style={{ width: `${percentage}%` }} /><span className="relative flex items-center justify-between gap-2 text-white"><span>{option.text}</span><span className="shrink-0 text-white/70">{percentage}% · {option.voteCount || 0}</span></span></button>;
+                                    return <button key={option.id} type="button" onClick={() => handleVotePoll(item, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-[11px] ${voted ? "border-blue-300/70" : "border-white/15 hover:border-white/35"}`}><span className="relative flex items-center justify-between gap-2 text-white"><span>{option.text}</span><span className="shrink-0 text-white/70">{option.voteCount || 0} votes </span></span></button>;
                                   })}</div>
                                   <p className="mt-2 text-[9px] text-white/45">{item.poll.totalVotes || 0} votes · {item.poll.allowMultipleAnswers ? "Multiple choices" : "Choose one"}</p>
                                 </div>}
@@ -2290,7 +2318,7 @@ className={`h-1.5 w-1.5 rounded-full ${
   onClick={() => fileInputRef.current?.click()}
   disabled={uploadingFile || !activeConversation}
 >
-  <FiPaperclip size={15} />
+<FiPlus size={19} />
 </IconButton>
 <input
   ref={fileInputRef}
@@ -2320,7 +2348,7 @@ className={`h-1.5 w-1.5 rounded-full ${
             onClick={() => selectMentionUser(person)}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition hover:bg-white/10"
           >
-            <Avatar name={getUserName(person)} size={28} />
+           <Avatar name={getUserName(person)} src={getAvatarUrl(person)} size={28} />
 
             <span className="min-w-0 flex-1 truncate text-xs text-white">
               {getUserName(person)}
@@ -2420,7 +2448,15 @@ className={`h-1.5 w-1.5 rounded-full ${
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <div className="border-b border-white/25 pb-3 text-center">
           <div className="flex justify-center">
-            <Avatar name={activeConversationName} size={52} />
+          <Avatar
+  name={activeConversationName}
+  src={
+    activeConversation?.type === "group"
+      ? getAvatarUrl(activeConversation)
+      : getAvatarUrl(getOtherParticipant(activeConversation, currentUserId))
+  }
+  size={52}
+/>
           </div>
           <h3 className="mt-3 break-words text-sm font-semibold text-white">
             {activeConversationName}
@@ -2614,7 +2650,7 @@ className={`h-1.5 w-1.5 rounded-full ${
               </p>
             )}
 
-            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+<div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {!groupSearch.trim() && (
                 <p className="py-5 text-center text-xs text-white/60">
                   Search for people to add to your group.
@@ -2640,7 +2676,7 @@ className={`h-1.5 w-1.5 rounded-full ${
                           : "hover:bg-white/10"
                       }`}
                     >
-                      <Avatar name={getUserName(person)} size={32} />
+                  <Avatar name={getUserName(person)} src={getAvatarUrl(person)} size={32} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-white">
                           {getUserName(person)}
@@ -2715,7 +2751,7 @@ className={`h-1.5 w-1.5 rounded-full ${
         className="mb-3 h-10 rounded-md border border-white/25 bg-[#062C5F]/30 px-3 text-sm text-white outline-none"
       />
 
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+<div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {addMemberUsers.map((person) => {
           const id = getUserId(person);
           const selected = selectedAddMembers.some(

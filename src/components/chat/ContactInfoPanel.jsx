@@ -38,6 +38,16 @@ export default function ContactInfoPanel({
   avatar = "",
   presence = "Offline",
 }) {
+  const profilePhoto =
+  (typeof avatar === "string" && avatar) ||
+  (typeof contact.profilePicture === "string" && contact.profilePicture) ||
+  contact.profilePicture?.url ||
+  (typeof contact.avatar === "string" && contact.avatar) ||
+  contact.avatar?.url ||
+  contact.avatarUrl ||
+  contact.profileImageUrl ||
+  contact.photoUrl ||
+  "";
   const email = contact.email;
   const role = contact.role || contact.userRole;
 
@@ -68,15 +78,15 @@ export default function ContactInfoPanel({
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <div className="flex flex-col items-center border-b border-white/20 pb-5 text-center">
         <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#AAB5C5] text-xl font-semibold text-[#172A40]">
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={`${name} profile`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            name.charAt(0).toUpperCase()
-          )}
+        {profilePhoto ? (
+  <img
+    src={profilePhoto}
+    alt={`${name} profile`}
+    className="h-full w-full rounded-full object-cover"
+  />
+) : (
+  name.charAt(0).toUpperCase()
+)}
         </div>
 
         <h3 className="mt-3 break-words text-sm font-semibold text-white">
