@@ -19,7 +19,7 @@ import {
   FiSmile,
 } from "react-icons/fi";
 
-function RemoteVideo({ stream }) {
+function RemoteVideo({ stream, fit = "cover" }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ function RemoteVideo({ stream }) {
       ref={videoRef}
       autoPlay
       playsInline
-      className="h-full w-full object-cover"
+      className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`}
     />
   );
 }
@@ -92,6 +92,7 @@ const [pollOptions, setPollOptions] = useState(["", ""]);
     messages,
     localStream,
     remoteStreams,
+    screenSharerPeerId,
     isMuted,
     isVideoOff,
     reactions,
@@ -208,14 +209,24 @@ sendPollEvent,
       return;
     }
 
+    if (!window.isSecureContext) {
+      window.alert("Screen sharing ke liye HTTPS connection zaroori hai.");
+      return;
+    }
+
     if (!navigator.mediaDevices?.getDisplayMedia) {
-      console.error("Screen sharing is not supported in this browser.");
+      window.alert(
+        "Is mobile browser mein website screen sharing supported nahi hai. Android par latest Chrome try karein; iPhone/iPad Safari mein browser screen capture available nahi hota."
+      );
       return;
     }
 
     try {
+      // Must run directly from the Share button click. Mobile browsers may show
+      // their own OS-level screen/broadcast picker.
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: { frameRate: { ideal: 15, max: 30 } },
+        audio: false,
       });
 
       const screenTrack = screenStream.getVideoTracks()[0];
@@ -242,6 +253,13 @@ sendPollEvent,
       setScreenSharing(true);
     } catch (error) {
       console.error("Screen sharing could not start:", error);
+      if (error?.name === "NotAllowedError") {
+        window.alert("Screen sharing permission cancel ya deny ho gayi.");
+      } else if (error?.name === "NotSupportedError" || error?.name === "AbortError") {
+        window.alert("Is device/browser par screen sharing available nahi hai.");
+      } else {
+        window.alert(error?.message || "Screen sharing start nahi ho paayi.");
+      }
     }
   }
   function createPoll() {
@@ -313,9 +331,19 @@ function closePoll(pollId) {
   }
 
   const remoteEntries = Object.entries(remoteStreams || {});
-  const totalVideoTiles = remoteEntries.length + 1;
-  const gridColumns = Math.ceil(Math.sqrt(totalVideoTiles));
-  const gridRows = Math.ceil(totalVideoTiles / gridColumns);
+  const featuredPeerId = screenSharerPeerId;
+  const isLocalScreenFeatured = Boolean(
+    screenSharing && (!featuredPeerId || String(featuredPeerId) === String(user?.id))
+  );
+  const featuredRemoteStream = featuredPeerId && !isLocalScreenFeatured
+    ? remoteStreams?.[featuredPeerId]
+    : null;
+  const hasFeaturedScreen = Boolean(
+    (isLocalScreenFeatured && screenStreamRef.current) || featuredRemoteStream
+  );
+  const thumbnailEntries = remoteEntries.filter(
+    ([peerId]) => !hasFeaturedScreen || String(peerId) !== String(featuredPeerId)
+  );
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[#06182F] text-white">
@@ -424,140 +452,112 @@ function closePoll(pollId) {
             onClose={() => setShowWhiteboard(false)}
           />
         ) : (
-          <div className="relative flex h-full min-h-0 min-w-0 gap-3 overflow-hidden">
-            <div
-              className="grid h-full min-h-0 min-w-0 flex-1 gap-2 overflow-hidden sm:gap-3"
-              style={{
-                gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-                gridTemplateRows: `repeat(${gridRows}, minmax(0, 1fr))`,
-              }}
-            >
-              <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-[#0B8FD8]/50 bg-[#0B2344]">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="h-full w-full object-cover"
-                />
-{isVideoOff && (
-  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
-    {getParticipantPhoto(user) ? (
-     <img
-     src={getParticipantPhoto(user)}
-     alt={user?.name || "Your profile"}
-     className="h-28 w-28 rounded-full border-2 border-white/20 object-cover"
-   />
-    ) : (
-      <span className="text-3xl font-semibold">
-        {(user?.name || user?.username || "You")
-          .trim()
-          .charAt(0)
-          .toUpperCase()}
-      </span>
-    )}
-  </div>
-)}
+          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+            {hasFeaturedScreen ? (
+              <>
+                <section className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/50 bg-black">
+                  {isLocalScreenFeatured ? (
+                    <video
+                      key="local-featured-screen"
+                      autoPlay
+                      muted
+                      playsInline
+                      ref={(node) => {
+                        if (node && screenStreamRef.current && node.srcObject !== screenStreamRef.current) {
+                          node.srcObject = screenStreamRef.current;
+                          node.play().catch(() => {});
+                        }
+                      }}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <RemoteVideo stream={featuredRemoteStream} fit="contain" />
+                  )}
+                  <div className="absolute bottom-3 left-3 rounded-md bg-black/70 px-3 py-1.5 text-xs">
+                    {isLocalScreenFeatured ? "You · Presenting" : `${participants.find((p) => String(p.userId) === String(featuredPeerId) || String(p.peerId) === String(featuredPeerId))?.name || "Participant"} · Presenting`}
+                  </div>
+                  <div className="absolute right-3 top-3 rounded-full bg-[#0066FF] px-3 py-1 text-xs font-medium">
+                    Screen sharing
+                  </div>
+                </section>
 
-                <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-md bg-black/60 px-3 py-1.5 text-xs">
-                  {!isMuted ? <FiMic size={13} /> : <FiMicOff size={13} />}
-                  You
+                <div className="flex h-24 shrink-0 gap-2 overflow-x-auto pb-1 sm:h-28">
+                  <div className="relative h-full w-32 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-[#0B2344] sm:w-40">
+                    <video ref={(node) => {
+                      if (node && localStream && node.srcObject !== localStream) {
+                        node.srcObject = localStream;
+                        node.play().catch(() => {});
+                      }
+                    }} autoPlay muted playsInline className="h-full w-full object-cover" />
+                    <span className="absolute bottom-1 left-2 rounded bg-black/60 px-2 py-0.5 text-[10px]">You</span>
+                  </div>
+                  {thumbnailEntries.map(([peerId, stream]) => {
+                    const person = participants.find((p) => String(p.userId) === String(peerId) || String(p.peerId) === String(peerId));
+                    return (
+                      <div key={peerId} className="relative h-full w-32 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-[#0B2344] sm:w-40">
+                        <RemoteVideo stream={stream} />
+                        <span className="absolute bottom-1 left-2 max-w-[90%] truncate rounded bg-black/60 px-2 py-0.5 text-[10px]">{person?.name || "Guest"}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                {isHandRaised && (
-    <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">
-        ✋ Hand Raised
-    </div>
-)}
-
-{reactions
-    .filter((reaction) => String(reaction.userId) === String(user?.id))
-    .map((reaction) => (
-        <div
-            key={reaction.id}
-            className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl"
-            style={{
-                animation: "quorum-reaction-float 1.8s ease-out forwards",
-            }}
-        >
-            {reaction.emoji}
-        </div>
-    ))}
+              </>
+            ) : (
+              <div
+                className="grid h-full min-h-0 min-w-0 flex-1 gap-2 overflow-hidden sm:gap-3"
+                style={{
+                  gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(remoteEntries.length + 1))}, minmax(0, 1fr))`,
+                  gridTemplateRows: `repeat(${Math.ceil((remoteEntries.length + 1) / Math.ceil(Math.sqrt(remoteEntries.length + 1)))}, minmax(0, 1fr))`,
+                }}
+              >
+                <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-[#0B8FD8]/50 bg-[#0B2344]">
+                  <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+                  {isVideoOff && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
+                      {getParticipantPhoto(user) ? (
+                        <img src={getParticipantPhoto(user)} alt={user?.name || "Your profile"} className="h-28 w-28 rounded-full border-2 border-white/20 object-cover" />
+                      ) : (
+                        <span className="text-3xl font-semibold">{(user?.name || user?.username || "You").trim().charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-md bg-black/60 px-3 py-1.5 text-xs">
+                    {!isMuted ? <FiMic size={13} /> : <FiMicOff size={13} />} You
+                  </div>
+                  {isHandRaised && <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">✋ Hand Raised</div>}
+                  {reactions.filter((r) => String(r.userId) === String(user?.id)).map((r) => (
+                    <div key={r.id} className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl" style={{ animation: "quorum-reaction-float 1.8s ease-out forwards" }}>{r.emoji}</div>
+                  ))}
+                </div>
+                {remoteEntries.map(([peerId, remoteStream]) => {
+                  const participant = participants.find((person) => String(person.userId) === String(peerId) || String(person.peerId) === String(peerId));
+                  return (
+                    <div key={peerId} className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/40 bg-[#0B2344]">
+                      <RemoteVideo stream={remoteStream} />
+                      {(participant?.isVideoOff || participant?.cameraOff) && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
+                          {getParticipantPhoto(participant) ? (
+                            <img src={getParticipantPhoto(participant)} alt={participant?.name || "Participant"} className="h-28 w-28 rounded-full border-2 border-white/20 object-cover" />
+                          ) : (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C4D7C] text-2xl font-semibold">{(participant?.name || "Guest").trim().charAt(0).toUpperCase()}</div>
+                          )}
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 left-3 rounded-md bg-black/60 px-3 py-1.5 text-xs">{participant?.name || "Guest"}</div>
+                      {participant?.isHandRaised && <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">✋ Hand Raised</div>}
+                      {reactions.filter((r) => String(r.userId) === String(participant?.userId)).map((r) => (
+                        <div key={r.id} className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl" style={{ animation: "quorum-reaction-float 1.8s ease-out forwards" }}>{r.emoji}</div>
+                      ))}
+                    </div>
+                  );
+                })}
+                {remoteEntries.length === 0 && (
+                  <div className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#0B2344]">
+                    <div className="text-center"><div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#12355B]"><FiUsers size={20} /></div><p className="text-sm text-white/60">Waiting for another participant...</p></div>
+                  </div>
+                )}
               </div>
-
-              {remoteEntries.map(([peerId, remoteStream]) => {
-                const participant = participants.find(
-                  (person) =>
-                    person.userId === peerId || person.peerId === peerId
-                );
-
-                return (
-                  <div
-                    key={peerId}
-                    className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-[#0B8FD8]/40 bg-[#0B2344]"
-                  >
-                    <RemoteVideo stream={remoteStream} />
-                    {(participant?.isVideoOff || participant?.cameraOff) && (
-  <div className="absolute inset-0 flex items-center justify-center bg-[#0B2344]">
-    {getParticipantPhoto(participant) ? (
-      <img
-  src={getParticipantPhoto(participant)}
-  alt={participant?.name || "Participant"}
-  className="h-28 w-28 rounded-full border-2 border-white/20 object-cover"
-/>
-    ) : (
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1C4D7C] text-2xl font-semibold">
-        {(participant?.name || "Guest")
-          .trim()
-          .charAt(0)
-          .toUpperCase()}
-      </div>
-    )}
-  </div>
-)}
-
-                    <div className="absolute bottom-3 left-3 rounded-md bg-black/60 px-3 py-1.5 text-xs">
-                      {participant?.name || "Guest"}
-                    </div>
-                    {participant?.isHandRaised && (
-    <div className="absolute right-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-sm">
-        ✋ Hand Raised
-    </div>
-)}
-
-{reactions
-    .filter(
-        (reaction) =>
-            String(reaction.userId) === String(participant?.userId)
-    )
-    .map((reaction) => (
-        <div
-            key={reaction.id}
-            className="pointer-events-none absolute right-1/2 top-1/3 z-20 text-5xl"
-            style={{
-                animation: "quorum-reaction-float 1.8s ease-out forwards",
-            }}
-        >
-            {reaction.emoji}
-        </div>
-    ))}
-                  </div>
-                );
-              })}
-
-              {remoteEntries.length === 0 && (
-                <div className="relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#0B2344]">
-                  <div className="text-center">
-                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#12355B]">
-                      <FiUsers size={20} />
-                    </div>
-
-                    <p className="text-sm text-white/60">
-                      Waiting for another participant...
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         )}
 

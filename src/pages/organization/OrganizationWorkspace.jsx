@@ -409,19 +409,47 @@ function OrganizationWorkspace() {
     setOpenMenu("");
   }
 
-  function joinMeetingWithCode(event) {
-    event.preventDefault();
-    const code = joinMeetingCode.trim();
-    if (!code) {
-      setNotice("Please enter a meeting code.");
-      return;
+
+  function extractMeetingCode(value) {
+    const input = (value || "").trim();
+  
+    if (!input) return "";
+    try {
+      const url = new URL(input, window.location.origin);
+
+      const pathMatch = url.pathname.match(
+        /\/(?:meet|meetings)\/([^/?#]+)/i
+      );
+  
+      if (pathMatch?.[1]) {
+        return decodeURIComponent(pathMatch[1]).trim();
+      }
+      const queryCode = url.searchParams.get("code");
+      if (queryCode) return queryCode.trim();
+    } catch (error) {
+   
     }
 
+    return input.replace(/[.,)\]]+$/, "").trim();
+  }
+  
+  function joinMeetingWithCode(event) {
+    event.preventDefault();
+  
+    const code = extractMeetingCode(joinMeetingCode);
+  
+    if (!code) {
+      setNotice("Please enter a valid meeting code or meeting link.");
+      return;
+    }
+  
     setShowMeetingInviteModal(false);
+  
     navigate(
-      `/video-call?code=${encodeURIComponent(code)}&organizationId=${encodeURIComponent(organizationId)}&whiteboard=1`
+      `/video-call?code=${encodeURIComponent(code)}&organizationId=${encodeURIComponent(organizationId)}`
     );
   }
+  
 
   function openOrgEdit() {
     setOrgForm({

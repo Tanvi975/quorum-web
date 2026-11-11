@@ -32,13 +32,15 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const [messages, setMessages] = useState([]);
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
+    const [screenSharerPeerId, setScreenSharerPeerId] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [reactions, setReactions] = useState([]);
     const [isHandRaised, setIsHandRaised] = useState(false);
     const [polls, setPolls] = useState([]);
+
     const flushPendingIce = useCallback(async(key, pc) => {
-        if (!pc ?.remoteDescription) return;
+        if (!pc?.remoteDescription) return;
 
         const pending = pendingIceRef.current.get(key) || [];
         pendingIceRef.current.delete(key);
@@ -88,6 +90,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         if (mountedRef.current) {
             setLocalStream(null);
             setRemoteStreams({});
+            setScreenSharerPeerId(null);
         }
     }, [meetingCode]);
 
@@ -164,7 +167,11 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                 const handleSfuError = (data) => {
                     cleanup();
-                    reject(new Error(data ?.message || "SFU room join failed."));
+                    reject(
+                        new Error(
+                            data ?.message || "SFU room join failed."
+                        )
+                    );
                 };
 
                 socket.once("sfu:joined", handleJoined);
@@ -172,7 +179,11 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                 timeout = setTimeout(() => {
                     cleanup();
-                    reject(new Error("SFU room join timed out. Please try again."));
+                    reject(
+                        new Error(
+                            "SFU room join timed out. Please try again."
+                        )
+                    );
                 }, 15000);
 
                 socket.emit("sfu:join", {
@@ -181,6 +192,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                     name: user.name,
                 });
             });
+
             if (
                 sfuAccessDeniedRef.current ||
                 !socket.connected ||
@@ -198,6 +210,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             ) {
                 pc.close();
                 publisherRef.current = null;
+
                 stream.getTracks().forEach((track) => track.stop());
                 localStreamRef.current = null;
                 startedRef.current = false;
@@ -229,10 +242,12 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             console.error("Starting meeting media failed:", err);
 
             if (mountedRef.current) {
-                setError(err.message || "Camera/microphone or WebRTC setup failed.");
+                setError(
+                    err.message ||
+                    "Camera/microphone or WebRTC setup failed."
+                );
             }
         }
-
     }, [meetingCode, user]);
 
     const replaceVideoTrack = useCallback(async(newTrack) => {
@@ -311,7 +326,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                if (!socket.connected || socketRef.current !== socket) {
+                if (!socket.connected ||
+                    socketRef.current !== socket
+                ) {
                     pc.close();
                     subscribersRef.current.delete(trackId);
                     return;
@@ -366,7 +383,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             socket.emit("meeting:join", { meetingCode }, (ack) => {
                 if (!ack ?.success) {
                     setStatus("Unable to join");
-                    setError(ack ?.message || "Meeting join failed.");
+                    setError(
+                        ack ?.message || "Meeting join failed."
+                    );
                     return;
                 }
 
@@ -375,16 +394,22 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                     setStatus("Waiting for host approval");
                 } else {
                     setIsMeetingHost(ack.data ?.role === "host");
-                    const initialParticipants = ack.data ?.participants || [];
+
+                    const initialParticipants =
+                        ack.data ?.participants || [];
 
                     setParticipants(initialParticipants);
 
-                    const currentParticipant = initialParticipants.find(
-                        (participant) =>
-                        String(participant.userId) === String(user.id)
-                    );
+                    const currentParticipant =
+                        initialParticipants.find(
+                            (participant) =>
+                            String(participant.userId) ===
+                            String(user.id)
+                        );
 
-                    setIsHandRaised(Boolean(currentParticipant ?.isHandRaised));
+                    setIsHandRaised(
+                        Boolean(currentParticipant ?.isHandRaised)
+                    );
 
                     setStatus("In call");
                     startMedia();
@@ -395,14 +420,17 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         socket.on("connect_error", (err) => {
             console.error("Socket connection error:", err.message);
             setStatus("Connection failed");
-            setError(err.message || "Could not connect to meeting server.");
+            setError(
+                err.message || "Could not connect to meeting server."
+            );
         });
 
         socket.on("meeting:error", ({ message } = {}) => {
             sfuAccessDeniedRef.current = true;
             setStatus("Unable to join");
             setError(
-                message || "You do not have permission to join this meeting."
+                message ||
+                "You do not have permission to join this meeting."
             );
             stopMedia();
         });
@@ -424,7 +452,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             if (!guest ?.userId) return;
 
             setWaitingList((previous) => [
-                ...previous.filter((item) => item.userId !== guest.userId),
+                ...previous.filter(
+                    (item) => item.userId !== guest.userId
+                ),
                 guest,
             ]);
         });
@@ -437,12 +467,17 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         socket.on("meeting:rejected", ({ message } = {}) => {
             setStatus("Admission rejected");
-            setError(message || "The host declined your request.");
+            setError(
+                message || "The host declined your request."
+            );
         });
 
-        socket.on("meeting:participant-joined", ({ participants: list } = {}) => {
-            setParticipants(list || []);
-        });
+        socket.on(
+            "meeting:participant-joined",
+            ({ participants: list } = {}) => {
+                setParticipants(list || []);
+            }
+        );
 
         socket.on(
             "meeting:participant-left",
@@ -466,27 +501,37 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             }
         );
 
-        socket.on("meeting:participant-mic-status", ({ userId, isMuted }) => {
-            setParticipants((previous) =>
-                previous.map((person) =>
-                    person.userId === userId ? {...person, isMuted } : person
-                )
-            );
-        });
+        socket.on(
+            "meeting:participant-mic-status",
+            ({ userId, isMuted }) => {
+                setParticipants((previous) =>
+                    previous.map((person) =>
+                        person.userId === userId ?
+                        {...person, isMuted } :
+                        person
+                    )
+                );
+            }
+        );
 
-        socket.on("meeting:participant-cam-status", ({ userId, isVideoOff }) => {
-            setParticipants((previous) =>
-                previous.map((person) =>
-                    person.userId === userId ? {...person, isVideoOff } :
-                    person
-                )
-            );
-        });
+        socket.on(
+            "meeting:participant-cam-status",
+            ({ userId, isVideoOff }) => {
+                setParticipants((previous) =>
+                    previous.map((person) =>
+                        person.userId === userId ?
+                        {...person, isVideoOff } :
+                        person
+                    )
+                );
+            }
+        );
 
         socket.on("meeting:muted-by-host", () => {
-            localStreamRef.current ?.getAudioTracks().forEach((track) => {
-                track.enabled = false;
-            });
+            localStreamRef.current?.getAudioTracks()
+                .forEach((track) => {
+                    track.enabled = false;
+                });
 
             setIsMuted(true);
         });
@@ -509,9 +554,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                     setPolls((previous) => {
                         if (event.type === "create") {
-                            if (previous.some((p) => p.id === event.poll.id)) {
+                            if (
+                                previous.some(
+                                    (p) => p.id === event.poll.id
+                                )
+                            ) {
                                 return previous;
                             }
+
                             return [...previous, event.poll];
                         }
 
@@ -548,6 +598,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
             setMessages((previous) => [...previous, message]);
         });
+
         socket.on("meeting:reaction", (data) => {
             if (!data ?.userId || !data ?.emoji) return;
 
@@ -560,7 +611,9 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
             setTimeout(() => {
                 setReactions((previous) =>
-                    previous.filter((item) => item.id !== reaction.id)
+                    previous.filter(
+                        (item) => item.id !== reaction.id
+                    )
                 );
             }, 2000);
         });
@@ -572,7 +625,8 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
             setParticipants((previous) =>
                 previous.map((person) =>
-                    person.userId === userId ? {...person, isHandRaised } :
+                    person.userId === userId ?
+                    {...person, isHandRaised } :
                     person
                 )
             );
@@ -581,6 +635,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 setIsHandRaised(isHandRaised);
             }
         });
+
         socket.on("meeting:ended", ({ message } = {}) => {
             setStatus("Meeting ended");
             setError(message || "");
@@ -593,47 +648,133 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
                 if (!pc || !sdp) return;
 
-                await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+                await pc.setRemoteDescription(
+                    new RTCSessionDescription(sdp)
+                );
+
                 await flushPendingIce("publisher", pc);
             } catch (err) {
                 console.error("Publisher answer failed:", err);
             }
         });
 
-        socket.on("sfu:joined", ({ existingTracks = [] } = {}) => {
-            existingTracks.forEach(({ trackId, kind, peerId }) => {
+        socket.on(
+            "sfu:joined",
+            ({
+                existingTracks = [],
+                activeScreenSharer = null,
+            } = {}) => {
+                const activeSharerId =
+                    typeof activeScreenSharer === "string" ?
+                    activeScreenSharer :
+                    activeScreenSharer ?.peerId ||
+                    activeScreenSharer ?.userId ||
+                    null;
+
+                setScreenSharerPeerId(activeSharerId);
+
+                existingTracks.forEach(
+                    ({ trackId, kind, peerId }) => {
+                        if (peerId !== user.id) {
+                            subscribeToTrack(
+                                trackId,
+                                kind,
+                                peerId
+                            ).catch((err) => {
+                                console.error(
+                                    "Subscribe to remote track failed:",
+                                    err
+                                );
+                            });
+                        }
+                    }
+                );
+            }
+        );
+
+        socket.on(
+            "sfu:screen-share-started",
+            ({ peerId } = {}) => {
+                if (peerId) {
+                    setScreenSharerPeerId(peerId);
+                }
+            }
+        );
+
+        socket.on(
+            "sfu:screen-share-stopped",
+            ({ peerId } = {}) => {
+                setScreenSharerPeerId((current) =>
+                    !peerId ||
+                    String(current) === String(peerId) ?
+                    null :
+                    current
+                );
+            }
+        );
+
+        socket.on(
+            "sfu:screen-share-rejected",
+            ({ message } = {}) => {
+                setError(
+                    message ||
+                    "Someone else is already sharing their screen."
+                );
+            }
+        );
+
+        socket.on(
+            "sfu:new-producer",
+            ({ trackId, kind, peerId } = {}) => {
                 if (peerId !== user.id) {
-                    subscribeToTrack(trackId, kind, peerId).catch((err) => {
-                        console.error("Subscribe to remote track failed:", err);
+                    subscribeToTrack(
+                        trackId,
+                        kind,
+                        peerId
+                    ).catch((err) => {
+                        console.error(
+                            "Subscribe to remote track failed:",
+                            err
+                        );
                     });
                 }
-            });
-        });
-
-        socket.on("sfu:new-producer", ({ trackId, kind, peerId } = {}) => {
-            if (peerId !== user.id) {
-                subscribeToTrack(trackId, kind, peerId).catch((err) => {
-                    console.error("Subscribe to remote track failed:", err);
-                });
             }
-        });
+        );
 
-        socket.on("sfu:subscribed", async({ trackId, sdp } = {}) => {
-            try {
-                const pc = subscribersRef.current.get(trackId);
+        socket.on(
+            "sfu:subscribed",
+            async({ trackId, sdp } = {}) => {
+                try {
+                    const pc =
+                        subscribersRef.current.get(trackId);
 
-                if (pc && sdp) {
-                    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-                    await flushPendingIce(`subscriber:${trackId}`, pc);
+                    if (pc && sdp) {
+                        await pc.setRemoteDescription(
+                            new RTCSessionDescription(sdp)
+                        );
+
+                        await flushPendingIce(
+                            `subscriber:${trackId}`,
+                            pc
+                        );
+                    }
+                } catch (err) {
+                    console.error(
+                        "Subscriber answer failed:",
+                        err
+                    );
                 }
-            } catch (err) {
-                console.error("Subscriber answer failed:", err);
             }
-        });
+        );
 
         socket.on(
             "sfu:ice-candidate",
-            async({ candidate, peerId, target, trackId } = {}) => {
+            async({
+                candidate,
+                peerId,
+                target,
+                trackId,
+            } = {}) => {
                 if (!candidate) return;
 
                 let key;
@@ -642,7 +783,10 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 if (target === "publisher") {
                     key = "publisher";
                     pc = publisherRef.current;
-                } else if (target === "subscriber" && trackId) {
+                } else if (
+                    target === "subscriber" &&
+                    trackId
+                ) {
                     key = `subscriber:${trackId}`;
                     pc = subscribersRef.current.get(trackId);
                 } else {
@@ -655,9 +799,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
                 }
 
                 try {
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    await pc.addIceCandidate(
+                        new RTCIceCandidate(candidate)
+                    );
                 } catch (err) {
-                    console.error("Adding remote ICE candidate failed:", err);
+                    console.error(
+                        "Adding remote ICE candidate failed:",
+                        err
+                    );
                 }
             }
         );
@@ -692,13 +841,14 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const toggleMic = () => {
         const next = !isMuted;
 
-        localStreamRef.current ?.getAudioTracks().forEach((track) => {
-            track.enabled = !next;
-        });
+        localStreamRef.current?.getAudioTracks()
+            .forEach((track) => {
+                track.enabled = !next;
+            });
 
         setIsMuted(next);
 
-        socketRef.current ?.emit("meeting:toggle-mic", {
+        socketRef.current?.emit("meeting:toggle-mic", {
             meetingCode,
             isMuted: next,
         });
@@ -707,26 +857,33 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const toggleCamera = () => {
         const next = !isVideoOff;
 
-        localStreamRef.current ?.getVideoTracks().forEach((track) => {
-            track.enabled = !next;
-        });
+        localStreamRef.current?.getVideoTracks()
+            .forEach((track) => {
+                track.enabled = !next;
+            });
 
         setIsVideoOff(next);
 
-        socketRef.current ?.emit("meeting:toggle-cam", {
+        socketRef.current?.emit("meeting:toggle-cam", {
             meetingCode,
             isVideoOff: next,
         });
     };
 
     const sendMessage = (content) => {
-        if (typeof content !== "string" || !content.trim()) return;
+        if (
+            typeof content !== "string" ||
+            !content.trim()
+        ) {
+            return;
+        }
 
-        socketRef.current ?.emit("meeting:send-message", {
+        socketRef.current?.emit("meeting:send-message", {
             meetingCode,
             content: content.trim(),
         });
     };
+
     const sendPollEvent = (event) => {
         const socket = socketRef.current;
 
@@ -741,23 +898,32 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
             },
             (ack) => {
                 if (!ack ?.success) {
-                    console.error("Poll update failed:", ack ?.message);
+                    console.error(
+                        "Poll update failed:",
+                        ack ?.message
+                    );
                 }
             }
         );
 
         return true;
     };
+
     const sendReaction = (emoji) => {
         const socket = socketRef.current;
 
-        if (!socket ?.connected || !meetingCode || !emoji) return;
+        if (!socket ?.connected || !meetingCode || !emoji) {
+            return;
+        }
 
         socket.emit(
             "meeting:reaction", { meetingCode, emoji },
             (ack) => {
                 if (!ack ?.success) {
-                    console.error("Reaction failed:", ack ?.message);
+                    console.error(
+                        "Reaction failed:",
+                        ack ?.message
+                    );
                 }
             }
         );
@@ -768,29 +934,41 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         setIsHandRaised(next);
 
-        socketRef.current ?.emit("meeting:toggle-hand", {
+        socketRef.current?.emit("meeting:toggle-hand", {
             meetingCode,
             isHandRaised: next,
         });
     };
+
     const admitGuest = (userId) => {
         const socket = socketRef.current;
 
         if (!meetingCode || !userId || !socket ?.connected) {
-            setError("Meeting connection or guest details are unavailable.");
+            setError(
+                "Meeting connection or guest details are unavailable."
+            );
             return;
         }
 
         socket.emit(
-            "meeting:admit-participant", { meetingCode, targetUserId: userId },
+            "meeting:admit-participant", {
+                meetingCode,
+                targetUserId: userId,
+            },
             (ack) => {
                 if (ack ?.success) {
                     setWaitingList((previous) =>
-                        previous.filter((guest) => guest.userId !== userId)
+                        previous.filter(
+                            (guest) => guest.userId !== userId
+                        )
                     );
+
                     setError("");
                 } else {
-                    setError(ack ?.message || "Could not admit participant.");
+                    setError(
+                        ack ?.message ||
+                        "Could not admit participant."
+                    );
                 }
             }
         );
@@ -799,13 +977,17 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
     const rejectGuest = (userId) => {
         if (!userId) return;
 
-        socketRef.current ?.emit("meeting:reject-participant", {
-            meetingCode,
-            userId,
-        });
+        socketRef.current?.emit(
+            "meeting:reject-participant", {
+                meetingCode,
+                userId,
+            }
+        );
 
         setWaitingList((previous) =>
-            previous.filter((guest) => guest.userId !== userId)
+            previous.filter(
+                (guest) => guest.userId !== userId
+            )
         );
     };
 
@@ -838,6 +1020,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         messages,
         localStream,
         remoteStreams,
+        screenSharerPeerId,
         isMuted,
         isVideoOff,
         toggleMic,

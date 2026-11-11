@@ -57,9 +57,9 @@ function MeetRedirect() {
 
   return (
     <Navigate
-      to={`/video-call?code=${encodeURIComponent(code || "")}&host=1`}
-      replace
-    />
+  to={`/video-call?code=${encodeURIComponent(code || "")}`}
+  replace
+/>
   );
 }
 
