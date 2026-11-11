@@ -80,6 +80,9 @@ function VideoCall() {
   const [activeSideTab, setActiveSideTab] = useState("participants");
   const [chatInput, setChatInput] = useState("");
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [showPolls, setShowPolls] = useState(false);
+const [pollQuestion, setPollQuestion] = useState("");
+const [pollOptions, setPollOptions] = useState(["", ""]);
 
   const {
     status,
@@ -103,6 +106,8 @@ function VideoCall() {
     rejectGuest,
     leaveMeeting,
     isHost,
+    polls,
+sendPollEvent,
   } = useQuorumMeeting({
     meetingCode,
     user,
@@ -239,7 +244,52 @@ function VideoCall() {
       console.error("Screen sharing could not start:", error);
     }
   }
+  function createPoll() {
+    const question = pollQuestion.trim();
+    const options = pollOptions
+        .map((option) => option.trim())
+        .filter(Boolean);
 
+    if (!question || options.length < 2) return;
+
+    const poll = {
+        id: `${user?.id || "user"}-${Date.now()}`,
+        question,
+        options,
+        createdBy: user?.id,
+        createdByName: user?.name || "Host",
+        votes: {},
+        closed: false,
+    };
+
+    sendPollEvent({ type: "create", poll });
+
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+}
+
+function voteInPoll(poll, optionIndex) {
+    if (
+        poll.closed ||
+        Object.prototype.hasOwnProperty.call(
+            poll.votes || {},
+            user?.id
+        )
+    ) return;
+
+    sendPollEvent({
+        type: "vote",
+        pollId: poll.id,
+        optionIndex,
+    });
+}
+
+function closePoll(pollId) {
+    sendPollEvent({
+        type: "close",
+        pollId,
+    });
+}
   function leaveCall() {
     if (screenTrackRef.current) {
       screenTrackRef.current.onended = null;
@@ -537,6 +587,19 @@ function VideoCall() {
       <footer className={`flex shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-[#071D38] px-2 sm:gap-3 ${
   showWhiteboard ? "h-16" : "min-h-20 flex-wrap py-3"
 }`}>
+  <button
+    type="button"
+    onClick={() => setShowPolls(true)}
+    className="relative flex h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm hover:bg-white/20"
+>
+    <span>📊</span>
+
+    {polls.length > 0 && (
+        <span className="rounded-full bg-sky-500 px-2 py-0.5 text-xs">
+            {polls.length}
+        </span>
+    )}
+</button>
         <button
           type="button"
           onClick={toggleMic}
@@ -664,7 +727,172 @@ function VideoCall() {
           <FiPhoneOff size={18} />
         </button>
       </footer>
+      {showPolls && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+        <section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#0B2344] p-5 text-white shadow-2xl">
 
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                    Live meeting polls
+                </h2>
+
+                <button
+                    onClick={() => setShowPolls(false)}
+                    className="rounded-lg px-3 py-1 text-white/70 hover:bg-white/10"
+                >
+                    ✕
+                </button>
+            </div>
+
+            {isHost && (
+                <div className="mb-5 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <h3 className="mb-3 text-sm font-semibold">
+                        Create a poll
+                    </h3>
+
+                    <input
+                        value={pollQuestion}
+                        onChange={(e) => setPollQuestion(e.target.value)}
+                        placeholder="Ask a question..."
+                        className="mb-3 w-full rounded-lg border border-white/15 bg-[#071D38] px-3 py-2 text-sm"
+                    />
+
+                    {pollOptions.map((option, index) => (
+                        <div key={index} className="mb-2 flex gap-2">
+                            <input
+                                value={option}
+                                onChange={(e) =>
+                                    setPollOptions((prev) =>
+                                        prev.map((item, i) =>
+                                            i === index ? e.target.value : item
+                                        )
+                                    )
+                                }
+                                placeholder={`Option ${index + 1}`}
+                                className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#071D38] px-3 py-2 text-sm"
+                            />
+
+                            {pollOptions.length > 2 && (
+                                <button
+                                    onClick={() =>
+                                        setPollOptions((prev) =>
+                                            prev.filter((_, i) => i !== index)
+                                        )
+                                    }
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                            onClick={() =>
+                                setPollOptions((prev) => [...prev, ""])
+                            }
+                            className="rounded-lg border border-white/20 px-3 py-2 text-xs"
+                        >
+                            + Add option
+                        </button>
+
+                        <button
+                            onClick={createPoll}
+                            disabled={
+                                !pollQuestion.trim() ||
+                                pollOptions.filter((x) => x.trim()).length < 2
+                            }
+                            className="ml-auto rounded-lg bg-sky-600 px-4 py-2 text-sm disabled:opacity-40"
+                        >
+                            Launch poll
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="space-y-3">
+                {polls.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-white/50">
+                        No polls yet. The host can create the first poll.
+                    </p>
+                ) : (
+                    polls.slice().reverse().map((poll) => {
+                        const votes = poll.votes || {};
+                        const voteCount = Object.keys(votes).length;
+                        const myVote = votes[user?.id];
+
+                        return (
+                            <article
+                                key={poll.id}
+                                className="rounded-xl border border-white/10 bg-white/5 p-4"
+                            >
+                                <div className="mb-1 flex justify-between gap-3">
+                                    <h3 className="font-medium">
+                                        {poll.question}
+                                    </h3>
+
+                                    <span className="text-xs text-white/50">
+                                        {poll.closed ? "Closed" : "Live"}
+                                    </span>
+                                </div>
+
+                                <p className="mb-3 text-xs text-white/45">
+                                    By {poll.createdByName || "Host"} · {voteCount} votes
+                                </p>
+
+                                <div className="space-y-2">
+                                    {poll.options.map((option, index) => {
+                                        const count = Object.values(votes)
+                                            .filter((v) => v === index).length;
+
+                                        const percent = voteCount
+                                            ? Math.round((count / voteCount) * 100)
+                                            : 0;
+
+                                        return (
+                                            <button
+                                                key={index}
+                                                disabled={
+                                                    poll.closed ||
+                                                    myVote !== undefined
+                                                }
+                                                onClick={() =>
+                                                    voteInPoll(poll, index)
+                                                }
+                                                className="relative w-full overflow-hidden rounded-lg border border-white/10 px-3 py-2 text-left text-sm disabled:cursor-default"
+                                            >
+                                                <span
+                                                    className="absolute inset-y-0 left-0 bg-sky-500/20"
+                                                    style={{ width: `${percent}%` }}
+                                                />
+
+                                                <span className="relative flex justify-between">
+                                                    <span>{option}</span>
+                                                    <span>
+                                                        {voteCount ? `${percent}%` : "Vote"}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {isHost && !poll.closed && (
+                                    <button
+                                        onClick={() => closePoll(poll.id)}
+                                        className="mt-3 text-xs text-rose-300"
+                                    >
+                                        Close poll
+                                    </button>
+                                )}
+                            </article>
+                        );
+                    })
+                )}
+            </div>
+        </section>
+    </div>
+)}
       <ConfirmDialog
         open={showLeaveDialog}
         type="leave"
