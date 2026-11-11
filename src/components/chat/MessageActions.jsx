@@ -133,12 +133,12 @@ export default function MessageActions({
     ...(canEdit
       ? [{ label: "Edit", icon: FiEdit2, action: onEdit }]
       : []),
-    {
-      label: canDeleteForEveryone ? "Delete for everyone" : "Delete for me",
-      icon: FiTrash2,
-      action: onDelete,
-      danger: true,
-    },
+      {
+        label: "Delete",
+        icon: FiTrash2,
+        action: onDelete,
+        danger: true,
+      },
   ];
 
   return (

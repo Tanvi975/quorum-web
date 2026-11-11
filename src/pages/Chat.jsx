@@ -601,26 +601,30 @@ if (requestedConversationId && !requestedConversation) {
     socket.on("conversation:updated", handleConversationUpdated);
     socket.on("conversation:removed", handleConversationRemoved);
 
-const handleMessageRead = (data) => {
-    if (
-      String(data.conversationId) !==
-      String(activeConversationRef.current?.id)
-    ) {
-      return;
-    }
-  
-    if (String(data.userId) === String(currentUserId)) {
-      return;
-    }
-  
-    setReadBoundary((previous) => ({
-      ...previous,
-      [data.conversationId]: {
-        seq: Number(data.lastReadSeq || 0),
-        messageId: data.lastReadMessageId || data.messageId || null,
-      },
-    }));
-  };
+    const handleMessageRead = (data) => {
+    
+      if (
+        String(data.conversationId) !==
+        String(activeConversationRef.current?.id)
+      ) {
+        return;
+      }
+    
+      if (String(data.userId) === String(currentUserId)) {
+        return;
+      }
+    
+      setReadBoundary((previous) => {
+        const updated = {
+          ...previous,
+          [data.conversationId]: {
+            seq: Number(data.lastReadSeq || 0),
+            messageId: data.lastReadMessageId || data.messageId || null,
+          },
+        };
+        return updated;
+      });
+    };
   
   socket.on("message:read", handleMessageRead);
   const handlePresenceOnline = (data) => {
@@ -2428,7 +2432,57 @@ className={`h-1.5 w-1.5 rounded-full ${
             </form>
           </div>}
           {forwardTargetMessageIds.length > 0 && <ForwardMessagesModal conversations={conversations} getConversationName={(conversation) => getConversationName(conversation, currentUserId)} currentConversationId={activeConversation?.id} loading={forwarding} onClose={() => { setForwardTargetMessageIds([]); setSelectedForwardIds([]); }} onForward={forwardSelectedMessages} />}
-          {pendingDelete && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-3" role="dialog" aria-modal="true"><div className="w-full max-w-sm rounded-xl border border-white/20 bg-[#102842] p-4"><h3 className="text-sm font-semibold text-white">Delete message?</h3><p className="mt-2 text-xs text-white/70">Choose how you want to delete this message.</p><div className="mt-4 flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setPendingDelete(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Cancel</button><button type="button" onClick={() => confirmDeleteMessage(false)} className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white">Delete for me</button>{pendingDelete.item.mine || activeIsGroupAdmin ? <button type="button" onClick={() => confirmDeleteMessage(true)} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white">Delete for everyone</button> : null}</div></div></div>}
+          {pendingDelete && (
+  <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-3" role="dialog" aria-modal="true">
+    <div className="w-full max-w-sm rounded-xl border border-white/20 bg-[#102842] p-4">
+      <h3 className="text-sm font-semibold text-white">
+        {pendingDelete.deleteForEveryone ? "Delete message?" : "Delete message?"}
+      </h3>
+      <p className="mt-2 text-xs text-white/70">
+        {pendingDelete.deleteForEveryone
+          ? "Choose how you want to delete this message."
+          : "Are you sure you want to delete this message?"}
+      </p>
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setPendingDelete(null)}
+          className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white hover:bg-white/10"
+        >
+          Cancel
+        </button>
+        {!pendingDelete.deleteForEveryone ? (
+          <button
+            type="button"
+            onClick={() => setPendingDelete((current) => ({ ...current, deleteForEveryone: true }))}
+            className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+          >
+            Delete
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => confirmDeleteMessage(false)}
+              className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white hover:bg-white/10"
+            >
+              Delete for me
+            </button>
+            {pendingDelete.item.mine || activeIsGroupAdmin ? (
+              <button
+                type="button"
+                onClick={() => confirmDeleteMessage(true)}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
+              >
+                Delete for everyone
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+)}
           {showInfo && activeConversation && (
  
 <aside className="fixed inset-0 z-40 flex w-full min-h-0 flex-col overflow-y-auto rounded-none border border-white/20 bg-[#102842]/95 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:inset-y-3 sm:left-auto sm:right-3 sm:w-[300px] sm:rounded-lg sm:p-4 lg:static lg:inset-auto lg:z-auto lg:w-[240px] lg:shrink-0 lg:rounded-lg lg:border lg:bg-[#102842]/55 lg:p-3 xl:w-[260px]">
