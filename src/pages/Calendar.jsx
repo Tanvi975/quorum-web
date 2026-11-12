@@ -82,7 +82,24 @@ function formatEventDate(dateKey) {
     day: "numeric",
   });
 }
+function getQuorumMeetingLink(link) {
+  if (!link) return "";
 
+  try {
+    const url = new URL(link, "https://meet.newquorum.me");
+
+    if (
+      url.hostname === "newquorum.me" ||
+      url.hostname === "www.newquorum.me"
+    ) {
+      url.hostname = "meet.newquorum.me";
+    }
+
+    return url.toString();
+  } catch {
+    return link;
+  }
+}
 function mapApiEvent(event) {
   const start = new Date(event.startDate);
   const end = new Date(event.endDate || event.startDate);
@@ -94,7 +111,7 @@ function mapApiEvent(event) {
     startTime: start.toTimeString().slice(0, 5),
     endTime: end.toTimeString().slice(0, 5),
     description: event.description || "",
-    meetingLink: event.meetingLink || "",
+    meetingLink: getQuorumMeetingLink(event.meetingLink),
   };
 }
 
@@ -434,7 +451,7 @@ function Calendar() {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           isAllDay: false,
-          meetingLink: meeting.link,
+          meetingLink: getQuorumMeetingLink(meeting.link),
           attendeeEmails,
           hasReminder: true,
           reminderMinutes: 15,

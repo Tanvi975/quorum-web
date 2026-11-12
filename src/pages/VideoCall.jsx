@@ -68,7 +68,10 @@ function VideoCall() {
   const [searchParams] = useSearchParams();
 
   const meetingCode = searchParams.get("code");
-  const meetingLink = window.location.href;
+  const meetingLink = new URL(
+    window.location.pathname + window.location.search,
+    "https://meet.newquorum.me"
+  ).toString();
   const isHostFromUrl = searchParams.get("host") === "1";
   const organizationId = searchParams.get("organizationId");
   const whiteboardEnabled = searchParams.get("whiteboard") === "1";

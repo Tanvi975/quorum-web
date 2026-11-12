@@ -217,14 +217,32 @@ function DashboardOverview({
                   </div>
 
                   {event.meetingLink ? (
-                    <a
-                      href={event.meetingLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 rounded-lg bg-[#087BFF] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0069DF]"
-                    >
-                      Join
-                    </a>
+  <a
+    href={(() => {
+      try {
+        const url = new URL(
+          event.meetingLink,
+          "https://meet.newquorum.me"
+        );
+
+        if (
+          url.hostname === "newquorum.me" ||
+          url.hostname === "www.newquorum.me"
+        ) {
+          url.hostname = "meet.newquorum.me";
+        }
+
+        return url.toString();
+      } catch {
+        return event.meetingLink;
+      }
+    })()}
+    target="_blank"
+    rel="noreferrer"
+    className="shrink-0 rounded-lg bg-[#087BFF] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0069DF]"
+  >
+    Join
+  </a>
                   ) : (
                     <button
                       type="button"
