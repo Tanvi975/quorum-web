@@ -1,24 +1,41 @@
-import { useCallback, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import { FiArrowLeft, FiFileText } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import OnboardingLayout from "../OnboardingLayout";
 import DocumentsList from "./DocumentsList";
 import DocumentEditor from "./DocumentEditor";
 import { getDocumentById } from "../../services/documentService";
+import { getOrganizations } from "../../services/organizationService";
 
 export default function DocumentsPage() {
-    const { user } = useAuth();
     const navigate = useNavigate();
 
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [loadingDocument, setLoadingDocument] = useState(false);
+    const [organizations, setOrganizations] = useState([]);
     const [error, setError] = useState("");
 
-    const organizationId =
-        user?.organizationId ||
-        user?.organization?.id ||
-        user?.organization?._id;
+    const organizationId = organizations[0]?.id;
+
+    useEffect(() => {
+        async function loadOrganizations() {
+            try {
+                const response = await getOrganizations();
+
+                const data =
+                    response?.data?.data ??
+                    response?.data ??
+                    [];
+
+                setOrganizations(Array.isArray(data) ? data : []);
+            } catch {
+                setOrganizations([]);
+            }
+        }
+
+        loadOrganizations();
+    }, []);
 
     const handleSelectDocument = useCallback(async (document) => {
         const documentId = document?.id || document?._id;
@@ -43,11 +60,6 @@ export default function DocumentsPage() {
 
             setSelectedDocument(result);
         } catch (requestError) {
-            console.error(
-                "Document details loading failed:",
-                requestError
-            );
-
             const status = requestError?.response?.status;
 
             setError(
@@ -82,7 +94,7 @@ export default function DocumentsPage() {
 
     return (
         <OnboardingLayout fullWidth>
-        <div className="relative z-10 mx-auto w-full max-w-[1500px] space-y-5 px-3 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
+            <div className="relative z-10 mx-auto w-full max-w-[1500px] space-y-5 px-3 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
                 {selectedDocument ? (
                     <>
                         <button

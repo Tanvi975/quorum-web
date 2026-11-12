@@ -1,8 +1,12 @@
 import api from "./api";
 
 function unwrapResponse(response) {
-    const body = response ?.data;
-    if (body && body.data !== undefined) return body.data;
+    const body = response?.data;
+
+    if (body?.data !== undefined) {
+        return body.data;
+    }
+
     return body ?? response;
 }
 
@@ -16,18 +20,26 @@ function requireDocumentId(documentId) {
     }
 }
 
+// GET /api/documents?organizationId=<uuid>
 export async function getDocuments({ organizationId } = {}) {
-    const params = organizationId ? { organizationId } : {};
-    const response = await api.get("/api/documents", { params });
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
+    }
+
+    const response = await api.get("/api/documents", {
+        params: { organizationId },
+    });
+
     const data = unwrapResponse(response);
 
     if (Array.isArray(data)) return data;
-    if (Array.isArray(data ?.documents)) return data.documents;
-    if (Array.isArray(data ?.items)) return data.items;
+    if (Array.isArray(data?.documents)) return data.documents;
+    if (Array.isArray(data?.items)) return data.items;
 
     return [];
 }
 
+// GET /api/documents/:id
 export async function getDocumentById(documentId) {
     requireDocumentId(documentId);
 
@@ -36,7 +48,7 @@ export async function getDocumentById(documentId) {
     );
 
     const data = unwrapResponse(response);
-    const document = data ?.document ?? data;
+    const document = data?.document ?? data;
 
     if (!document ||
         typeof document !== "object" ||
@@ -46,4 +58,57 @@ export async function getDocumentById(documentId) {
     }
 
     return document;
+}
+
+// POST /api/documents
+export async function createDocument({
+    title,
+    organizationId,
+    defaultPermission = "VIEW",
+    initialCollaborators = [],
+}) {
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
+    }
+
+    if (!title?.trim()) {
+        throw new Error("Document title is required.");
+    }
+
+    const payload = {
+        title: title.trim(),
+        scopeType: "ORGANIZATION",
+        organizationId,
+        defaultPermission,
+        initialCollaborators,
+    };
+
+    const response = await api.post("/api/documents", payload);
+
+    return unwrapResponse(response);
+}
+
+// POST /api/documents/:id/ai
+export async function runDocumentAI(documentId, {
+    action,
+    selectedText,
+}) {
+    requireDocumentId(documentId);
+
+    if (!action) {
+        throw new Error("AI action is required.");
+    }
+
+    if (!selectedText?.trim()) {
+        throw new Error("Select some document text first.");
+    }
+
+    const response = await api.post(
+        `/api/documents/${encodeURIComponent(documentId)}/ai`, {
+            action,
+            selectedText: selectedText.trim(),
+        }
+    );
+
+    return unwrapResponse(response);
 }

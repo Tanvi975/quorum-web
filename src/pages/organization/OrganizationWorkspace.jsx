@@ -27,6 +27,7 @@ import TeamChat from "./TeamChat";
 import OrganizationOverview from "./OrganizationOverview";
 import OrganizationWhiteboards from "../../components/OrganizationWhiteboards";
 import OrgJiraSettings from "../../components/jira/OrgJiraSettings";
+import OrganizationDocuments from "../../components/documents/OrganizationDocuments";
 
 const btn =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-50";
@@ -1185,7 +1186,7 @@ function OrganizationWorkspace() {
           </div>
         </section>
         <nav className="mb-4 flex w-full min-w-0 flex-wrap gap-2">
-        {["Overview", "Teams", "Members", "Whiteboards", "Jira", "About"].map((tab) => (
+        {["Overview", "Teams", "Members", "Whiteboards", "Documents", "Jira", "About"].map((tab) => (
             <button
               key={tab}
               type="button"
@@ -1394,6 +1395,9 @@ function OrganizationWorkspace() {
                {activeTab === "Whiteboards" && (
           <OrganizationWhiteboards organizationId={organizationId} />
         )}
+        {activeTab === "Documents" && (
+    <OrganizationDocuments organizationId={organizationId} />
+)}
         {activeTab === "Jira" && (
           <div className="w-full min-w-0">
             <OrgJiraSettings
