@@ -97,6 +97,8 @@ export default function WhiteboardWorkspace({
     const [color, setColor] = useState("#0066FF");
     const [strokeWidth, setStrokeWidth] = useState(3);
     const [selectedEmoji, setSelectedEmoji] = useState("😀");
+    const [fillEnabled, setFillEnabled] = useState(false);
+const [fillColor, setFillColor] = useState("#93C5FD");
     const [showBoardPicker, setShowBoardPicker] = useState(!initialBoardId);
     const [boardNameInput, setBoardNameInput] = useState(
         isMeetingMode ? "Meeting whiteboard" : "New whiteboard"
@@ -483,6 +485,10 @@ export default function WhiteboardWorkspace({
             setColor={setColor}
             strokeWidth={strokeWidth}
             setStrokeWidth={setStrokeWidth}
+            fillEnabled={fillEnabled}
+            setFillEnabled={setFillEnabled}
+            fillColor={fillColor}
+            setFillColor={setFillColor}
             onClear={handleClear}
             onUndo={undo}
             onRedo={redo}
@@ -516,6 +522,8 @@ export default function WhiteboardWorkspace({
                 color={color}
                 strokeWidth={strokeWidth}
                 selectedEmoji={selectedEmoji}
+                fillEnabled={fillEnabled}
+                fillColor={fillColor}
                 backgroundColor={viewState.backgroundColor || "#FFFFFF"}
                 viewState={viewState}
                 updateViewState={updateViewState}

@@ -386,6 +386,8 @@ export default function WhiteboardCanvas({
     tool = "pen",
     color = "#0066FF",
     strokeWidth = 3,
+    fillEnabled = false,
+    fillColor = "#93C5FD",
     selectedEmoji = "😀",
     backgroundColor = "#FFFFFF",
     viewState,
@@ -572,7 +574,11 @@ export default function WhiteboardCanvas({
                 height: 0,
                 strokeColor: color,
                 strokeWidth,
-                fillColor: "transparent",
+                fillColor:
+                    fillEnabled &&
+                    ["rectangle", "ellipse", "diamond", "triangle"].includes(tool)
+                        ? fillColor
+                        : "transparent",
             };
 
             let next;
@@ -615,6 +621,8 @@ export default function WhiteboardCanvas({
             scrollY,
             color,
             strokeWidth,
+            fillEnabled,
+            fillColor,
             changeElements,
             selectedEmoji,
             drawElement,

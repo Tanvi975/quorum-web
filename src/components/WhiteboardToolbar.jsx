@@ -102,6 +102,10 @@ export default function WhiteboardToolbar({
     setColor,
     strokeWidth,
     setStrokeWidth,
+    fillEnabled,
+    setFillEnabled,
+    fillColor,
+    setFillColor,
     onClear,
     onUndo,
     onRedo,
@@ -320,6 +324,42 @@ export default function WhiteboardToolbar({
                 </ToolButton>
             </div>
 
+             <div className="flex shrink-0 items-center gap-2">
+                 <button
+                     type="button"
+                     onClick={() => setFillEnabled((previous) => !previous)}
+                     disabled={disabled}
+                     aria-pressed={fillEnabled}
+                     title="Toggle shape fill"
+                     className={`h-9 rounded-lg border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${
+                         fillEnabled
+                             ? "border-blue-500 bg-blue-50 text-blue-600"
+                             : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
+                     }`}
+                 >
+                     Fill {fillEnabled ? "ON" : "OFF"}
+                 </button>
+
+                 <label
+                     title="Shape fill color"
+                     className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 ${
+                         disabled ? "pointer-events-none opacity-50" : ""
+                     }`}
+                 >
+                     <span
+                         className="h-6 w-6 rounded-full border border-gray-300"
+                         style={{ backgroundColor: fillColor }}
+                     />
+                     <input
+                         type="color"
+                         value={fillColor}
+                         disabled={disabled}
+                         onChange={(event) => setFillColor(event.target.value)}
+                         className="sr-only"
+                         aria-label="Choose shape fill color"
+                     />
+                 </label>
+             </div>
             <div className="mx-1 h-7 w-px shrink-0 bg-gray-200" />
                 <label
                     title="Stroke color"
