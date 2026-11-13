@@ -28,7 +28,7 @@ export async function initCsrf() {
 }
 
 api.interceptors.request.use((config) => {
-    const method = config.method ?.toLowerCase();
+    const method = config.method?.toLowerCase();
     const mutatingMethods = ["post", "put", "patch", "delete"];
 
     if (mutatingMethods.includes(method) && csrfToken) {
@@ -43,8 +43,8 @@ api.interceptors.response.use(
     (response) => response,
     async(error) => {
         const originalRequest = error.config;
-        const status = error.response ?.status;
-        const url = originalRequest ?.url || "";
+        const status = error.response?.status;
+        const url = originalRequest?.url || "";
 
         const isAuthEndpoint =
             url.includes("/api/auth/login") ||
@@ -92,5 +92,50 @@ api.interceptors.response.use(
         }
     }
 );
+
+export function getApiErrorMessage(error, fallback = "Something went wrong. Please try again.") {
+    if (!error) {
+        return fallback;
+    }
+
+    if (error.code === "ERR_NETWORK" || !error.response) {
+        return "Unable to connect to the server. Please check your internet connection.";
+    }
+
+    const status = error.response.status;
+
+    switch (status) {
+        case 400:
+            return error.response.data?.message || "Invalid request. Please check your information.";
+
+        case 401:
+            return "Your session has expired. Please login again.";
+
+        case 403:
+            return "You don't have permission to perform this action.";
+
+        case 404:
+            return "The requested information was not found.";
+
+        case 409:
+            return error.response.data?.message || "This action conflicts with existing information.";
+
+        case 422:
+            return error.response.data?.message || "Please check the information you entered.";
+
+        case 429:
+            return "Too many requests. Please try again later.";
+
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+            return "Server is temporarily unavailable. Please try again later.";
+
+        default:
+            return fallback;
+    }
+}
+
 
 export default api;

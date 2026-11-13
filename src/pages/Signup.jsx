@@ -7,7 +7,7 @@ import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import illustration2 from "../assets/team-illustration-2.svg";
 import { registerUser } from "../services/authService";
-
+import { getApiErrorMessage } from "../services/api";
 function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -108,18 +108,15 @@ function Signup() {
       } else if (status === 409) {
         message = "An account with this email already exists.";
       } else if (status === 400) {
-        message = backendMessage || "Please check your details and try again.";
+        message =
+          backendMessage || "Please check your details and try again.";
       } else if (status === 429) {
         message = "Too many attempts. Please try again after 15 minutes.";
-      } else if (status >= 500) {
-        message =
-          "We're having trouble. Please try again in a moment.";
-      } else if (!err.response) {
-        message =
-          "Unable to connect. Please check your internet connection.";
       } else {
-        message =
-          backendMessage || "We couldn't create your account. Please try again.";
+        message = getApiErrorMessage(
+          err,
+          "We couldn't create your account. Please try again."
+        );
       }
 
       setErrors((prev) => ({ ...prev, form: message }));

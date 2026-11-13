@@ -7,6 +7,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { loginUser } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import illustration1 from "../assets/team-illustration-1.svg";
 
 function Login() {
@@ -106,14 +107,11 @@ function Login() {
       } else if (status === 429) {
         errorMessage =
           "Too many login attempts. Please wait a moment and try again.";
-      } else if (status >= 500) {
-        errorMessage =
-          "We're having trouble. Please try again in a moment.";
-      } else if (!err.response) {
-        errorMessage =
-          "Unable to connect. Please check your internet connection.";
       } else {
-        errorMessage = "We couldn't sign you in. Please try again.";
+        errorMessage = getApiErrorMessage(
+          err,
+          "We couldn't sign you in. Please try again."
+        );
       }
 
       setErrors({ form: errorMessage });

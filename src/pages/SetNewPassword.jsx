@@ -4,6 +4,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { resetPassword } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import illustration3 from "../assets/team-illustration-3.svg";
 
 function SetNewPassword() {
@@ -45,21 +46,22 @@ function SetNewPassword() {
       await resetPassword(email, otp, password);
       setSuccess(true);
     } catch (err) {
-      const status = err.response && err.response.status;
+      const status = err.response?.status;
       let message;
-    
+
       if (status === 400 || status === 410) {
-        message = "This code has expired or is invalid. Please request a new one.";
+        message =
+          "This code has expired or is invalid. Please request a new one.";
       } else if (status === 429) {
-        message = "Too many attempts. Please wait a moment and try again.";
-      } else if (status >= 500) {
-        message = "We're having trouble. Please try again in a moment.";
-      } else if (!err.response) {
-        message = "Unable to connect. Please check your internet connection.";
+        message =
+          "Too many attempts. Please wait a moment and try again.";
       } else {
-        message = "We couldn't reset your password. Please try again.";
+        message = getApiErrorMessage(
+          err,
+          "We couldn't reset your password. Please try again."
+        );
       }
-    
+
       setErrors({ form: message });
     }
   }

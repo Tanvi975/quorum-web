@@ -5,6 +5,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../components/AuthButton";
 import illustration1 from "../assets/team-illustration-1.svg";
 import { useAuth } from "../context/AuthContext";
+import { getApiErrorMessage } from "../services/api";
 import {
   forgotPassword,
   verifyEmailOTP,
@@ -130,20 +131,19 @@ function VerifyCode() {
       }
     } catch (err) {
       const status = err.response?.status;
-    
+
       if (status === 400) {
         setError("Invalid or expired verification code");
       } else if (status === 401) {
         setError("Your session could not be verified. Please try again.");
       } else if (status === 429) {
         setError("Too many attempts. Please wait before trying again.");
-      } else if (!err.response) {
-        setError("Unable to connect. Please check your internet connection.");
       } else {
         setError(
-          err.response?.data?.message ||
-            err.message ||
+          getApiErrorMessage(
+            err,
             "Verification failed. Please try again."
+          )
         );
       }
     } finally {
@@ -173,13 +173,15 @@ function VerifyCode() {
       const status = err.response?.status;
 
       if (status === 429) {
-        setError("Too many attempts. Please wait before requesting another code.");
-      } else if (!err.response) {
-        setError("Unable to connect. Please check your internet connection.");
+        setError(
+          "Too many attempts. Please wait before requesting another code."
+        );
       } else {
         setError(
-          err.response?.data?.message ||
+          getApiErrorMessage(
+            err,
             "We couldn't resend the code. Please try again."
+          )
         );
       }
     } finally {

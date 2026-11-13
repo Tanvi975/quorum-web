@@ -4,6 +4,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import AuthButton from "../components/AuthButton";
 import { forgotPassword } from "../services/authService";
+import { getApiErrorMessage } from "../services/api";
 import illustration3 from "../assets/team-illustration-3.svg";
 
 function ForgotPassword() {
@@ -27,21 +28,20 @@ function ForgotPassword() {
         },
       });
     } catch (err) {
-      const status = err.response && err.response.status;
+      const status = err.response?.status;
       let message;
-    
+
       if (status === 404) {
         message = "We couldn't find an account with that email.";
       } else if (status === 429) {
         message = "Too many requests. Please wait a moment and try again.";
-      } else if (status >= 500) {
-        message = "We're having trouble. Please try again in a moment.";
-      } else if (!err.response) {
-        message = "Unable to connect. Please check your internet connection.";
       } else {
-        message = "We couldn't send the code. Please try again.";
+        message = getApiErrorMessage(
+          err,
+          "We couldn't send the code. Please try again."
+        );
       }
-    
+
       setError(message);
     }
   }
