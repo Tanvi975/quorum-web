@@ -9,7 +9,6 @@ import {
   FiGlobe,
   FiUser,
   FiBriefcase,
-  FiFileText,
 } from "react-icons/fi";
 import { SiGithub, SiJira } from "react-icons/si";
 
@@ -20,7 +19,6 @@ const navigationItems = [
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
   { label: "Projects", icon: FiBriefcase, path: "/projects" },
-  { label: "Documents", icon: FiFileText, path: "/documents" },
   { label: "My Jira", icon: SiJira, path: "/jira/my-tickets" },
   { label: "My GitHub", icon: SiGithub, path: "/github" },
   { label: "Community", icon: FiGlobe, path: "/communities" },

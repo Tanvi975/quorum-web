@@ -114,6 +114,10 @@ export default function WhiteboardWorkspace({
         updateViewState,
         moveCursor,
         clearBoard,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
     } = useWhiteboardSocket({
         boardId,
         meetingCode: meetingCode || undefined,
@@ -480,6 +484,10 @@ export default function WhiteboardWorkspace({
             strokeWidth={strokeWidth}
             setStrokeWidth={setStrokeWidth}
             onClear={handleClear}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
             selectedEmoji={selectedEmoji}
             setSelectedEmoji={setSelectedEmoji}
             disabled={!socketConnected}

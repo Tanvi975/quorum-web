@@ -9,6 +9,8 @@ import {
     FiCircle,
     FiType,
     FiTrash2,
+    FiRotateCcw,
+    FiRotateCw,
     FiChevronDown,
     FiArrowUpRight,
     FiDroplet,
@@ -101,6 +103,10 @@ export default function WhiteboardToolbar({
     strokeWidth,
     setStrokeWidth,
     onClear,
+    onUndo,
+    onRedo,
+    canUndo = false,
+    canRedo = false,
     selectedEmoji = "😀",
     setSelectedEmoji = () => {},
     disabled = false,
@@ -239,7 +245,7 @@ export default function WhiteboardToolbar({
   ref={toolbarRef}
   className="relative flex w-full min-w-0 max-w-full items-center gap-2 overflow-visible border-b border-gray-200 bg-white px-2 py-2 sm:px-3"
 >
-<div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto overflow-y-visible overscroll-x-contain px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+<div className="flex w-full min-w-0 items-center gap-2 overflow-visible px-1 py-2">
                 <div className="flex shrink-0 items-center gap-1">
                 <ToolButton
                     title="Select"
@@ -296,6 +302,25 @@ export default function WhiteboardToolbar({
             <div className="mx-1 h-7 w-px shrink-0 bg-gray-200" />
 
             <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1">
+                <ToolButton
+                    title="Undo"
+                    disabled={disabled || !canUndo}
+                    onClick={onUndo}
+                >
+                    <FiRotateCcw size={18} />
+                </ToolButton>
+
+                <ToolButton
+                    title="Redo"
+                    disabled={disabled || !canRedo}
+                    onClick={onRedo}
+                >
+                    <FiRotateCw size={18} />
+                </ToolButton>
+            </div>
+
+            <div className="mx-1 h-7 w-px shrink-0 bg-gray-200" />
                 <label
                     title="Stroke color"
                     className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 ${
@@ -419,7 +444,7 @@ export default function WhiteboardToolbar({
     open={showClearDialog}
     type="delete"
     title="Clear Whiteboard?"
-    message="Are you sure you want to clear the entire whiteboard? This action cannot be undone."
+    message="Are you sure you want to clear the entire whiteboard? You can undo this action afterwards."
     confirmText="Clear Board"
     cancelText="Cancel"
     onCancel={() => setShowClearDialog(false)}
