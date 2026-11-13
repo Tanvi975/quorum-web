@@ -51,6 +51,7 @@ import InviteAcceptPage from "./components/projects/InviteAcceptPage";
 import TaskBoard from "./components/projects/TaskBoard";
 import ResourceList from "./components/projects/ResourceList";
 import DocumentsPage from "./components/documents/DocumentsPage";
+import NotFound from "./pages/NotFound";
 
 function MeetRedirect() {
   const { code } = useParams();
@@ -442,7 +443,7 @@ function App() {
     </ProtectedRoute>
   }
 />
-          <Route path="*" element={<Navigate to="/landing" replace />} />
+<Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
