@@ -52,7 +52,7 @@ import TaskBoard from "./components/projects/TaskBoard";
 import ResourceList from "./components/projects/ResourceList";
 import DocumentsPage from "./components/documents/DocumentsPage";
 import NotFound from "./pages/NotFound";
-
+import ErrorBoundary from "./components/ErrorBoundary";
 function MeetRedirect() {
   const { code } = useParams();
 
@@ -155,6 +155,7 @@ function App() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -447,6 +448,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
