@@ -53,6 +53,7 @@ import ResourceList from "./components/projects/ResourceList";
 import DocumentsPage from "./components/documents/DocumentsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Recordings from "./pages/Recordings";
 function MeetRedirect() {
   const { code } = useParams();
 
@@ -199,6 +200,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/recordings"
+  element={
+    <ProtectedRoute>
+      <Recordings />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/video-call"
             element={

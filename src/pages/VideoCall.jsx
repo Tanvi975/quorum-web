@@ -6,6 +6,10 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import ParticipantPanel from "../components/ParticipantPanel";
 import WhiteboardWorkspace from "../components/WhiteboardWorkspace";
 import {
+  getRecordingUploadUrl,
+  completeRecording,
+} from "../services/recordingService";
+import {
   FiMic,
   FiMicOff,
   FiVideo,
@@ -113,6 +117,8 @@ const [pollOptions, setPollOptions] = useState(["", ""]);
     isHost,
     polls,
 sendPollEvent,
+emitMeetingEvent,
+subscribeToRecordingStatus,
   } = useQuorumMeeting({
     meetingCode,
     user,
@@ -124,7 +130,32 @@ sendPollEvent,
   const screenTrackRef = useRef(null);
   const chatEndRef = useRef(null);
   const previousMessageCount = useRef(messages.length);
+  const mediaRecorderRef = useRef(null);
+const recordingChunksRef = useRef([]);
+const recordingIdRef = useRef(null);
+const recordingStartedAtRef = useRef(null);
+const recordingOwnerRef = useRef(false);
 
+const [isRecording, setIsRecording] = useState(false);
+const [isUploadingRecording, setIsUploadingRecording] = useState(false);
+const [recordingMessage, setRecordingMessage] = useState("");
+useEffect(() => {
+  const unsubscribe = subscribeToRecordingStatus((data) => {
+    if (!data || data.meetingCode !== meetingCode) return;
+
+    setIsRecording(Boolean(data.isRecording));
+
+    if (data.isRecording) {
+      setRecordingMessage(
+        `${data.startedBy?.name || "A participant"} started recording.`
+      );
+    } else if (data.status === "PROCESSING") {
+      setRecordingMessage("Recording stopped. Video is processing...");
+    }
+  });
+
+  return unsubscribe;
+}, [subscribeToRecordingStatus, meetingCode]);
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -312,44 +343,254 @@ function closePoll(pollId) {
         pollId,
     });
 }
-  function leaveCall() {
-    if (screenTrackRef.current) {
-      screenTrackRef.current.onended = null;
-      screenTrackRef.current.stop();
-    }
 
-    screenStreamRef.current?.getTracks().forEach((track) => {
-      track.stop();
+function buildRecordingStream() {
+  const tracks = [];
+  const seenTrackIds = new Set();
+
+  const addStream = (stream) => {
+    if (!stream) return;
+
+    stream.getTracks().forEach((track) => {
+      if (track.readyState === "live" && !seenTrackIds.has(track.id)) {
+        seenTrackIds.add(track.id);
+        tracks.push(track);
+      }
     });
+  };
 
-    screenTrackRef.current = null;
-    screenStreamRef.current = null;
-    setScreenSharing(false);
+  addStream(localStream);
 
-    leaveMeeting();
+  Object.values(remoteStreams || {}).forEach(addStream);
+
+  // Include the local screen share as well.
+  addStream(screenStreamRef.current);
+
+  if (!tracks.length) {
+    throw new Error("No live audio/video tracks are available to record.");
   }
 
-  function confirmLeaveMeeting() {
-    setShowLeaveDialog(false);
-    leaveCall();
-  }
-  function confirmEndMeeting() {
-    setShowLeaveDialog(false);
+  return new MediaStream(tracks);
+}
 
-    if (screenTrackRef.current) {
-        screenTrackRef.current.onended = null;
-        screenTrackRef.current.stop();
+async function startCallRecording() {
+  if (!isHost) {
+    setRecordingMessage("Only the meeting host can start a recording.");
+    return;
+  }
+
+  if (isRecording || mediaRecorderRef.current) return;
+
+  try {
+    if (!window.MediaRecorder) {
+      throw new Error("Recording is not supported in this browser.");
     }
 
-    screenStreamRef.current?.getTracks().forEach((track) => {
-        track.stop();
+    const stream = buildRecordingStream();
+
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+      ? "video/webm;codecs=vp8,opus"
+      : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "";
+
+    const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    // Backend currently presigns the upload for Content-Type video/mp4.
+    // Keep the filename extension aligned with the actual WebM container.
+    const extension = recorder.mimeType.includes("webm") ? "webm" : "mp4";
+
+    const started = await emitMeetingEvent("meeting:start-recording");
+
+    const newRecordingId = started?.id || started?.recordingId;
+
+    if (!newRecordingId) {
+      throw new Error("Backend did not return a recording ID.");
+    }
+
+    recordingIdRef.current = newRecordingId;
+    recordingStartedAtRef.current = Date.now();
+    recordingOwnerRef.current = true;
+    recordingChunksRef.current = [];
+
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        recordingChunksRef.current.push(event.data);
+      }
+    };
+
+    recorder.onerror = (event) => {
+      console.error("MediaRecorder error:", event.error);
+      setRecordingMessage("Recording encountered an error.");
+    };
+
+    recorder.start(1000);
+    mediaRecorderRef.current = recorder;
+
+    setIsRecording(true);
+    setRecordingMessage("Recording is live.");
+  } catch (err) {
+    console.error("Could not start recording:", err);
+    setRecordingMessage(err.message || "Could not start recording.");
+    recordingOwnerRef.current = false;
+  }
+}
+
+async function stopCallRecording() {
+  if (!recordingOwnerRef.current || !mediaRecorderRef.current) return;
+
+  setIsUploadingRecording(true);
+  setRecordingMessage("Finalizing recording...");
+
+  try {
+    const recorder = mediaRecorderRef.current;
+
+    const videoBlob = await new Promise((resolve, reject) => {
+      recorder.addEventListener(
+        "stop",
+        () => {
+          const blob = new Blob(recordingChunksRef.current, {
+            type: recorder.mimeType || "video/webm",
+          });
+
+          resolve(blob);
+        },
+        { once: true }
+      );
+
+      recorder.addEventListener(
+        "error",
+        (event) => reject(event.error || new Error("Recording failed.")),
+        { once: true }
+      );
+
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      } else {
+        resolve(
+          new Blob(recordingChunksRef.current, {
+            type: recorder.mimeType || "video/webm",
+          })
+        );
+      }
     });
 
-    screenTrackRef.current = null;
-    screenStreamRef.current = null;
-    setScreenSharing(false);
+    mediaRecorderRef.current = null;
 
-    endMeeting();
+    if (!videoBlob.size) {
+      throw new Error("The recording file is empty.");
+    }
+
+    const recordingId = recordingIdRef.current;
+
+    if (!recordingId) {
+      throw new Error("Recording ID is missing.");
+    }
+
+    // Tell the backend that the recording has stopped.
+    await emitMeetingEvent("meeting:stop-recording");
+
+    setIsRecording(false);
+    setRecordingMessage("Uploading recording...");
+
+    const extension = videoBlob.type.includes("webm") ? "webm" : "mp4";
+    const fileName = `${meetingCode}-${Date.now()}.${extension}`;
+
+    const uploadData = await getRecordingUploadUrl(meetingCode, fileName);
+
+    if (!uploadData?.uploadUrl || !uploadData?.fileUrl) {
+      throw new Error("Backend did not return a valid S3 upload URL.");
+    }
+
+    const uploadResponse = await fetch(uploadData.uploadUrl, {
+      method: "PUT",
+      headers: {
+        // Required by the current backend's presigned URL signature.
+        "Content-Type": "video/mp4",
+      },
+      body: videoBlob,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`S3 upload failed (${uploadResponse.status}).`);
+    }
+
+    const durationSeconds = Math.max(
+      1,
+      Math.round((Date.now() - recordingStartedAtRef.current) / 1000)
+    );
+
+    await completeRecording(recordingId, {
+      fileUrl: uploadData.fileUrl,
+      durationSeconds,
+      fileSizeBytes: videoBlob.size,
+    });
+
+    setRecordingMessage("Recording uploaded successfully.");
+  } catch (err) {
+    console.error("Recording upload failed:", err);
+    setRecordingMessage(
+      err.response?.data?.message || err.message || "Recording upload failed."
+    );
+  } finally {
+    recordingChunksRef.current = [];
+    recordingIdRef.current = null;
+    recordingStartedAtRef.current = null;
+    recordingOwnerRef.current = false;
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+    setIsUploadingRecording(false);
+  }
+}
+
+async function leaveCall() {
+  if (recordingOwnerRef.current && mediaRecorderRef.current) {
+    await stopCallRecording();
+  }
+
+  if (screenTrackRef.current) {
+    screenTrackRef.current.onended = null;
+    screenTrackRef.current.stop();
+  }
+
+  screenStreamRef.current?.getTracks().forEach((track) => {
+    track.stop();
+  });
+
+  screenTrackRef.current = null;
+  screenStreamRef.current = null;
+  setScreenSharing(false);
+
+  leaveMeeting();
+}
+
+async function confirmLeaveMeeting() {
+  setShowLeaveDialog(false);
+  await leaveCall();
+}
+async function confirmEndMeeting() {
+  setShowLeaveDialog(false);
+
+  if (recordingOwnerRef.current && mediaRecorderRef.current) {
+    await stopCallRecording();
+  }
+
+  if (screenTrackRef.current) {
+    screenTrackRef.current.onended = null;
+    screenTrackRef.current.stop();
+  }
+
+  screenStreamRef.current?.getTracks().forEach((track) => {
+    track.stop();
+  });
+
+  screenTrackRef.current = null;
+  screenStreamRef.current = null;
+  setScreenSharing(false);
+
+  endMeeting();
 }
   const remoteEntries = Object.entries(remoteStreams || {});
   const featuredPeerId = screenSharerPeerId;
@@ -621,6 +862,59 @@ function closePoll(pollId) {
         </span>
     )}
 </button>
+
+{isHost && (
+  <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+  
+    <button
+      type="button"
+      onClick={isRecording ? stopCallRecording : startCallRecording}
+      disabled={isUploadingRecording}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+      title={
+        isUploadingRecording
+          ? "Uploading recording..."
+          : isRecording
+            ? "Stop recording"
+            : "Start recording"
+      }
+      aria-label={
+        isUploadingRecording
+          ? "Recording uploading"
+          : isRecording
+            ? "Stop recording"
+            : "Start recording"
+      }
+      aria-pressed={isRecording}
+    >
+      <span
+        className={`h-3 w-3 rounded-full ${
+          isRecording
+            ? "animate-pulse bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.7)]"
+            : "bg-gray-400"
+        }`}
+      />
+    </button>
+
+    {(isRecording || isUploadingRecording || recordingMessage) && (
+      <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-3 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-[#102A46] px-3 py-2 text-xs font-medium text-white shadow-xl">
+        <span className="flex items-center gap-2">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              isUploadingRecording
+                ? "animate-pulse bg-blue-400"
+                : "animate-pulse bg-red-500"
+            }`}
+          />
+          {isUploadingRecording
+            ? "Uploading recording..."
+            : recordingMessage || "Recording is live"}
+        </span>
+      </div>
+    )}
+  </div>
+)}
+
         <button
           type="button"
           onClick={toggleMic}

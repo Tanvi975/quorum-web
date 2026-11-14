@@ -1019,7 +1019,42 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         stopMedia();
         socket ?.disconnect();
         socketRef.current = null;
-        window.location.href = "/dashboard";
+        window.location.href = `/recordings?code=${encodeURIComponent(meetingCode)}`;
+    };
+
+    const emitMeetingEvent = (eventName, payload = {}) => {
+        return new Promise((resolve, reject) => {
+            const socket = socketRef.current;
+
+            if (!socket ?.connected) {
+                reject(new Error("Meeting socket is not connected."));
+                return;
+            }
+
+            socket.emit(
+                eventName, { meetingCode, ...payload },
+                (ack) => {
+                    if (!ack ?.success) {
+                        reject(new Error(ack ?.message || "Meeting event failed."));
+                        return;
+                    }
+
+                    resolve(ack.data ?? ack);
+                }
+            );
+        });
+    };
+
+    const subscribeToRecordingStatus = (callback) => {
+        const socket = socketRef.current;
+
+        if (!socket) return () => {};
+
+        socket.on("meeting:recording-status", callback);
+
+        return () => {
+            socket.off("meeting:recording-status", callback);
+        };
     };
 
     return {
@@ -1048,5 +1083,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         isHost: isMeetingHost,
         polls,
         sendPollEvent,
+        emitMeetingEvent,
+        subscribeToRecordingStatus,
     };
 }

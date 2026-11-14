@@ -498,6 +498,15 @@ function DashboardOverview({
                 Saved items
                 <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
               </button>
+              <button
+  type="button"
+  onClick={() => navigate("/recordings")}
+  className="flex w-full items-center gap-3 rounded-xl border border-[#32658F] bg-[#244F76] px-3 py-3 text-left text-sm text-[#DCEAF7] transition hover:bg-[#2A5A83]"
+>
+  <FiVideo className="text-[#8CC4FF]" size={17} />
+  Meeting recordings
+  <FiArrowRight className="ml-auto text-[#A8C5DF]" size={15} />
+</button>
             </div>
           </div>
         </div>
