@@ -12,6 +12,7 @@ import {
   FaInfoCircle,
   FaComments,
   FaEllipsisV,
+  FaBuilding,
 } from "react-icons/fa";
 
 import {
@@ -27,7 +28,7 @@ import { createScopedMeeting } from "../../services/meetingService";
 import { SiGithub, SiJira } from "react-icons/si";
 import TeamGitHubBoard from "../../components/github/TeamGitHubBoard";
 import TeamJiraBoard from "../../components/jira/TeamJiraBoard";
-
+import VirtualOffice from "../../components/virtual-office/VirtualOffice";
 function getStoredUser() {
   for (const key of ["user", "currentUser", "authUser", "auth"]) {
     try {
@@ -595,12 +596,14 @@ useEffect(() => {
           {teamName}
         </h2>
         <p className="mt-0.5 text-xs text-sky-100/65">
-        {teamViewMode === "jira"
-  ? "Jira tickets & board"
-  : teamViewMode === "github"
-    ? "GitHub repository & development activity"
-    : "Team conversation"}
-        </p>
+  {teamViewMode === "virtual-office"
+    ? "Team virtual workspace"
+    : teamViewMode === "jira"
+      ? "Jira tickets & board"
+      : teamViewMode === "github"
+        ? "GitHub repository & development activity"
+        : "Team conversation"}
+</p>
       </div>
 
       <div className="flex items-center rounded-xl bg-black/25 p-1 border border-white/10 shrink-0">
@@ -639,6 +642,18 @@ useEffect(() => {
 >
   <SiGithub className="h-3.5 w-3.5" />
   <span>GitHub</span>
+</button>
+<button
+  type="button"
+  onClick={() => setTeamViewMode("virtual-office")}
+  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+    teamViewMode === "virtual-office"
+      ? "bg-[#0068FF] text-white shadow-sm"
+      : "text-white/70 hover:text-white"
+  }`}
+>
+  <FaBuilding className="h-3.5 w-3.5" />
+  <span>Virtual Office</span>
 </button>
       </div>
 
@@ -801,7 +816,15 @@ useEffect(() => {
       </div>
     )}
 
-{teamViewMode === "github" ? (
+{teamViewMode === "virtual-office" ? (
+  <VirtualOffice
+    teamId={teamId}
+    teamName={teamName}
+    socket={socket}
+    connected={connected}
+    enabled={teamViewMode === "virtual-office"}
+  />
+) : teamViewMode === "github" ? (
   <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
     <TeamGitHubBoard
       orgId={organizationId}
