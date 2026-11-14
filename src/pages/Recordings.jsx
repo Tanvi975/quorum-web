@@ -156,12 +156,12 @@ export default function Recordings() {
         transcriptText
       );
 
-      const generated =
-        result?.summary?.text ||
-        result?.summary ||
-        result?.data?.summary?.text ||
-        result?.data?.summary ||
-        "";
+     
+const generated =
+result?.data?.summary ||
+result?.summary ||
+"";
+
 
       setSummary(generated);
 

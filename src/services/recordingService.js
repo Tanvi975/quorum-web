@@ -30,14 +30,28 @@ export const completeRecording = async(recordingId, payload) => {
     return response.data ?.data ?? response.data;
 };
 
-export const generateRecordingSummary = async(recordingId, transcriptText = "") => {
-    const payload = transcriptText.trim() ? { transcriptText: transcriptText.trim() } : {};
+
+export const generateRecordingSummary = async(
+    recordingId,
+    transcriptText = "",
+    regenerate = false
+) => {
+    const payload = {
+        regenerate,
+    };
+
+    if (transcriptText.trim()) {
+        payload.transcriptText = transcriptText.trim();
+    }
+
     const response = await api.post(
-        `/api/recordings/${recordingId}/summarize`, payload
+        `/api/recordings/${recordingId}/summarize`,
+        payload
     );
 
     return response.data ?.data ?? response.data;
 };
+
 
 export const deleteRecording = async(recordingId) => {
     const response = await api.delete(`/api/recordings/${recordingId}`);
