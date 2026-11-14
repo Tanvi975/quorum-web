@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuorumMeeting } from "../hooks/useQuorumMeeting";
 import ConfirmDialog from "../components/ConfirmDialog";
 import ParticipantPanel from "../components/ParticipantPanel";
@@ -70,6 +70,7 @@ function getParticipantPhoto(person) {
 function VideoCall() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const meetingCode = searchParams.get("code");
   const meetingLink = new URL(
@@ -842,6 +843,7 @@ async function confirmEndMeeting() {
   onSendMessage={(content) => sendMessage(content)}
   meetingCode={meetingCode}
   meetingLink={meetingLink}
+  onOpenRecordings={() => navigate(`/meetings/${encodeURIComponent(meetingCode)}/recordings`)}
 />
         </div>
       </main>

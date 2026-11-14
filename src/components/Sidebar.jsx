@@ -9,14 +9,12 @@ import {
   FiGlobe,
   FiUser,
   FiBriefcase,
-  FiVideo,
 } from "react-icons/fi";
 import { SiGithub, SiJira } from "react-icons/si";
 
 const navigationItems = [
   { label: "Home", icon: FiHome, path: "/dashboard" },
   { label: "Calendar", icon: FiCalendar, path: "/calendar" },
-  { label: "Recordings", icon: FiVideo, path: "/recordings" },
   { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },

@@ -136,7 +136,6 @@ export default function Recordings() {
     }
   };
 
-  // Generate AI summary
   const createSummary = async () => {
     if (!selected?.id) return;
 
@@ -156,12 +155,10 @@ export default function Recordings() {
         transcriptText
       );
 
-     
-const generated =
-result?.data?.summary ||
-result?.summary ||
-"";
-
+      const generated =
+        result?.data?.summary ||
+        result?.summary ||
+        "";
 
       setSummary(generated);
 
@@ -216,7 +213,23 @@ result?.summary ||
   };
 
   return (
-    <main className="min-h-screen bg-[#0B1729] px-4 py-8 text-white sm:px-8">
+    <main
+      className="min-h-screen px-4 py-8 text-white sm:px-8"
+      style={{
+        backgroundColor: "#062C5F",
+        backgroundImage: `
+          linear-gradient(
+            to bottom,
+            #213F70 0%,
+            #315A8A 35%,
+            #506D9A 65%,
+            #7698C5 100%
+          )
+        `,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 100%",
+      }}
+    >
       <div className="mx-auto max-w-5xl">
 
         <button

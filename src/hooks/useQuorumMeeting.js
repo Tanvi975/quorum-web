@@ -1019,7 +1019,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         stopMedia();
         socket ?.disconnect();
         socketRef.current = null;
-        window.location.href = `/recordings?code=${encodeURIComponent(meetingCode)}`;
+        window.location.href = `/meetings/${encodeURIComponent(meetingCode)}/recordings`;
     };
 
     const emitMeetingEvent = (eventName, payload = {}) => {

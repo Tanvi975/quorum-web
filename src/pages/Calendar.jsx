@@ -536,6 +536,32 @@ function Calendar() {
 
     setCurrentMonth(new Date(eventYear, eventMonth - 1, 1));
   }
+  function getMeetingCode(event) {
+    if (event?.meetingCode) return String(event.meetingCode).trim();
+
+    const meetingLink = event?.meetingLink;
+    if (!meetingLink) return "";
+
+    try {
+      const url = new URL(meetingLink, window.location.origin);
+      return (
+        url.searchParams.get("code") ||
+        url.pathname.match(/\/(?:meet|meetings)\/([^/?#]+)/i)?.[1] ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  }
+
+  function canOpenRecording(event) {
+    const status = String(event?.status || event?.meetingStatus || "").toUpperCase();
+    if (["COMPLETED", "ENDED", "FINISHED"].includes(status)) return true;
+
+    const end = event?.endDate ? new Date(event.endDate) : null;
+    return Boolean(end && !Number.isNaN(end.getTime()) && end.getTime() < Date.now());
+  }
+
   function openMeeting(event) {
     if (!event.meetingLink) {
       selectEventDate(event);
@@ -854,6 +880,21 @@ function Calendar() {
                               <FiExternalLink className="h-3 w-3" />
                             )}
                           </button>
+
+                          {getMeetingCode(event) && canOpenRecording(event) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/meetings/${encodeURIComponent(getMeetingCode(event))}/recordings`
+                                )
+                              }
+                              className="inline-flex min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#38BDF8]/35 bg-[#0B3B68]/70 px-3 py-1.5 text-[11px] font-semibold text-[#C6EAFF] transition hover:bg-[#0B4D83]"
+                            >
+                              <FiVideo className="h-3 w-3" />
+                              Recordings
+                            </button>
+                          )}
 
                           <button
                             type="button"

@@ -71,6 +71,7 @@ export default function ParticipantPanel({
   onSendMessage = () => {},
   meetingCode = "",
   meetingLink = "",
+  onOpenRecordings = () => {},
 }) {
   const endRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -356,6 +357,21 @@ export default function ParticipantPanel({
             >
               <FiCopy size={15} />
               Copy meeting code
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-3">
+            <h3 className="text-sm font-semibold text-white">Meeting recordings</h3>
+            <p className="mt-1 text-xs leading-relaxed text-white/60">
+              Open recordings saved for this meeting, including instant and scheduled meetings.
+            </p>
+            <button
+              type="button"
+              onClick={onOpenRecordings}
+              disabled={!meetingCode}
+              className="mt-3 flex w-full items-center justify-center rounded-lg bg-[#0066FF] px-3 py-2.5 text-sm font-medium text-white transition hover:bg-[#0057DB] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              View meeting recordings
             </button>
           </div>
 

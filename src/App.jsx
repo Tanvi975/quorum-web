@@ -200,14 +200,11 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Keep old bookmarks working; recordings now live under a meeting. */}
           <Route
-  path="/recordings"
-  element={
-    <ProtectedRoute>
-      <Recordings />
-    </ProtectedRoute>
-  }
-/>
+            path="/recordings"
+            element={<Navigate to="/calendar" replace />}
+          />
           <Route
             path="/video-call"
             element={
@@ -229,6 +226,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MeetRedirect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meetings/:code/recordings"
+            element={
+              <ProtectedRoute>
+                <Recordings />
               </ProtectedRoute>
             }
           />
