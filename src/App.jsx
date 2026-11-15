@@ -200,7 +200,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* Keep old bookmarks working; recordings now live under a meeting. */}
           <Route
             path="/recordings"
             element={<Navigate to="/calendar" replace />}

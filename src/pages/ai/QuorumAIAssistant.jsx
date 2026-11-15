@@ -6,12 +6,15 @@ import {
   FiPlus,
   FiSend,
   FiArrowLeft,
+  FiMic,
+  FiMicOff,
 } from "react-icons/fi";
 const tabs = [
   { id: "chat", label: "AI Chat" },
   { id: "search", label: "Workspace Search" },
   { id: "project", label: "Project Assistance" },
   { id: "update", label: "Status Report" },
+  { id: "workflows", label: "Workflows" },
   { id: "history", label: "AI History" },
 ];
 
@@ -204,7 +207,13 @@ const fileInputRef = useRef(null);
   const [projectResult, setProjectResult] = useState(null);
   const [timeframe, setTimeframe] = useState("last_7_days");
   const [statusResult, setStatusResult] = useState(null);
-
+  const [workflowPrompt, setWorkflowPrompt] = useState("");
+  const [isListening, setIsListening] = useState(false);
+const speechRecognitionRef = useRef(null);
+const speechBaseTextRef = useRef("");
+const speechTranscriptRef = useRef("");
+  const [workflowPlan, setWorkflowPlan] = useState(null);
+  const [workflowResult, setWorkflowResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyCursor, setHistoryCursor] = useState("");
   const [nextCursor, setNextCursor] = useState(null);
@@ -224,6 +233,16 @@ const fileInputRef = useRef(null);
       loadHistory("", historyFilter);
     }
   }, [activeTab, historyFilter]);
+  useEffect(() => {
+    return () => {
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.onerror = null;
+        speechRecognitionRef.current.abort();
+      }
+    };
+  }, []);
 
   function runRequest(request) {
     setError("");
@@ -425,7 +444,166 @@ async function handleChat(event) {
       setStatusResult(response.data);
     });
   }
+  function startVoiceInput() {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+    if (!SpeechRecognition) {
+      setError(
+        "Voice input is not supported in this browser. Please use Google Chrome."
+      );
+      return;
+    }
+  
+    if (isListening) return;
+  
+    setError("");
+  
+    const recognition = new SpeechRecognition();
+  
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-IN";
+  
+    speechBaseTextRef.current = workflowPrompt.trim();
+    speechTranscriptRef.current = "";
+  
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+  
+    recognition.onresult = (event) => {
+      let newTranscript = "";
+  
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          newTranscript += event.results[i][0].transcript + " ";
+        }
+      }
+  
+      if (newTranscript) {
+        speechTranscriptRef.current += newTranscript;
+  
+        setWorkflowPrompt(
+          [speechBaseTextRef.current, speechTranscriptRef.current.trim()]
+            .filter(Boolean)
+            .join(" ")
+        );
+      }
+    };
+  
+    recognition.onerror = (event) => {
+      if (event.error !== "no-speech" && event.error !== "aborted") {
+        setError(`Voice input error: ${event.error}`);
+      }
+    };
+  
+    recognition.onend = () => {
+      setIsListening(false);
+      speechRecognitionRef.current = null;
+    };
+  
+    speechRecognitionRef.current = recognition;
+  
+    try {
+      recognition.start();
+    } catch (err) {
+      speechRecognitionRef.current = null;
+      setIsListening(false);
+      setError("Could not start microphone. Please try again.");
+    }
+  }
+  
+  function stopVoiceInput() {
+    speechRecognitionRef.current?.stop();
+  }
+async function handleCreateWorkflowPlan(event) {
+  event.preventDefault();
 
+  const text = workflowPrompt.trim();
+
+  if (!text || busy) return;
+
+  if (text.length > 10000) {
+    setError("Workflow command must be 10,000 characters or fewer.");
+    return;
+  }
+  const organizationId =
+    targetType === "organizationId" && targetId.trim()
+      ? targetId.trim()
+      : undefined;
+
+  setError("");
+  setBusy(true);
+  setWorkflowPlan(null);
+  setWorkflowResult(null);
+
+  try {
+    const response = await aiService.createWorkflowPlan(
+      text,
+      organizationId
+    );
+
+    const data = response.data?.data ?? response.data;
+
+    if (!data?.planId || !Array.isArray(data.steps)) {
+      throw new Error("The backend returned an invalid workflow plan.");
+    }
+
+    setWorkflowPlan(data);
+  } catch (err) {
+    setError(getErrorMessage(err));
+  } finally {
+    setBusy(false);
+  }
+}
+async function handleExecuteWorkflow() {
+  if (!workflowPlan?.planId || busy) return;
+
+  setError("");
+  setBusy(true);
+  setWorkflowResult(null);
+
+  try {
+    const response = await aiService.executeWorkflow(
+      workflowPlan.planId
+    );
+
+    const data = response.data?.data ?? response.data;
+
+    if (!data?.planId || !Array.isArray(data.results)) {
+      throw new Error("The backend returned an invalid execution result.");
+    }
+
+    setWorkflowResult(data);
+    setWorkflowPlan(null);
+  } catch (err) {
+    const status = err.response?.status;
+    const message = err.response?.data?.message;
+
+    if (status === 409) {
+      setError(
+        message ||
+          "This workflow is already being executed. Please wait and check the result."
+      );
+    } else if (status === 400) {
+      setError(
+        message ||
+          "This workflow plan is invalid, expired, or has already been executed. Generate a new plan."
+      );
+    } else {
+      setError(getErrorMessage(err));
+    }
+  } finally {
+    setBusy(false);
+  }
+}
+
+function handleDiscardWorkflowPlan() {
+  setWorkflowPlan(null);
+  setWorkflowResult(null);
+  setError("");
+}
   async function loadHistory(cursor = "", filter = historyFilter) {
     setError("");
     setHistoryLoading(true);
@@ -1081,7 +1259,326 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
             )}
           </section>
         )}
+{activeTab === "workflows" && (
+  <section className="min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-5 lg:p-6">
 
+    <SectionTitle
+      title="One-Command Work Execution"
+      subtitle="Describe multiple workplace actions in one command. Review the AI-generated plan before executing it."
+    />
+
+    {/* Command input */}
+    {!workflowPlan && !workflowResult && (
+      <form onSubmit={handleCreateWorkflowPlan} className="space-y-4">
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-white/90">
+            What would you like Quorum to do?
+          </label>
+
+          <textarea
+            value={workflowPrompt}
+            onChange={(event) => setWorkflowPrompt(event.target.value)}
+            maxLength={10000}
+            rows={5}
+            required
+            placeholder="Example: Create a Mobile Dev team with Alice and Bob, schedule a kickoff meeting tomorrow at 10 AM, share the Product Roadmap, and notify them."
+            className="w-full min-w-0 resize-y rounded-xl border border-white/25 bg-[#062C5F]/35 p-4 text-sm leading-6 text-white outline-none placeholder:text-white/50 focus:border-blue-300"
+          />
+<div className="mt-3 flex flex-wrap items-center gap-3">
+  <button
+    type="button"
+    onClick={isListening ? stopVoiceInput : startVoiceInput}
+    disabled={busy}
+    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+      isListening
+        ? "bg-red-500/20 text-red-200 border border-red-400/40"
+        : "bg-blue-500/20 text-blue-100 border border-blue-300/30 hover:bg-blue-500/30"
+    }`}
+  >
+    {isListening ? <FiMicOff size={17} /> : <FiMic size={17} />}
+
+    {isListening ? "Stop Listening" : "Speak to Ultron"}
+  </button>
+
+  <span className="text-xs text-white/65" role="status">
+    {isListening
+      ? "Listening... Speak your command."
+      : "Click the microphone and speak your command."}
+  </span>
+</div>
+          <p className="mt-2 text-right text-xs text-white/60">
+            {workflowPrompt.length}/10,000
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/15 bg-[#062C5F]/25 p-4">
+          <h3 className="text-sm font-medium text-white">
+            Organization context (optional)
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-white/65">
+            If you belong to multiple organizations, provide the Organization ID
+            to help the backend identify the correct workspace. Leave it empty
+            if you belong to only one organization.
+          </p>
+
+          <input
+            value={targetType === "organizationId" ? targetId : ""}
+            onChange={(event) => {
+              setTargetType("organizationId");
+              setTargetId(event.target.value);
+            }}
+            placeholder="Organization UUID (optional)"
+            className="mt-3 w-full min-w-0 rounded-lg border border-white/20 bg-[#062C5F]/40 p-3 text-sm text-white outline-none placeholder:text-white/45 focus:border-blue-300"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={busy || !workflowPrompt.trim()}
+          className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? "Creating plan..." : "Generate workflow plan"}
+        </button>
+
+        {busy && <Loading>AI is preparing your workflow plan...</Loading>}
+      </form>
+    )}
+
+    {/* Generated plan review */}
+    {workflowPlan && (
+      <div className="space-y-5">
+
+        <div className="rounded-xl border border-blue-300/25 bg-[#062C5F]/35 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold text-white">
+              Review your workflow
+            </h3>
+
+            <span className="rounded-full border border-blue-200/30 bg-blue-500/15 px-3 py-1 text-xs text-blue-100">
+              Awaiting confirmation
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm leading-6 text-white/85">
+            {workflowPlan.summary || "Review the proposed actions below."}
+          </p>
+
+          {workflowPlan.expiresAt && (
+            <p className="mt-3 text-xs text-amber-200">
+              Plan expires: {new Date(workflowPlan.expiresAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <h3 className="mb-3 font-semibold text-white">
+            Planned actions ({workflowPlan.steps.length})
+          </h3>
+
+          <div className="space-y-3">
+            {workflowPlan.steps.map((step, index) => (
+              <article
+                key={`${step.step ?? index}-${step.action}`}
+                className="rounded-xl border border-white/20 bg-[#062C5F]/30 p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-blue-200">
+                    Step {step.step ?? index + 1}
+                  </span>
+
+                  <span className="rounded bg-slate-800 px-2 py-1 text-xs text-blue-100">
+                    {step.action}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-white/90">
+                  {step.description || step.action}
+                </p>
+
+                {step.params && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-blue-200 hover:text-white">
+                      View action parameters
+                    </summary>
+
+                    <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-black/20 p-3 text-xs leading-5 text-white/75">
+                      {JSON.stringify(step.params, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-amber-300/20 bg-amber-950/20 p-4">
+          <p className="text-sm leading-6 text-amber-100/90">
+            Review all actions carefully. Clicking Confirm & Execute will send
+            the complete plan to the backend. Executed workflows cannot be
+            replayed.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleExecuteWorkflow}
+            disabled={busy || workflowPlan.steps.length === 0}
+            className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? "Executing workflow..." : "Confirm & Execute"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDiscardWorkflowPlan}
+            disabled={busy}
+            className="rounded-lg border border-white/25 px-5 py-3 text-sm text-white/85 transition hover:bg-white/10 disabled:opacity-50"
+          >
+            Discard plan
+          </button>
+        </div>
+
+        {busy && <Loading>Executing workflow. Please do not submit it again...</Loading>}
+      </div>
+    )}
+
+    {/* Execution audit trail */}
+    {workflowResult && (
+      <div className="space-y-5">
+
+        <div className="rounded-xl border border-white/20 bg-[#062C5F]/35 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold text-white">
+              Workflow execution report
+            </h3>
+
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                workflowResult.status === "COMPLETED"
+  ? "border border-green-300/30 bg-green-500/15 text-green-200"
+  : workflowResult.status === "PARTIALLY_COMPLETED"
+                  ? "border border-green-300/30 bg-green-500/15 text-green-200"
+                  : "border border-amber-300/30 bg-amber-500/15 text-amber-200"
+              }`}
+            >
+             {workflowResult.status === "COMPLETED"
+  ? "Completed"
+  : workflowResult.status === "PARTIALLY_COMPLETED"
+    ? "Partially Completed"
+    : workflowResult.status === "FAILED"
+      ? "Failed"
+      : workflowResult.status || "Unknown"}
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm leading-6 text-white/85">
+            {workflowResult.summary}
+          </p>
+
+          {workflowResult.executedAt && (
+            <p className="mt-2 text-xs text-white/60">
+              Executed: {new Date(workflowResult.executedAt).toLocaleString()}
+            </p>
+          )}
+
+          <p className="mt-2 break-all text-xs text-white/50">
+            Plan ID: {workflowResult.planId}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="mb-3 font-semibold text-white">
+            Execution results ({workflowResult.results.length})
+          </h3>
+          <div className="mb-4 flex flex-wrap gap-3 text-sm">
+  <span className="rounded-lg bg-green-500/15 px-3 py-2 text-green-200">
+    Successful: {workflowResult.results.filter((item) => item.success).length}
+  </span>
+
+  <span className="rounded-lg bg-red-500/15 px-3 py-2 text-red-200">
+    Failed: {workflowResult.results.filter((item) => item.success === false).length}
+  </span>
+</div>
+          <div className="space-y-3">
+            {workflowResult.results.map((result, index) => (
+              <article
+                key={`${result.step ?? index}-${result.action}`}
+                className="rounded-xl border border-white/20 bg-[#062C5F]/30 p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-blue-200">
+                    Step {result.step ?? index + 1} · {result.action}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      result.success
+                        ? "bg-green-500/15 text-green-200"
+                        : "bg-red-500/15 text-red-200"
+                    }`}
+                  >
+                    {result.success ? "Success" : "Failed"}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-white/85">
+                  {result.description || result.action}
+                </p>
+                {result.error && (
+  <div className="mt-3 rounded-lg border border-red-400/30 bg-red-950/30 p-3">
+    <p className="text-xs font-semibold text-red-200">
+      Failure reason
+    </p>
+    <p className="mt-1 break-words text-sm text-red-100/90">
+      {result.error}
+    </p>
+  </div>
+)}
+                {result.resource && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-blue-200 hover:text-white">
+                      View created resource details
+                    </summary>
+
+                    <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-black/20 p-3 text-xs leading-5 text-white/75">
+                      {JSON.stringify(result.resource, null, 2)}
+                    </pre>
+
+                    {result.resource.meetingLink && (
+                      <a
+                        href={result.resource.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block text-sm text-blue-200 underline hover:text-white"
+                      >
+                        Open meeting
+                      </a>
+                    )}
+                  </details>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setWorkflowResult(null);
+            setWorkflowPrompt("");
+            setError("");
+          }}
+          className="rounded-lg bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-5 py-3 text-sm font-medium text-white transition hover:brightness-110"
+        >
+          Create another workflow
+        </button>
+      </div>
+    )}
+  </section>
+)}
         {activeTab === "history" && (
          <section className="min-h-0 min-w-0 w-full flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/25 bg-white/10 p-3 shadow-[0_18px_40px_rgba(10,35,65,0.18)] backdrop-blur-md sm:p-5 lg:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">

@@ -25,7 +25,17 @@ export const aiService = {
         });
         return api.post(`${AI_BASE}/chat`, formData);
     },
+    createWorkflowPlan: (prompt, organizationId) =>
+        api.post(`${AI_BASE}/workflows/plan`, {
+            prompt,
+            ...(organizationId ? { organizationId } : {}),
+            autoExecute: false,
+        }),
 
+    executeWorkflow: (planId) =>
+        api.post(`${AI_BASE}/workflows/execute`, {
+            planId,
+        }),
     search: (query, limit = 15) =>
         api.post(`${AI_BASE}/search`, { query, limit }),
 
