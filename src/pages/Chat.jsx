@@ -490,6 +490,48 @@ if (requestedConversationId && !requestedConversation) {
     };
   }, [activeConversation?.id, activeConversation?.participants, currentUserId]);
   useEffect(() => {
+    const userIds = Array.from(
+      new Set([
+        ...conversations
+          .filter((conversation) => conversation?.type !== "group")
+          .map((conversation) =>
+            getUserId(getOtherParticipant(conversation, currentUserId))
+          ),
+        ...searchResults.map((person) => getUserId(person)),
+      ])
+    )
+      .filter(
+        (id) => id && String(id) !== String(currentUserId)
+      )
+      .map(String);
+  
+    if (!userIds.length) return;
+  
+    let cancelled = false;
+  
+    async function loadPresence() {
+      try {
+        const response = await getUsersPresence(userIds);
+        const presences = response?.data?.presences || {};
+  
+        if (!cancelled) {
+          setPresenceByUser((previous) => ({
+            ...previous,
+            ...presences,
+          }));
+        }
+      } catch (error) {
+        console.error("Unable to load sidebar presence:", error);
+      }
+    }
+  
+    loadPresence();
+  
+    return () => {
+      cancelled = true;
+    };
+  }, [conversations, searchResults, currentUserId]);
+  useEffect(() => {
     if (!search.trim() || !searchMode) {
       setSearchResults([]);
       setSearching(false);
@@ -1969,7 +2011,24 @@ const handleSaveConversation = async () => {
             onClick={() => openUserChat(person)}
              className="flex w-full items-center gap-2.5 rounded-md border border-transparent p-2 text-left hover:bg-white/10"
               >
-            <Avatar name={getUserName(person)} src={getAvatarUrl(person)} size={31} />
+           <div className="relative shrink-0">
+  <Avatar
+    name={getUserName(person)}
+    src={getAvatarUrl(person)}
+    size={31}
+  />
+
+  <div className="absolute bottom-0 right-0">
+    <PresenceBadge
+      status={
+        presenceByUser[String(getUserId(person))]?.isOnline
+          ? presenceByUser[String(getUserId(person))]?.status || "AVAILABLE"
+          : "OFFLINE"
+      }
+      size={12}
+    />
+  </div>
+</div>
              <div className="min-w-0 flex-1">
              <p className="truncate text-[11px] font-semibold text-white">
                {getUserName(person)}
@@ -2024,7 +2083,15 @@ const handleSaveConversation = async () => {
                  const active =
                   String(activeConversation?.id) ===
                   String(conversation.id);
-
+                  const otherParticipant = getOtherParticipant(
+                    conversation,
+                    currentUserId
+                  );
+                  
+                  const otherParticipantId = getUserId(otherParticipant);
+                  
+                  const conversationPresence =
+                    presenceByUser[String(otherParticipantId)];
                    return (
                   <button
                    type="button"
@@ -2049,15 +2116,30 @@ const handleSaveConversation = async () => {
                       : "border-transparent hover:bg-white/10"
                         }`}
                           >
-                          <Avatar
-  name={conversationName}
-  src={
-    conversation?.type === "group"
-      ? getAvatarUrl(conversation)
-      : getAvatarUrl(getOtherParticipant(conversation, currentUserId))
-  }
-  size={31}
-/>
+ <div className="relative shrink-0">
+  <Avatar
+    name={conversationName}
+    src={
+      conversation?.type === "group"
+        ? getAvatarUrl(conversation)
+        : getAvatarUrl(otherParticipant)
+    }
+    size={31}
+  />
+
+  {conversation?.type !== "group" && (
+    <div className="absolute bottom-0 right-0">
+      <PresenceBadge
+        status={
+          conversationPresence?.isOnline
+            ? conversationPresence?.status || "AVAILABLE"
+            : "OFFLINE"
+        }
+        size={11}
+      />
+    </div>
+  )}
+</div>
                             <div className="min-w-0 flex-1">
                            <div className="flex items-center justify-between gap-1">
                            <span className="truncate text-[11px] font-semibold text-white">
