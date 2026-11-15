@@ -36,7 +36,7 @@ export default function ContactInfoPanel({
   contact = {},
   name = "User",
   avatar = "",
-  presence = "Offline",
+  presence = {},
 }) {
   const profilePhoto =
   (typeof avatar === "string" && avatar) ||
@@ -48,6 +48,45 @@ export default function ContactInfoPanel({
   contact.profileImageUrl ||
   contact.photoUrl ||
   "";
+  const statusColors = {
+    AVAILABLE: "#22C55E",
+    BUSY: "#EF4444",
+    DO_NOT_DISTURB: "#DC2626",
+    BE_RIGHT_BACK: "#F59E0B",
+    AWAY: "#F59E0B",
+    OFFLINE: "#6B7280",
+  };
+
+  const statusLabels = {
+    AVAILABLE: "Available",
+    BUSY: "Busy",
+    DO_NOT_DISTURB: "Do Not Disturb",
+    BE_RIGHT_BACK: "Be Right Back",
+    AWAY: "Away",
+    OFFLINE: "Offline",
+  };
+
+  const presenceStatus =
+    typeof presence === "object"
+      ? presence.status || "OFFLINE"
+      : "OFFLINE";
+
+  const presenceText =
+    typeof presence === "object"
+      ? presence.isOnline
+        ? presence.statusMessage || statusLabels[presenceStatus]
+        : presence.lastSeen
+          ? `Last seen ${formatDate(presence.lastSeen, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}`
+          : "Offline"
+      : presence;
+
+  const presenceColor =
+    typeof presence === "object"
+      ? statusColors[presenceStatus] || "#6B7280"
+      : "#6B7280";
   const email = contact.email;
   const role = contact.role || contact.userRole;
 
@@ -77,25 +116,30 @@ export default function ContactInfoPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <div className="flex flex-col items-center border-b border-white/20 pb-5 text-center">
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#AAB5C5] text-xl font-semibold text-[#172A40]">
-        {profilePhoto ? (
-  <img
-    src={profilePhoto}
-    alt={`${name} profile`}
-    className="h-full w-full rounded-full object-cover"
+      <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#AAB5C5] text-xl font-semibold text-[#172A40]">
+  {profilePhoto ? (
+    <img
+      src={profilePhoto}
+      alt={`${name} profile`}
+      className="h-full w-full rounded-full object-cover"
+    />
+  ) : (
+    name.charAt(0).toUpperCase()
+  )}
+
+  <span
+    className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#172A40]"
+    style={{ backgroundColor: presenceColor }}
   />
-) : (
-  name.charAt(0).toUpperCase()
-)}
-        </div>
+</div>
 
         <h3 className="mt-3 break-words text-sm font-semibold text-white">
           {name}
         </h3>
 
         <p className="mt-1 text-[11px] text-white/65">
-          {presence}
-        </p>
+  {presenceText}
+</p>
       </div>
 
       <section>

@@ -18,7 +18,24 @@ import { getUpcomingEvents } from "../services/calendarService";
 import DashboardOverview from "../components/DashboardOverview";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { getProfile } from "../services/profileService";
+import {
+  updateUserStatus,
+  resetUserStatus,
+} from "../services/presenceService";
+const dashboardStatusOptions = [
+  { value: "AVAILABLE", label: "Available", color: "#22C55E" },
+  { value: "BUSY", label: "Busy", color: "#EF4444" },
+  { value: "DO_NOT_DISTURB", label: "Do Not Disturb", color: "#DC2626" },
+  { value: "BE_RIGHT_BACK", label: "Be Right Back", color: "#F59E0B" },
+  { value: "AWAY", label: "Appear Away", color: "#F59E0B" },
+];
 
+const dashboardStatusDurations = [
+  { label: "30 minutes", value: 30 },
+  { label: "1 hour", value: 60 },
+  { label: "4 hours", value: 240 },
+  { label: "Never", value: null },
+];
 function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(true);
@@ -52,6 +69,12 @@ useEffect(() => {
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+const [selectedStatus, setSelectedStatus] = useState("AVAILABLE");
+const [statusMessage, setStatusMessage] = useState("");
+const [statusDuration, setStatusDuration] = useState(60);
+const [savingStatus, setSavingStatus] = useState(false);
+const [statusError, setStatusError] = useState("");
   const profileMenuRef = useRef(null);
 
   const [creatingMeeting, setCreatingMeeting] = useState(false);
@@ -119,7 +142,59 @@ useEffect(() => {
       navigate("/login", { replace: true });
     }
   }
+  async function handleUpdateDashboardStatus() {
+    setSavingStatus(true);
+    setStatusError("");
   
+    try {
+      await updateUserStatus({
+        status: selectedStatus,
+        statusMessage: statusMessage.trim(),
+        clearAfterMinutes: statusDuration,
+      });
+  
+      setCurrentUser((previous) => ({
+        ...previous,
+        status: selectedStatus,
+        statusMessage: statusMessage.trim(),
+      }));
+  
+      setShowStatusPicker(false);
+    } catch (error) {
+      setStatusError(
+        error?.response?.data?.message || "Unable to update status."
+      );
+    } finally {
+      setSavingStatus(false);
+    }
+  }
+  
+  async function handleResetDashboardStatus() {
+    setSavingStatus(true);
+    setStatusError("");
+  
+    try {
+      await resetUserStatus();
+  
+      setSelectedStatus("AVAILABLE");
+      setStatusMessage("");
+      setStatusDuration(60);
+  
+      setCurrentUser((previous) => ({
+        ...previous,
+        status: "AVAILABLE",
+        statusMessage: "",
+      }));
+  
+      setShowStatusPicker(false);
+    } catch (error) {
+      setStatusError(
+        error?.response?.data?.message || "Unable to reset status."
+      );
+    } finally {
+      setSavingStatus(false);
+    }
+  }
 
   function handleJoinMeeting() {
     const code = meetingCode.trim();
@@ -199,7 +274,7 @@ useEffect(() => {
 </button>
 
     {profileMenuOpen && (
-      <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-xl border border-[#355574] bg-[#142B45] py-2 shadow-2xl shadow-black/40">
+     <div className="absolute right-0 top-12 z-50 w-72 overflow-hidden rounded-xl border border-[#355574] bg-[#142B45] py-2 shadow-2xl shadow-black/40">
         <div className="border-b border-[#355574] px-4 py-3">
           <p className="truncate text-sm font-semibold text-white">
             {userName}
@@ -207,6 +282,104 @@ useEffect(() => {
           <p className="mt-1 text-xs text-[#A9BED6]">
             My account
           </p>
+          <button
+  type="button"
+  onClick={() => setShowStatusPicker((open) => !open)}
+  className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#24476B]"
+>
+  <span
+    className="h-2.5 w-2.5 rounded-full"
+    style={{
+      backgroundColor:
+        dashboardStatusOptions.find(
+          (item) => item.value === selectedStatus
+        )?.color || "#22C55E",
+    }}
+  />
+  <span className="flex-1 text-sm text-white">
+    Set Status
+  </span>
+  <span className="text-xs text-[#A9BED6]">
+    {showStatusPicker ? "▲" : "▼"}
+  </span>
+</button>
+
+{showStatusPicker && (
+  <div className="border-y border-[#355574] px-4 py-3">
+    <div className="space-y-1">
+      {dashboardStatusOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => setSelectedStatus(option.value)}
+          className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-left text-sm ${
+            selectedStatus === option.value
+              ? "bg-[#24476B] text-white"
+              : "text-[#D8E7F8] hover:bg-[#24476B]"
+          }`}
+        >
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: option.color }}
+          />
+          {option.label}
+        </button>
+      ))}
+    </div>
+
+    <input
+      type="text"
+      maxLength={100}
+      value={statusMessage}
+      onChange={(event) => setStatusMessage(event.target.value)}
+      placeholder="What's your status?"
+      className="mt-3 w-full rounded-lg border border-[#355574] bg-[#0E2238] px-3 py-2 text-sm text-white outline-none placeholder:text-[#7891AD]"
+    />
+
+    <select
+      value={statusDuration === null ? "never" : statusDuration}
+      onChange={(event) =>
+        setStatusDuration(
+          event.target.value === "never"
+            ? null
+            : Number(event.target.value)
+        )
+      }
+      className="mt-3 w-full rounded-lg border border-[#355574] bg-[#0E2238] px-3 py-2 text-sm text-white"
+    >
+      {dashboardStatusDurations.map((item) => (
+        <option
+          key={item.label}
+          value={item.value === null ? "never" : item.value}
+        >
+          {item.label}
+        </option>
+      ))}
+    </select>
+
+    {statusError && (
+      <p className="mt-2 text-xs text-red-400">{statusError}</p>
+    )}
+
+    <button
+      type="button"
+      disabled={savingStatus}
+      onClick={handleUpdateDashboardStatus}
+      className="mt-3 w-full rounded-lg bg-[#2878D5] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+    >
+      {savingStatus ? "Updating..." : "Update Status"}
+    </button>
+
+    <button
+      type="button"
+      disabled={savingStatus}
+      onClick={handleResetDashboardStatus}
+      className="mt-2 w-full rounded-lg border border-[#355574] px-3 py-2 text-sm text-[#D8E7F8] disabled:opacity-50"
+    >
+      Reset to Default
+    </button>
+  </div>
+)}
         </div>
 
         <button

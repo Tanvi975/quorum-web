@@ -11,7 +11,6 @@ import {
   removeGroupParticipant,
   leaveGroupConversation,
   updateGroupConversation,
-  getConversationPresence,
   getVoiceUploadSignature,
   getChatUploadSignature,
   addMessageReaction,
@@ -23,6 +22,7 @@ import {
   createChatPoll,
   voteOnChatPoll,
 } from "../services/chatService";
+import { getUsersPresence } from "../services/presenceService";
 import {
   FiSearch,
   FiPlus,
@@ -294,14 +294,34 @@ const activeContactPresence = activeContactId
   ? presenceByUser[String(activeContactId)]
   : null;
 
-const activeContactStatus = activeContactPresence?.isOnline
-  ? "Online"
-  : activeContactPresence?.lastSeen
-    ? `Last seen ${new Date(activeContactPresence.lastSeen).toLocaleString([], {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })}`
-    : "Offline";
+  const statusLabels = {
+    AVAILABLE: "Available",
+    BUSY: "Busy",
+    DO_NOT_DISTURB: "Do Not Disturb",
+    BE_RIGHT_BACK: "Be Right Back",
+    AWAY: "Away",
+    OFFLINE: "Offline",
+  };
+  
+  const activeContactStatus = activeContactPresence?.isOnline
+    ? activeContactPresence?.statusMessage ||
+      statusLabels[activeContactPresence?.status] ||
+      "Available"
+    : activeContactPresence?.lastSeen
+      ? `Last seen ${new Date(activeContactPresence.lastSeen).toLocaleString([], {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}`
+      : "Offline";
+  
+  const activeContactStatusColor = {
+    AVAILABLE: "#22C55E",
+    BUSY: "#EF4444",
+    DO_NOT_DISTURB: "#DC2626",
+    BE_RIGHT_BACK: "#F59E0B",
+    AWAY: "#F59E0B",
+    OFFLINE: "#6B7280",
+  }[activeContactPresence?.status || "OFFLINE"];
     const activeIsGroup = activeConversation?.type === "group";
     const mentionUsers = activeIsGroup
   ? (activeConversation?.participants || [])
@@ -406,24 +426,38 @@ if (requestedConversationId && !requestedConversation) {
     loadConversations();
   }, [loadConversations]);
   useEffect(() => {
-    if (!activeConversation?.id || activeConversation.type === "group") {
-      return;
-    }
+    const participants = activeConversation?.participants || [];
+  
+    const userIds = [
+      ...new Set(
+        participants
+          .map((participant) => getUserId(getUser(participant)))
+          .filter(
+            (id) =>
+              id &&
+              String(id) !== String(currentUserId)
+          )
+          .map(String)
+      ),
+    ];
+  
+    if (!userIds.length) return;
   
     let cancelled = false;
   
     async function loadPresence() {
       try {
-        const result = await getConversationPresence(activeConversation.id);
+        const response = await getUsersPresence(userIds);
+        const presences = response?.data?.presences || {};
   
-        if (cancelled) return;
-  
-        setPresenceByUser((previous) => ({
-          ...previous,
-          ...(result?.presences || {}),
-        }));
-      } catch (err) {
-        console.error("Unable to load conversation presence:", err);
+        if (!cancelled) {
+          setPresenceByUser((previous) => ({
+            ...previous,
+            ...presences,
+          }));
+        }
+      } catch (error) {
+        console.error("Unable to load conversation presence:", error);
       }
     }
   
@@ -432,7 +466,7 @@ if (requestedConversationId && !requestedConversation) {
     return () => {
       cancelled = true;
     };
-  }, [activeConversation?.id, activeConversation?.type]);
+  }, [activeConversation?.id, activeConversation?.participants, currentUserId]);
   useEffect(() => {
     if (!search.trim() || !searchMode) {
       setSearchResults([]);
@@ -633,6 +667,7 @@ if (requestedConversationId && !requestedConversation) {
     setPresenceByUser((previous) => ({
       ...previous,
       [String(data.userId)]: {
+        ...previous[String(data.userId)],
         isOnline: true,
         lastSeen: null,
       },
@@ -645,12 +680,25 @@ if (requestedConversationId && !requestedConversation) {
     setPresenceByUser((previous) => ({
       ...previous,
       [String(data.userId)]: {
+        ...previous[String(data.userId)],
         isOnline: false,
         lastSeen: data.lastSeen || null,
       },
     }));
   };
+  const handlePresenceStatusUpdated = (data) => {
+    if (!data?.userId) return;
   
+    setPresenceByUser((previous) => ({
+      ...previous,
+      [String(data.userId)]: {
+        ...previous[String(data.userId)],
+        ...data,
+      },
+    }));
+  };
+  
+  socket.on("presence:status-updated", handlePresenceStatusUpdated);
   socket.on("presence:online", handlePresenceOnline);
   socket.on("presence:offline", handlePresenceOffline);
 
@@ -718,6 +766,7 @@ if (requestedConversationId && !requestedConversation) {
       socket.off("message:read", handleMessageRead);
       socket.off("presence:online", handlePresenceOnline);
       socket.off("presence:offline", handlePresenceOffline);
+      socket.off("presence:status-updated", handlePresenceStatusUpdated);
       socket.off("typing:start", handleTypingStart);
       socket.off("typing:stop", handleTypingStop);
       socket.off("message:reaction_updated", handleReactionUpdated);
@@ -2061,15 +2110,14 @@ const handleSaveConversation = async () => {
                    {activeConversationName}
                    </h2>
                    <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/75">
-  <span
-className={`h-1.5 w-1.5 rounded-full ${
-  activeIsGroup
-    ? "bg-[#38BDF8]"
-    : activeContactPresence?.isOnline
-      ? "bg-[#22C55E]"
-      : "bg-[#7D8C9D]"
-}`}
-  />
+                   <span
+  className="h-1.5 w-1.5 rounded-full"
+  style={{
+    backgroundColor: activeIsGroup
+      ? "#38BDF8"
+      : activeContactStatusColor,
+  }}
+/>
   {activeIsGroup
     ? `Group · ${activeConversation?.participants?.length || 0} members`
     : activeContactStatus}
@@ -2637,12 +2685,12 @@ className={`h-1.5 w-1.5 rounded-full ${
         </button>
       </div>
 ) : (
-  <ContactInfoPanel
-    contact={activeContact}
-    name={getUserName(activeContact)}
-    avatar={getAvatarUrl(activeContact)}
-    presence={activeContactStatus}
-  />
+<ContactInfoPanel
+  contact={activeContact}
+  name={getUserName(activeContact)}
+  avatar={getAvatarUrl(activeContact)}
+  presence={activeContactPresence || {}}
+/>
 )}
   </aside>
 )}
