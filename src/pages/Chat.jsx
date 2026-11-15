@@ -23,6 +23,7 @@ import {
   voteOnChatPoll,
 } from "../services/chatService";
 import { getUsersPresence } from "../services/presenceService";
+import PresenceBadge from "../components/common/PresenceBadge";
 import {
   FiSearch,
   FiPlus,
@@ -288,12 +289,33 @@ const [previewFile, setPreviewFile] = useState(null);
   ? getOtherParticipant(activeConversation, currentUserId)
   : {};
 
-const activeContactId = getUserId(activeContact);
+  const activeContactId = getUserId(activeContact);
 
-const activeContactPresence = activeContactId
-  ? presenceByUser[String(activeContactId)]
-  : null;
-
+  const activeContactPresence = activeContactId
+    ? presenceByUser[String(activeContactId)]
+    : null;
+  
+  const activeIsGroup = activeConversation?.type === "group";
+  
+  const onlineMembers = (activeConversation?.participants || []).filter(
+    (participant) => {
+      const person = getUser(participant);
+      const userId = participant?.userId || getUserId(person);
+  
+      if (!userId || String(userId) === String(currentUserId)) {
+        return false;
+      }
+  
+      return presenceByUser[String(userId)]?.isOnline === true;
+    }
+  );
+  
+  const onlineMemberCount = activeIsGroup
+    ? onlineMembers.length
+    : activeContactPresence?.isOnline
+      ? 1
+      : 0;
+  
   const statusLabels = {
     AVAILABLE: "Available",
     BUSY: "Busy",
@@ -322,19 +344,19 @@ const activeContactPresence = activeContactId
     AWAY: "#F59E0B",
     OFFLINE: "#6B7280",
   }[activeContactPresence?.status || "OFFLINE"];
-    const activeIsGroup = activeConversation?.type === "group";
-    const mentionUsers = activeIsGroup
-  ? (activeConversation?.participants || [])
-      .map((participant) => ({
-        ...getUser(participant),
-        id: participant?.userId || getUserId(getUser(participant)),
-      }))
-      .filter(
-        (person) =>
-          person.id &&
-          String(person.id) !== String(currentUserId)
-      )
-  : [];
+  
+  const mentionUsers = activeIsGroup
+    ? (activeConversation?.participants || [])
+        .map((participant) => ({
+          ...getUser(participant),
+          id: participant?.userId || getUserId(getUser(participant)),
+        }))
+        .filter(
+          (person) =>
+            person.id &&
+            String(person.id) !== String(currentUserId)
+        )
+    : [];
 
 const filteredMentionUsers =
   mentionQuery !== null
@@ -2118,9 +2140,18 @@ const handleSaveConversation = async () => {
       : activeContactStatusColor,
   }}
 />
-  {activeIsGroup
-    ? `Group · ${activeConversation?.participants?.length || 0} members`
-    : activeContactStatus}
+{activeIsGroup
+  ? `Group · ${activeConversation?.participants?.length || 0} members`
+  : activeContactStatus}
+
+<button
+  type="button"
+  onClick={() => setShowInfo(true)}
+  className="ml-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-medium text-emerald-300 transition hover:bg-emerald-400/20"
+  title="View online members"
+>
+  {onlineMemberCount} online
+</button>
 </p>
                     </div>
                   </div>
@@ -2220,14 +2251,39 @@ const handleSaveConversation = async () => {
                       );
                       const senderName = getUserName(item.sender);
                       const senderAvatar = getAvatarUrl(item.sender);
+                      const senderPresenceId = String(
+                        item.senderId || getUserId(item.sender) || ""
+                      );
+                      
+                      const senderPresence = presenceByUser[senderPresenceId] || {};
+                      const senderIsOnline = senderPresence.isOnline === true;
+                      
+                      const senderPresenceColor = senderIsOnline
+                        ? {
+                            AVAILABLE: "#22C55E",
+                            BUSY: "#EF4444",
+                            DO_NOT_DISTURB: "#DC2626",
+                            BE_RIGHT_BACK: "#F59E0B",
+                            AWAY: "#F59E0B",
+                          }[senderPresence.status] || "#22C55E"
+                        : "#6B7280";
                       return (
                         <div key={messageId || item.clientMessageId || index} ref={(node) => { if (messageId) messageElementRefs.current[String(messageId)] = node; }} className={`flex w-full items-end gap-2 ${item.mine ? "justify-end" : "justify-start"}`}>
                           {!item.mine && (
-                            <div className="w-8 shrink-0">
-                              {showSenderAvatar && (
-                                <Avatar name={senderName} src={senderAvatar} size={30} />
-                              )}
-                            </div>
+                           <div className="w-8 shrink-0">
+                           {showSenderAvatar && (
+                             <div className="relative inline-flex">
+                               <Avatar name={senderName} src={senderAvatar} size={30} />
+                         
+                               <div className="absolute bottom-0 right-0">
+  <PresenceBadge
+    status={senderIsOnline ? senderPresence.status || "AVAILABLE" : "OFFLINE"}
+    size={12}
+  />
+</div>
+                             </div>
+                           )}
+                         </div>
                           )}
                           <div className={`group relative max-w-[92%] break-words rounded-2xl px-3 py-2.5 shadow-md sm:max-w-[75%] sm:px-4 ${item.mine ? "rounded-br-md border border-[#1267B6] bg-[#1A3048] text-white" : "rounded-bl-md border border-white/20 bg-[#1A3048] text-[#E4ECF5]"}`}>
                             {activeIsGroup && !item.mine && showSenderAvatar && (
@@ -2591,6 +2647,29 @@ const handleSaveConversation = async () => {
             const person = getUser(participant);
             const userId = participant?.userId || getUserId(person);
             const isCurrentUser = String(userId) === String(currentUserId);
+            const memberPresence = presenceByUser[String(userId)] || {};
+const memberOnline = memberPresence.isOnline === true;
+
+const memberStatusText = memberOnline
+  ? memberPresence.statusMessage ||
+    statusLabels[memberPresence.status] ||
+    "Available"
+  : memberPresence.lastSeen
+    ? `Last seen ${new Date(memberPresence.lastSeen).toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}`
+    : "Offline";
+
+const memberStatusColor = memberOnline
+  ? {
+      AVAILABLE: "#22C55E",
+      BUSY: "#EF4444",
+      DO_NOT_DISTURB: "#DC2626",
+      BE_RIGHT_BACK: "#F59E0B",
+      AWAY: "#F59E0B",
+    }[memberPresence.status] || "#22C55E"
+  : "#6B7280";
             const isTargetOwner =
             Boolean(activeConversation?.ownerId) &&
             String(activeConversation.ownerId) === String(userId);
@@ -2603,7 +2682,14 @@ const handleSaveConversation = async () => {
                 className="mb-3 rounded-md bg-white/10 p-2"
               >
                 <div className="flex items-center gap-2">
-                  <Avatar name={getUserName(person)} size={28} />
+                <div className="relative shrink-0">
+  <Avatar name={getUserName(person)} src={getAvatarUrl(person)} size={28} />
+  <span
+    className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#102842]"
+    style={{ backgroundColor: memberStatusColor }}
+    title={memberOnline ? memberStatusText : "Offline"}
+  />
+</div>
                   <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                       <p className="truncate text-[11px] text-white">
@@ -2617,12 +2703,16 @@ const handleSaveConversation = async () => {
                       )}
                     </div>
                     <p className="text-[10px] text-white/70">
-                    {isTargetOwner
-                        ? "Group Owner"
-                        : isTargetAdmin
-                          ? "Admin"
-                          : "Member"}
-                    </p>
+  {isTargetOwner
+    ? "Group Owner"
+    : isTargetAdmin
+      ? "Admin"
+      : "Member"}
+  <span className="mx-1">·</span>
+  <span style={{ color: memberStatusColor }}>
+    {memberStatusText}
+  </span>
+</p>
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import React from "react";
-
+import PresenceBadge from "../common/PresenceBadge";
 const USE_CASE_LABELS = {
   ORGANIZATION: "Organization",
   FREELANCE: "Freelance",
@@ -48,45 +48,32 @@ export default function ContactInfoPanel({
   contact.profileImageUrl ||
   contact.photoUrl ||
   "";
-  const statusColors = {
-    AVAILABLE: "#22C55E",
-    BUSY: "#EF4444",
-    DO_NOT_DISTURB: "#DC2626",
-    BE_RIGHT_BACK: "#F59E0B",
-    AWAY: "#F59E0B",
-    OFFLINE: "#6B7280",
-  };
-
-  const statusLabels = {
-    AVAILABLE: "Available",
-    BUSY: "Busy",
-    DO_NOT_DISTURB: "Do Not Disturb",
-    BE_RIGHT_BACK: "Be Right Back",
-    AWAY: "Away",
-    OFFLINE: "Offline",
-  };
-
   const presenceStatus =
-    typeof presence === "object"
-      ? presence.status || "OFFLINE"
-      : "OFFLINE";
+  typeof presence === "object"
+    ? presence.isOnline
+      ? presence.status || "AVAILABLE"
+      : "OFFLINE"
+    : "OFFLINE";
 
-  const presenceText =
-    typeof presence === "object"
-      ? presence.isOnline
-        ? presence.statusMessage || statusLabels[presenceStatus]
-        : presence.lastSeen
-          ? `Last seen ${formatDate(presence.lastSeen, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}`
-          : "Offline"
-      : presence;
+const presenceText =
+  typeof presence === "object"
+    ? presence.isOnline
+      ? presence.statusMessage || (
+          presenceStatus === "DO_NOT_DISTURB"
+            ? "Do Not Disturb"
+            : presenceStatus === "BE_RIGHT_BACK"
+              ? "Be Right Back"
+              : presenceStatus.charAt(0) +
+                presenceStatus.slice(1).toLowerCase()
+        )
+      : presence.lastSeen
+        ? `Last seen ${formatDate(presence.lastSeen, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}`
+        : "Offline"
+    : "Offline";
 
-  const presenceColor =
-    typeof presence === "object"
-      ? statusColors[presenceStatus] || "#6B7280"
-      : "#6B7280";
   const email = contact.email;
   const role = contact.role || contact.userRole;
 
@@ -127,10 +114,12 @@ export default function ContactInfoPanel({
     name.charAt(0).toUpperCase()
   )}
 
-  <span
-    className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-[#172A40]"
-    style={{ backgroundColor: presenceColor }}
+<div className="absolute bottom-0 right-0">
+  <PresenceBadge
+    status={presenceStatus}
+    size={16}
   />
+</div>
 </div>
 
         <h3 className="mt-3 break-words text-sm font-semibold text-white">
