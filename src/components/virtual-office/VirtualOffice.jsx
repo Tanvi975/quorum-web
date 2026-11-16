@@ -64,6 +64,7 @@ const C = {
   presenceAvailable: "#22C55E",
   presenceBusy:  "#EF4444",
   presenceAway:  "#FBBF24",
+  presenceDnd:   "#A855F7",
   presenceOff:   "#9EA3AE",
   tileBorder:    "rgba(255,255,255,0.133)",
   live: "#22C55E",
@@ -72,9 +73,9 @@ const C = {
 function presenceColor(p) {
   switch ((p || "").toUpperCase()) {
     case "AVAILABLE": return C.presenceAvailable;
-    case "BUSY":
-    case "DO_NOT_DISTURB": return C.presenceBusy;
-    case "AWAY":
+    case "BUSY": return C.presenceBusy;
+    case "DO_NOT_DISTURB": return C.presenceDnd;
+    case "AWAY": return C.presenceAway;
     case "BE_RIGHT_BACK": return C.presenceAway;
     case "OFFLINE": return C.presenceOff;
     default: return C.presenceAvailable;
@@ -90,6 +91,16 @@ function presenceLabel(p) {
     case "DO_NOT_DISTURB": return "Do not disturb";
     case "OFFLINE": return "Offline";
     default: return "Active";
+  }
+}
+
+function presenceEmoji(p) {
+  switch ((p || "").toUpperCase()) {
+    case "BUSY": return "🎧";
+    case "DO_NOT_DISTURB": return "⛔";
+    case "BE_RIGHT_BACK": return "☕";
+    case "AWAY": return "💤";
+    default: return null;
   }
 }
 
@@ -388,22 +399,17 @@ function KnockToast({ data, onDismiss }) {
     const t = setTimeout(onDismiss, 12000);
     return () => clearTimeout(t);
   }, [data, onDismiss]);
-
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 p-4 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl text-white max-w-sm">
-      <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold">
-        {(data.senderName || "?").charAt(0).toUpperCase()}
+    <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900 p-4 text-white shadow-2xl" style={{ maxWidth: 340 }}>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold">
+        {initials(data.senderName)}
       </div>
-      <div className="flex-1">
-        <div className="font-semibold text-sm">🚪 {data.senderName} knocked on your desk</div>
-        {data.message && <div className="text-xs text-slate-400 mt-0.5">{data.message}</div>}
-        <div className="flex gap-2 mt-2">
-          <button onClick={onDismiss} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-semibold">
-            Reply in chat
-          </button>
-          <button onClick={onDismiss} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs">
-            Dismiss
-          </button>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold">🚪 {data.senderName} knocked on your desk</div>
+        {data.message && <div className="mt-0.5 text-xs text-slate-400">{data.message}</div>}
+        <div className="mt-2 flex gap-2">
+          <button onClick={onDismiss} className="rounded bg-indigo-600 px-3 py-1 text-xs font-semibold hover:bg-indigo-500">Reply in chat</button>
+          <button onClick={onDismiss} className="rounded bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700">Dismiss</button>
         </div>
       </div>
     </div>
@@ -421,18 +427,17 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     error,
     socketError,
     actionLoading,
+    knockNotification,
     refreshFloor,
     claimDesk,
     changeZone,
     knockOnDesk,
-    knockNotification,
     dismissKnock,
   } = useVirtualOffice({ teamId, socket, connected, enabled });
 
   const members = floorState?.members || {};
   const membersList = useMemo(() => Object.values(members), [members]);
   const desks = floorState?.desks || [];
-  const counts = floorState?.counts || {};
   const activeMeetingCode = floorState?.activeMeetingCode;
   const warLive = Boolean(activeMeetingCode);
 
@@ -443,7 +448,6 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
   const warM = inZone("WAR_ROOM");
   const coffeeM = inZone("COFFEE_LOUNGE");
   const focusM = inZone("FOCUS_POD");
-  const openM = inZone("OPEN_WORKSPACE");
 
   const deskRects = useMemo(() => computeDeskRects(desks.length), [desks.length]);
 
@@ -456,6 +460,20 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     return m ? presenceColor(m.presenceStatus) : null;
   });
   const mineDesk = sortedDesks.findIndex((d) => d.occupiedByUserId === currentUserId);
+
+  // Dedupe: one row per userId (hides phantom duplicate desks)
+  const uniqueOccupiedDesks = useMemo(() => {
+    const seen = new Set();
+    const rows = [];
+    for (const d of sortedDesks) {
+      if (!d.occupiedByUserId || seen.has(d.occupiedByUserId)) continue;
+      seen.add(d.occupiedByUserId);
+      rows.push(d);
+    }
+    return rows;
+  }, [sortedDesks]);
+  const realOccupiedCount = uniqueOccupiedDesks.length;
+  const realFreeCount = Math.max(0, desks.length - realOccupiedCount);
 
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
@@ -535,59 +553,73 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     return makeIso(w / 2, top, tw, th, unit);
   }, [size]);
 
-  const avatarSize = Math.max(20, Math.min(30, size.tw * 0.68));
+  const avatarSize = Math.max(22, Math.min(32, size.tw * 0.72));
 
-  const avatars = [];
-  const placed = new Set();
-
-  function placeInSlots(list, slots, z) {
-    for (let i = 0; i < list.length && i < slots.length; i++) {
-      const m = list[i];
-      const [px, py] = iso.p(slots[i][0], slots[i][1], z);
-      avatars.push({
-        userId: m.userId,
-        left: px - avatarSize / 2,
-        top:  py - avatarSize - 6,
-        member: m,
-        label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
-      });
-      placed.add(m.userId);
-    }
-  }
-  placeInSlots(warM,    WAR_SLOTS,    0);
-  placeInSlots(coffeeM, COFFEE_SLOTS, 0);
-  placeInSlots(focusM,  POD_CENTERS.map(([x, y]) => [x, y + 0.2]), 0.06);
-
-  const seated = new Set();
-  sortedDesks.forEach((d, i) => {
-    const m = d.occupiedByUserId ? members[d.occupiedByUserId] : null;
-    if (m && m.zoneId === "OPEN_WORKSPACE") {
-      const r = deskRects[i];
-      const [px, py] = iso.p(r.left + r.width / 2, r.top + r.height + 0.2, 0.15);
-      avatars.push({
-        userId: m.userId,
-        left: px - avatarSize / 2,
-        top:  py - avatarSize - 6,
-        member: m,
-        label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
-      });
-      seated.add(m.userId);
-      placed.add(m.userId);
-    }
-  });
-  openM.filter((m) => !seated.has(m.userId)).slice(0, 5).forEach((m, i) => {
-    const [px, py] = iso.p(5.8 + i * 0.9, 5.1);
-    avatars.push({
-      userId: m.userId,
-      left: px - avatarSize / 2,
-      top:  py - avatarSize - 6,
-      member: m,
-      label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
+  // Presence-driven avatar placement (overrides backend zone with presence spec)
+  const avatars = useMemo(() => {
+    const out = [];
+    const seen = new Set();
+    const deskByUser = {};
+    sortedDesks.forEach((d, i) => {
+      if (d.occupiedByUserId) deskByUser[d.occupiedByUserId] = { desk: d, idx: i };
     });
-    placed.add(m.userId);
-  });
+    let coffeeIdx = 0, focusIdx = 0, warIdx = 0, strayIdx = 0;
 
-  avatars.sort((a, b) => a.top - b.top);
+    const push = (m, wx, wy, z, dim) => {
+      if (seen.has(m.userId)) return;
+      seen.add(m.userId);
+      const [px, py] = iso.p(wx, wy, z);
+      out.push({
+        userId: m.userId,
+        left: px - avatarSize / 2,
+        top: py - avatarSize - 6,
+        member: m,
+        dim,
+        label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
+      });
+    };
+
+    membersList.forEach((m) => {
+      const presence = (m.presenceStatus || "OFFLINE").toUpperCase();
+      if (presence === "OFFLINE") return;
+
+      let effZone = m.zoneId;
+      if (presence === "DO_NOT_DISTURB") effZone = "FOCUS_POD";
+      else if (presence === "BE_RIGHT_BACK") effZone = "COFFEE_LOUNGE";
+      else if (presence === "BUSY" || presence === "AVAILABLE" || presence === "AWAY") {
+        effZone = "OPEN_WORKSPACE";
+      }
+
+      if (effZone === "OPEN_WORKSPACE") {
+        const dk = deskByUser[m.userId];
+        if (dk) {
+          const r = deskRects[dk.idx];
+          let cx = r.left + r.width / 2;
+          let cy = r.top + r.height + 0.2;
+          if (presence === "AWAY") { cx += 0.4; cy += 0.4; }
+          push(m, cx, cy, 0.15, presence === "AWAY" ? 0.5 : 1);
+        } else {
+          push(m, 6.0 + (strayIdx % 4) * 0.9, 9.3, 0, 1);
+          strayIdx++;
+        }
+      } else if (effZone === "COFFEE_LOUNGE") {
+        const [cx, cy] = COFFEE_SLOTS[coffeeIdx % COFFEE_SLOTS.length];
+        coffeeIdx++;
+        push(m, cx, cy, 0, 1);
+      } else if (effZone === "FOCUS_POD") {
+        const [cx, cy] = POD_CENTERS[focusIdx % POD_CENTERS.length];
+        focusIdx++;
+        push(m, cx, cy + 0.2, 0.06, 1);
+      } else if (effZone === "WAR_ROOM") {
+        const [cx, cy] = WAR_SLOTS[warIdx % WAR_SLOTS.length];
+        warIdx++;
+        push(m, cx, cy, 0, 1);
+      }
+    });
+
+    out.sort((a, b) => a.top - b.top);
+    return out;
+  }, [membersList, sortedDesks, deskRects, iso, avatarSize, currentUserId]);
 
   const labels = [
     { text: warLive ? "Meeting Room · LIVE" : (warM.length ? `Meeting Room · ${warM.length}` : "Meeting Room"), pos: iso.p(2.5, 0, 0.3) },
@@ -616,15 +648,12 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     );
   }
 
-  const openDesks = desks.filter((d) => d.status === "EMPTY" || !d.occupiedByUserId);
-  const occupiedDesks = desks.filter((d) => d.status !== "EMPTY" && d.occupiedByUserId);
-  const padLeft = Math.max(10, 10);
-
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 text-white sm:p-5">
       {knockNotification && (
         <KnockToast data={knockNotification} onDismiss={dismissKnock} />
       )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-bold sm:text-xl">Virtual Office</h2>
@@ -663,9 +692,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
         <section className="min-w-0">
           <div
             className="rounded-3xl border border-white/10 p-3 shadow-2xl"
-            style={{
-              background: "linear-gradient(180deg,#222E50 0%,#151C33 100%)",
-            }}
+            style={{ background: "linear-gradient(180deg,#222E50 0%,#151C33 100%)" }}
           >
             <div className="mb-2 flex items-center justify-between px-2">
               <div>
@@ -681,7 +708,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
               </div>
               <div className="hidden gap-2 sm:flex">
                 <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center">
-                  <div className="text-base font-bold text-white">{openDesks.length}</div>
+                  <div className="text-base font-bold text-white">{realFreeCount}</div>
                   <div className="text-[10px] text-sky-100/60">Desks Free</div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center">
@@ -726,12 +753,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                         : `Desk ${desk.deskNumber} · Free`
                     }
                     className="absolute cursor-pointer border-0 bg-transparent p-0"
-                    style={{
-                      left: cx - w / 2,
-                      top:  cy - h * 0.65,
-                      width: w,
-                      height: h,
-                    }}
+                    style={{ left: cx - w / 2, top: cy - h * 0.65, width: w, height: h }}
                   />
                 );
               })}
@@ -742,10 +764,8 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                 { zone: "FOCUS_POD",     rect: FOCUS_RECT },
               ].map(({ zone, rect }) => {
                 const corners = [
-                  iso.p(rect.l, rect.t),
-                  iso.p(rect.r, rect.t),
-                  iso.p(rect.r, rect.b),
-                  iso.p(rect.l, rect.b),
+                  iso.p(rect.l, rect.t), iso.p(rect.r, rect.t),
+                  iso.p(rect.r, rect.b), iso.p(rect.l, rect.b),
                 ];
                 const xs = corners.map((p) => p[0]);
                 const ys = corners.map((p) => p[1]);
@@ -759,13 +779,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                     disabled={actionLoading || !connected}
                     title={zone.replace("_", " ")}
                     className="absolute cursor-pointer border-0 bg-transparent p-0"
-                    style={{
-                      left: x1,
-                      top: y1,
-                      width: x2 - x1,
-                      height: y2 - y1,
-                      zIndex: 1,
-                    }}
+                    style={{ left: x1, top: y1, width: x2 - x1, height: y2 - y1, zIndex: 1 }}
                   />
                 );
               })}
@@ -775,11 +789,8 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                   key={i}
                   className="pointer-events-none absolute text-center font-bold text-white"
                   style={{
-                    left: l.pos[0] - 70,
-                    top:  l.pos[1] - 7,
-                    width: 140,
-                    fontSize: 10,
-                    letterSpacing: 0.3,
+                    left: l.pos[0] - 70, top: l.pos[1] - 7, width: 140,
+                    fontSize: 10, letterSpacing: 0.3,
                     textShadow: "0 0 4px rgba(0,0,0,0.6)",
                   }}
                 >
@@ -787,74 +798,69 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                 </div>
               ))}
 
-              {membersList.map((m) => {
-                const presence = m.presenceStatus || "OFFLINE";
-                if (presence === "OFFLINE") return null;
-
-                let effZone = m.zoneId;
-                if (presence === "DO_NOT_DISTURB") effZone = "FOCUS_POD";
-                else if (presence === "BE_RIGHT_BACK") effZone = "COFFEE_LOUNGE";
-                else if (["BUSY", "AVAILABLE", "AWAY"].includes(presence)) effZone = "OPEN_WORKSPACE";
-
-                let wx, wy;
-                if (effZone === "OPEN_WORKSPACE") {
-                  const desk = desks.find((d) => d.occupiedByUserId === m.userId);
-                  if (desk) {
-                    const idx = desk.deskNumber - 1;
-                    const row = Math.floor(idx / 3), col = idx % 3;
-                    wx = 5.8 + col * 1.3;
-                    wy = 5.8 + row * 1.0;
-                  } else { wx = 7.5; wy = 7.5; }
-                  if (presence === "AWAY") { wx += 0.6; wy += 0.6; }
-                } else if (effZone === "COFFEE_LOUNGE") {
-                  const slots = [[6.5, 2.0], [7.8, 2.5], [8.8, 3.2], [6.8, 3.5], [8.0, 1.5]];
-                  const idx = membersList
-                    .filter((x) => x.presenceStatus === "BE_RIGHT_BACK")
-                    .findIndex((x) => x.userId === m.userId);
-                  [wx, wy] = slots[(idx >= 0 ? idx : 0) % slots.length];
-                } else if (effZone === "FOCUS_POD") {
-                  const pods = [[1.5, 6.6], [3.5, 6.6], [1.5, 8.6], [3.5, 8.6]];
-                  const idx = membersList
-                    .filter((x) => x.presenceStatus === "DO_NOT_DISTURB")
-                    .findIndex((x) => x.userId === m.userId);
-                  [wx, wy] = pods[(idx >= 0 ? idx : 0) % pods.length];
-                } else if (effZone === "WAR_ROOM") {
-                  const slots = [[1.0, 2.4], [2.0, 1.2], [3.5, 1.5], [3.8, 2.8], [2.5, 3.5], [1.2, 3.2]];
-                  const idx = membersList
-                    .filter((x) => x.zoneId === "WAR_ROOM" && x.isInMeeting)
-                    .findIndex((x) => x.userId === m.userId);
-                  [wx, wy] = slots[(idx >= 0 ? idx : 0) % slots.length];
-                } else return null;
-
-                const [px, py] = iso.p(wx, wy, 0.45);
-                const ring =
-                  presence === "AVAILABLE" ? "#22C55E" :
-                  presence === "BUSY" ? "#EF4444" :
-                  presence === "AWAY" ? "#FBBF24" :
-                  presence === "BE_RIGHT_BACK" ? "#FBBF24" :
-                  presence === "DO_NOT_DISTURB" ? "#A855F7" : "#6B7280";
-                const dim = presence === "AWAY" ? 0.5 : 1;
-                const isMe = m.userId === currentUserId;
-
+              {avatars.map((a) => {
+                const isSelf = a.userId === currentUserId;
+                const presence = a.member.presenceStatus;
+                const ring = presenceColor(presence);
+                const emoji = presenceEmoji(presence);
                 return (
                   <div
-                    key={m.userId}
-                    onClick={() => !isMe && knockOnDesk(m.userId, "")}
-                    className={`absolute pointer-events-auto flex flex-col items-center ${!isMe ? "cursor-pointer" : ""}`}
-                    style={{ left: px, top: py, transform: "translate(-50%, -100%)", opacity: dim, zIndex: Math.round(wx + wy) }}
+                    key={a.userId}
+                    className="absolute"
+                    style={{
+                      left: a.left, top: a.top, width: avatarSize,
+                      opacity: a.dim ?? 1,
+                      zIndex: Math.round(a.top + 500),
+                    }}
                   >
                     <div
-                      className="relative rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ width: 28, height: 28, background: "#4F46E5", boxShadow: `0 0 0 2.5px ${ring}, 0 2px 6px rgba(0,0,0,0.4)` }}
+                      onClick={() => !isSelf && knockOnDesk(a.userId, "")}
+                      className={`relative mx-auto flex items-center justify-center rounded-full ${!isSelf ? "cursor-pointer" : ""}`}
+                      style={{
+                        width: avatarSize, height: avatarSize,
+                        background: "#0F172A",
+                        border: `2px solid ${ring}`,
+                        boxShadow: `0 0 10px ${ring}99`,
+                      }}
                     >
-                      {(m.name || "?").charAt(0).toUpperCase()}
-                      {presence === "BUSY" && <span className="absolute -top-1 -right-1 text-[10px]">🎧</span>}
-                      {presence === "DO_NOT_DISTURB" && <span className="absolute -top-1 -right-1 text-[10px]">⛔</span>}
-                      {presence === "BE_RIGHT_BACK" && <span className="absolute -top-1 -right-1 text-[10px]">☕</span>}
+                      {a.member.avatarUrl ? (
+                        <img
+                          src={a.member.avatarUrl}
+                          alt=""
+                          className="h-full w-full rounded-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      ) : (
+                        <span className="font-bold text-white" style={{ fontSize: avatarSize * 0.4 }}>
+                          {initials(a.member.name)}
+                        </span>
+                      )}
+                      {emoji && (
+                        <span
+                          className="absolute -right-1 -top-1 rounded-full bg-slate-900 px-0.5 text-[10px]"
+                          style={{ lineHeight: "14px" }}
+                        >
+                          {emoji}
+                        </span>
+                      )}
+                      {a.member.isInMeeting && !emoji && (
+                        <span className="absolute -right-1 -top-1 rounded-md bg-emerald-500 px-1 text-[9px] font-bold text-white">
+                          📹
+                        </span>
+                      )}
                     </div>
-                    <span className="mt-0.5 text-[9px] text-white bg-black/60 px-1 rounded">
-                      {isMe ? "You" : (m.name || "").split(" ")[0]}
-                    </span>
+                    {a.label && (
+                      <div
+                        className="mx-auto mt-1 truncate rounded-md border px-1.5 py-0.5 text-center text-[9px] font-bold text-white"
+                        style={{
+                          background: "rgba(15,23,42,0.75)",
+                          borderColor: `${ring}cc`,
+                          maxWidth: 70,
+                        }}
+                      >
+                        {a.label}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -863,7 +869,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
             <div className="mt-3 grid grid-cols-3 gap-2 px-2">
               <button
                 onClick={() => changeZone("OPEN_WORKSPACE")}
-                disabled={actionLoading || !connected || openDesks.length === 0}
+                disabled={actionLoading || !connected || realFreeCount === 0}
                 className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition disabled:opacity-50 ${
                   myZone === "OPEN_WORKSPACE"
                     ? "border-emerald-300/60 bg-emerald-400/20 text-emerald-100"
@@ -932,63 +938,70 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-xl">🪑</div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-white">Open Desks</h3>
-                  <p className="text-xs text-sky-100/60">{openDesks.length} Desks Available</p>
+                  <p className="text-xs text-sky-100/60">{realFreeCount} Desks Available</p>
                 </div>
               </div>
               <span className="shrink-0 rounded-full border border-white/10 bg-black/10 px-2 py-1 text-xs text-sky-100/80">
-                {(() => {
-                  const unique = new Set(
-                    desks
-                      .filter((d) => d.occupiedByUserId)
-                      .map((d) => d.occupiedByUserId)
-                  );
-                  return `${unique.size}/12 Occupied`;
-                })()}
+                {realOccupiedCount}/{desks.length} Occupied
               </span>
             </div>
             <div className="mt-3 space-y-2">
-              {(() => {
-                const seen = new Set();
-                const rows = [];
-                for (const d of desks) {
-                  if (!d.occupiedByUserId || seen.has(d.occupiedByUserId)) continue;
-                  seen.add(d.occupiedByUserId);
-                  const member = members?.[d.occupiedByUserId];
-                  rows.push({ desk: d, member });
-                }
-                if (rows.length === 0)
-                  return <div className="text-xs text-slate-400 p-3">Nobody is at a desk yet.</div>;
-
-                return rows.map(({ desk, member }) => {
-                  const name = desk.occupiedByUserName || member?.name || "Someone";
-                  const presence = member?.presenceStatus || "AVAILABLE";
-                  const isMe = desk.occupiedByUserId === currentUserId;
-                  const canKnock = !isMe && presence !== "DO_NOT_DISTURB" && presence !== "OFFLINE";
-
+              {uniqueOccupiedDesks.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-center text-xs text-sky-100/55">
+                  Nobody sitting yet.
+                </p>
+              ) : (
+                uniqueOccupiedDesks.map((desk) => {
+                  const m = members[desk.occupiedByUserId];
+                  const isSelf = desk.occupiedByUserId === currentUserId;
+                  const name = m?.name || desk.occupiedByUserName || "Teammate";
+                  const status = m?.presenceStatus || desk.status;
+                  const ring = presenceColor(status);
+                  const canKnock = !isSelf && status !== "DO_NOT_DISTURB" && status !== "OFFLINE";
                   return (
-                    <div key={desk.deskId} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                        {name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-white truncate">{isMe ? "You" : name}</div>
-                        <div className="text-[11px] text-slate-400">
-                          Desk #{String(desk.deskNumber).padStart(2, "0")} · {presence.replace(/_/g, " ").toLowerCase()}
+                    <div
+                      key={desk.deskId}
+                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                    >
+                      <div className="relative h-9 w-9 shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-white overflow-hidden">
+                          {m?.avatarUrl ? (
+                            <img src={m.avatarUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            initials(name)
+                          )}
                         </div>
+                        <span
+                          className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#213F70]"
+                          style={{ background: ring }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {name}
+                          {isSelf && (
+                            <span className="ml-2 rounded bg-amber-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              YOU
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-sky-100/65">
+                          Desk #{String(desk.deskNumber).padStart(2, "0")} · {presenceLabel(status)}
+                        </p>
                       </div>
                       {canKnock && (
                         <button
                           onClick={() => knockOnDesk(desk.occupiedByUserId, "")}
-                          disabled={actionLoading}
-                          className="px-3 py-1 text-xs rounded-md bg-amber-500 hover:bg-amber-400 text-black font-semibold disabled:opacity-50"
+                          disabled={actionLoading || !connected}
+                          className="shrink-0 rounded-lg bg-amber-500/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
                         >
-                          Knock
+                          Knock 👋
                         </button>
                       )}
                     </div>
                   );
-                });
-              })()}
+                })
+              )}
             </div>
           </section>
 
