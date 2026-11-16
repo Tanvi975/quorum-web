@@ -378,6 +378,38 @@ function drawDesk(ctx, iso, r, color, mine) {
   ctx.fill();
 }
 
+function KnockToast({ data, onDismiss }) {
+  useEffect(() => {
+    try {
+      const a = new Audio("/sounds/desk-knock.mp3");
+      a.volume = 0.5;
+      a.play().catch(() => {});
+    } catch {}
+    const t = setTimeout(onDismiss, 12000);
+    return () => clearTimeout(t);
+  }, [data, onDismiss]);
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 p-4 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl text-white max-w-sm">
+      <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold">
+        {(data.senderName || "?").charAt(0).toUpperCase()}
+      </div>
+      <div className="flex-1">
+        <div className="font-semibold text-sm">🚪 {data.senderName} knocked on your desk</div>
+        {data.message && <div className="text-xs text-slate-400 mt-0.5">{data.message}</div>}
+        <div className="flex gap-2 mt-2">
+          <button onClick={onDismiss} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-semibold">
+            Reply in chat
+          </button>
+          <button onClick={onDismiss} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs">
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VirtualOffice({ teamId, teamName, socket, connected, enabled }) {
   const { user } = useAuth();
   const currentUserId = user?.id || user?.userId || user?._id || null;
@@ -393,6 +425,8 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     claimDesk,
     changeZone,
     knockOnDesk,
+    knockNotification,
+    dismissKnock,
   } = useVirtualOffice({ teamId, socket, connected, enabled });
 
   const members = floorState?.members || {};
@@ -588,6 +622,9 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 text-white sm:p-5">
+      {knockNotification && (
+        <KnockToast data={knockNotification} onDismiss={dismissKnock} />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-bold sm:text-xl">Virtual Office</h2>
@@ -750,70 +787,74 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                 </div>
               ))}
 
-              {avatars.map((a) => {
-                const isSelf = a.userId === currentUserId;
-                const ring = presenceColor(a.member.presenceStatus);
+              {membersList.map((m) => {
+                const presence = m.presenceStatus || "OFFLINE";
+                if (presence === "OFFLINE") return null;
+
+                let effZone = m.zoneId;
+                if (presence === "DO_NOT_DISTURB") effZone = "FOCUS_POD";
+                else if (presence === "BE_RIGHT_BACK") effZone = "COFFEE_LOUNGE";
+                else if (["BUSY", "AVAILABLE", "AWAY"].includes(presence)) effZone = "OPEN_WORKSPACE";
+
+                let wx, wy;
+                if (effZone === "OPEN_WORKSPACE") {
+                  const desk = desks.find((d) => d.occupiedByUserId === m.userId);
+                  if (desk) {
+                    const idx = desk.deskNumber - 1;
+                    const row = Math.floor(idx / 3), col = idx % 3;
+                    wx = 5.8 + col * 1.3;
+                    wy = 5.8 + row * 1.0;
+                  } else { wx = 7.5; wy = 7.5; }
+                  if (presence === "AWAY") { wx += 0.6; wy += 0.6; }
+                } else if (effZone === "COFFEE_LOUNGE") {
+                  const slots = [[6.5, 2.0], [7.8, 2.5], [8.8, 3.2], [6.8, 3.5], [8.0, 1.5]];
+                  const idx = membersList
+                    .filter((x) => x.presenceStatus === "BE_RIGHT_BACK")
+                    .findIndex((x) => x.userId === m.userId);
+                  [wx, wy] = slots[(idx >= 0 ? idx : 0) % slots.length];
+                } else if (effZone === "FOCUS_POD") {
+                  const pods = [[1.5, 6.6], [3.5, 6.6], [1.5, 8.6], [3.5, 8.6]];
+                  const idx = membersList
+                    .filter((x) => x.presenceStatus === "DO_NOT_DISTURB")
+                    .findIndex((x) => x.userId === m.userId);
+                  [wx, wy] = pods[(idx >= 0 ? idx : 0) % pods.length];
+                } else if (effZone === "WAR_ROOM") {
+                  const slots = [[1.0, 2.4], [2.0, 1.2], [3.5, 1.5], [3.8, 2.8], [2.5, 3.5], [1.2, 3.2]];
+                  const idx = membersList
+                    .filter((x) => x.zoneId === "WAR_ROOM" && x.isInMeeting)
+                    .findIndex((x) => x.userId === m.userId);
+                  [wx, wy] = slots[(idx >= 0 ? idx : 0) % slots.length];
+                } else return null;
+
+                const [px, py] = iso.p(wx, wy, 0.45);
+                const ring =
+                  presence === "AVAILABLE" ? "#22C55E" :
+                  presence === "BUSY" ? "#EF4444" :
+                  presence === "AWAY" ? "#FBBF24" :
+                  presence === "BE_RIGHT_BACK" ? "#FBBF24" :
+                  presence === "DO_NOT_DISTURB" ? "#A855F7" : "#6B7280";
+                const dim = presence === "AWAY" ? 0.5 : 1;
+                const isMe = m.userId === currentUserId;
+
                 return (
                   <div
-                    key={a.userId}
-                    className="absolute"
-                    style={{
-                      left: a.left,
-                      top:  a.top,
-                      width: avatarSize,
-                      zIndex: Math.round(a.top + 500),
-                    }}
+                    key={m.userId}
+                    onClick={() => !isMe && knockOnDesk(m.userId, "")}
+                    className={`absolute pointer-events-auto flex flex-col items-center ${!isMe ? "cursor-pointer" : ""}`}
+                    style={{ left: px, top: py, transform: "translate(-50%, -100%)", opacity: dim, zIndex: Math.round(wx + wy) }}
                   >
                     <div
-                      onClick={() =>
-                        !isSelf && knockOnDesk(a.userId, "")
-                      }
-                      className={`relative mx-auto flex items-center justify-center rounded-full ${
-                        !isSelf ? "cursor-pointer" : ""
-                      }`}
-                      style={{
-                        width: avatarSize,
-                        height: avatarSize,
-                        background: "#0F172A",
-                        border: `1.6px solid ${ring}`,
-                        boxShadow: `0 0 8px ${ring}88`,
-                      }}
+                      className="relative rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ width: 28, height: 28, background: "#4F46E5", boxShadow: `0 0 0 2.5px ${ring}, 0 2px 6px rgba(0,0,0,0.4)` }}
                     >
-                      {a.member.avatarUrl ? (
-                        <img
-                          src={a.member.avatarUrl}
-                          alt=""
-                          className="h-full w-full rounded-full object-cover"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
-                      ) : (
-                        <span
-                          className="font-bold text-white"
-                          style={{ fontSize: avatarSize * 0.38 }}
-                        >
-                          {initials(a.member.name)}
-                        </span>
-                      )}
-                      {a.member.isInMeeting && (
-                        <span
-                          className="absolute -right-1 -top-1 rounded-md bg-emerald-500 px-1 text-[9px] font-bold text-white"
-                        >
-                          📹
-                        </span>
-                      )}
+                      {(m.name || "?").charAt(0).toUpperCase()}
+                      {presence === "BUSY" && <span className="absolute -top-1 -right-1 text-[10px]">🎧</span>}
+                      {presence === "DO_NOT_DISTURB" && <span className="absolute -top-1 -right-1 text-[10px]">⛔</span>}
+                      {presence === "BE_RIGHT_BACK" && <span className="absolute -top-1 -right-1 text-[10px]">☕</span>}
                     </div>
-                    {a.label && (
-                      <div
-                        className="mx-auto mt-1 truncate rounded-md border px-1.5 py-0.5 text-center text-[9px] font-bold text-white"
-                        style={{
-                          background: "rgba(15,23,42,0.7)",
-                          borderColor: `${ring}cc`,
-                          maxWidth: 70,
-                        }}
-                      >
-                        {a.label}
-                      </div>
-                    )}
+                    <span className="mt-0.5 text-[9px] text-white bg-black/60 px-1 rounded">
+                      {isMe ? "You" : (m.name || "").split(" ")[0]}
+                    </span>
                   </div>
                 );
               })}
@@ -895,61 +936,59 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
                 </div>
               </div>
               <span className="shrink-0 rounded-full border border-white/10 bg-black/10 px-2 py-1 text-xs text-sky-100/80">
-                {occupiedDesks.length}/{desks.length} Occupied
+                {(() => {
+                  const unique = new Set(
+                    desks
+                      .filter((d) => d.occupiedByUserId)
+                      .map((d) => d.occupiedByUserId)
+                  );
+                  return `${unique.size}/12 Occupied`;
+                })()}
               </span>
             </div>
             <div className="mt-3 space-y-2">
-              {occupiedDesks.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-center text-xs text-sky-100/55">
-                  Nobody sitting yet.
-                </p>
-              ) : (
-                occupiedDesks.map((desk) => {
-                  const m = members[desk.occupiedByUserId];
-                  const isSelf = desk.occupiedByUserId === currentUserId;
-                  const name = m?.name || desk.occupiedByUserName || "Teammate";
-                  const status = m?.presenceStatus || desk.status;
-                  const ring = presenceColor(status);
+              {(() => {
+                const seen = new Set();
+                const rows = [];
+                for (const d of desks) {
+                  if (!d.occupiedByUserId || seen.has(d.occupiedByUserId)) continue;
+                  seen.add(d.occupiedByUserId);
+                  const member = members?.[d.occupiedByUserId];
+                  rows.push({ desk: d, member });
+                }
+                if (rows.length === 0)
+                  return <div className="text-xs text-slate-400 p-3">Nobody is at a desk yet.</div>;
+
+                return rows.map(({ desk, member }) => {
+                  const name = desk.occupiedByUserName || member?.name || "Someone";
+                  const presence = member?.presenceStatus || "AVAILABLE";
+                  const isMe = desk.occupiedByUserId === currentUserId;
+                  const canKnock = !isMe && presence !== "DO_NOT_DISTURB" && presence !== "OFFLINE";
+
                   return (
-                    <div
-                      key={desk.deskId}
-                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
-                    >
-                      <div className="relative h-9 w-9 shrink-0">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-white">
-                          {initials(name)}
+                    <div key={desk.deskId} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5">
+                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-white truncate">{isMe ? "You" : name}</div>
+                        <div className="text-[11px] text-slate-400">
+                          Desk #{String(desk.deskNumber).padStart(2, "0")} · {presence.replace(/_/g, " ").toLowerCase()}
                         </div>
-                        <span
-                          className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#213F70]"
-                          style={{ background: ring }}
-                        />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {name}
-                          {isSelf && (
-                            <span className="ml-2 rounded bg-amber-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                              YOU
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-sky-100/65">
-                          Desk #{String(desk.deskNumber).padStart(2, "0")} · {presenceLabel(status)}
-                        </p>
-                      </div>
-                      {!isSelf && (
+                      {canKnock && (
                         <button
                           onClick={() => knockOnDesk(desk.occupiedByUserId, "")}
-                          disabled={actionLoading || !connected}
-                          className="shrink-0 rounded-lg bg-amber-500/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                          disabled={actionLoading}
+                          className="px-3 py-1 text-xs rounded-md bg-amber-500 hover:bg-amber-400 text-black font-semibold disabled:opacity-50"
                         >
-                          Knock 👋
+                          Knock
                         </button>
                       )}
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </section>
 
