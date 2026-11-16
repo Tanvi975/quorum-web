@@ -196,6 +196,7 @@ const [activeTab, setActiveTab] = useState(
     name: "",
     description: "",
     logo: "",
+    logoFile: null,
   });
 
   let currentUser = null;
@@ -545,8 +546,9 @@ const [activeTab, setActiveTab] = useState(
       name: organization?.name || "",
       description: organization?.description || "",
       logo: organization?.logo || organization?.logoUrl || "",
+      logoFile: null,
     });
-
+  
     setOpenMenu("");
     setModal("edit-org");
   }
@@ -885,29 +887,64 @@ async function handleTeamPictureDelete() {
     </button>
   )}
 </div>
-  async function editOrganization(event) {
-    event.preventDefault();
-    setSaving(true);
+async function editOrganization(event) {
+  event.preventDefault();
 
-    try {
-      await api.patch(
-        `/api/organizations/${organizationId}`,
-        {
-          name: orgForm.name.trim(),
-          description: orgForm.description.trim(),
-          logo: orgForm.logo.trim(),
-        }
+  if (!organizationId) {
+    setNotice("Organization ID is missing.");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    let uploadedLogo =
+      orgForm.logo || organization?.logo || organization?.logoUrl || "";
+
+    // Upload selected logo first
+    if (orgForm.logoFile) {
+      const formData = new FormData();
+      formData.append("file", orgForm.logoFile);
+
+      const uploadResponse = await api.post(
+        `/api/v1/organizations/${encodeURIComponent(organizationId)}/profile-picture`,
+        formData
       );
 
-      closeModal();
-      setNotice("Organization updated successfully.");
-      await loadWorkspace(false);
-    } catch (err) {
-      setNotice(errorMessage(err));
-    } finally {
-      setSaving(false);
+      const payload =
+        uploadResponse?.data?.data ?? uploadResponse?.data ?? {};
+
+      uploadedLogo =
+        payload.logo ||
+        payload.profilePicture ||
+        payload.avatarUrl ||
+        payload.url ||
+        "";
+
+      if (!uploadedLogo) {
+        throw new Error("Logo uploaded but image URL was not returned.");
+      }
     }
+
+    await api.patch(
+      `/api/organizations/${organizationId}`,
+      {
+        name: orgForm.name.trim(),
+        description: orgForm.description.trim(),
+        logo: uploadedLogo,
+      }
+    );
+
+    closeModal();
+    setNotice("Organization updated successfully.");
+
+    await loadWorkspace(false);
+  } catch (err) {
+    setNotice(errorMessage(err));
+  } finally {
+    setSaving(false);
   }
+}
 
   async function leaveOrganization() {
     if (saving) return;
@@ -2232,19 +2269,59 @@ async function handleTeamPictureDelete() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-[#B6C6D9]">
-                  Logo URL
-                </label>
-                <input
-                  type="url"
-                  value={orgForm.logo}
-                  onChange={(event) =>
-                    setOrgForm({ ...orgForm, logo: event.target.value })
-                  }
-                  placeholder="https://example.com/logo.png"
-                  className={input}
-                />
-              </div>
+  <label className="mb-2 block text-sm text-[#B6C6D9]">
+    Organization Logo
+  </label>
+
+  {orgForm.logo && (
+    <img
+      src={orgForm.logo}
+      alt="Organization logo preview"
+      className="mb-3 h-16 w-16 rounded-xl border border-white/20 object-cover"
+    />
+  )}
+
+  <input
+    type="file"
+    accept="image/jpeg,image/png,image/webp,image/gif"
+    onChange={(event) => {
+      const file = event.target.files?.[0];
+
+      if (!file) return;
+
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        setNotice("Please select a JPG, PNG, WEBP or GIF image.");
+        event.target.value = "";
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setNotice("Image size must not exceed 5 MB.");
+        event.target.value = "";
+        return;
+      }
+
+      setOrgForm((prev) => ({
+        ...prev,
+        logoFile: file,
+      }));
+    }}
+    className="w-full text-sm text-[#B6C6D9]"
+  />
+
+  {orgForm.logoFile && (
+    <p className="mt-2 text-xs text-green-300">
+      Selected: {orgForm.logoFile.name}
+    </p>
+  )}
+</div>
 
               <div className="flex justify-end gap-3">
                 <button

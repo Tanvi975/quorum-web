@@ -300,7 +300,8 @@ const uploadTargetRef = useRef(null);
   };
   const handleLogoUpload = async (event) => {
     const file = event.target.files?.[0];
-    const organizationId = uploadTargetRef.current;
+    const organizationId =
+    uploadTargetRef.current || getOrganizationId(editingOrg);
   
     event.target.value = "";
   
@@ -350,6 +351,11 @@ const uploadTargetRef = useRef(null);
               : org
           )
         );
+        setEditingOrg((current) =>
+  current && getOrganizationId(current) === organizationId
+    ? { ...current, logo }
+    : current
+);
       } else {
         await fetchOrganizations();
       }
@@ -383,7 +389,11 @@ const uploadTargetRef = useRef(null);
             : item
         )
       );
-  
+      setEditingOrg((current) =>
+      current && getOrganizationId(current) === organizationId
+        ? { ...current, logo: null }
+        : current
+    );
       showNotice("Organization logo removed successfully.");
     } catch (error) {
       setLogoError(getErrorMessage(error));
@@ -649,42 +659,6 @@ const uploadTargetRef = useRef(null);
                             {getRoleLabel(org.role)}
                           </span>
                         )}
-                        {org.role === "ORG_ADMIN" && (
-  <div
-    className="mt-3 flex flex-wrap items-center gap-2"
-    onClick={(event) => event.stopPropagation()}
-    onKeyDown={(event) => event.stopPropagation()}
-  >
-    <button
-      type="button"
-      disabled={uploadingOrgId === organizationId}
-      onClick={() => {
-        uploadTargetRef.current = organizationId;
-        logoInputRef.current?.click();
-      }}
-      className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/30 bg-[#315A8A]/60 px-3 py-2 text-xs font-medium text-white transition hover:bg-[#315A8A] disabled:opacity-60"
-    >
-      <FiUpload size={14} />
-      {uploadingOrgId === organizationId
-        ? "Uploading..."
-        : org.logo
-          ? "Change logo"
-          : "Upload logo"}
-    </button>
-
-    {org.logo && (
-      <button
-        type="button"
-        disabled={uploadingOrgId === organizationId}
-        onClick={() => handleLogoDelete(org)}
-        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-red-200/30 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-100 transition hover:bg-red-400/20 disabled:opacity-60"
-      >
-        <FiTrash2 size={14} />
-        Remove logo
-      </button>
-    )}
-  </div>
-)}
                       </div>
                     </div>
 
@@ -838,7 +812,60 @@ const uploadTargetRef = useRef(null);
                   className="w-full rounded-lg border border-white/30 bg-[#213F70]/60 px-4 py-3 text-sm text-white outline-none placeholder:text-white/60 focus:border-[#C6EAFF] focus:ring-2 focus:ring-[#38BDF8]/25"
                   placeholder="Enter organization name"
                 />
+<div className="mt-5">
+  <label className="mb-2 block text-sm font-medium text-white">
+    Organization Logo
+  </label>
 
+  <div className="flex items-center gap-4">
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/30 bg-[#213F70]/60">
+      {editingOrg.logo ? (
+        <img
+          src={editingOrg.logo}
+          alt="Organization logo"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <FiBriefcase size={24} className="text-white/70" />
+      )}
+    </div>
+
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={uploadingOrgId === getOrganizationId(editingOrg)}
+        onClick={() => {
+          uploadTargetRef.current = getOrganizationId(editingOrg);
+          logoInputRef.current?.click();
+        }}
+        className={secondaryButton}
+      >
+        <FiUpload size={16} />
+        {uploadingOrgId === getOrganizationId(editingOrg)
+          ? "Uploading..."
+          : editingOrg.logo
+            ? "Change logo"
+            : "Upload logo"}
+      </button>
+
+      {editingOrg.logo && (
+        <button
+          type="button"
+          disabled={uploadingOrgId === getOrganizationId(editingOrg)}
+          onClick={() => handleLogoDelete(editingOrg)}
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200/30 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-400/20 disabled:opacity-60"
+        >
+          <FiTrash2 size={16} />
+          Remove
+        </button>
+      )}
+    </div>
+  </div>
+
+  <p className="mt-2 text-xs text-white/65">
+    JPG, PNG, WEBP or GIF. Maximum size: 5 MB.
+  </p>
+</div>
                 {modalError && (
                   <p role="alert" className="mt-3 text-sm text-red-100">
                     {modalError}
