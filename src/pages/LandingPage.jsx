@@ -94,7 +94,7 @@ export default function LandingPage() {
       <WorkflowSteps />
       <MeetingTimeline />
       <LandingFAQ />
-      <ContactSection />
+      {/* <ContactSection /> */}
       <LandingCTA />
       <LandingFooter />
 

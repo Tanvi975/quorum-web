@@ -11,7 +11,7 @@ export const navLinks = [
   { label: "Workspace", href: "#calendar" },
   { label: "How it works", href: "#flow" },
   { label: "FAQ", href: "#faq" },
-  { label: "Contact", href: "#contact" }
+  // { label: "Contact", href: "#contact" }
 ];
 
 export const flowSteps = [

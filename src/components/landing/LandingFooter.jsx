@@ -8,7 +8,7 @@ export default function LandingFooter() {
         <Logo />
         <div className="flex flex-wrap items-center gap-7 text-xs text-[#B6C8D9]">
           <a href="#home" className="transition hover:text-white">About</a>
-          <a href="#contact" className="transition hover:text-white">Contact</a>
+          {/* <a href="#contact" className="transition hover:text-white">Contact</a> */}
           <a href="#faq" className="transition hover:text-white">FAQ</a>
         </div>
       </div>

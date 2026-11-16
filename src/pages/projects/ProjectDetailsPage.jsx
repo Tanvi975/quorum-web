@@ -188,12 +188,12 @@ export default function ProjectDetailsPage() {
             description: "Communicate with collaborators in this project.",
             icon: FiMessageCircle,
             count: "Project conversation",
-            path: project?.conversation?.id || project?.conversation?._id || project?.conversationId
-                ? `/chat?conversationId=${encodeURIComponent(
-                    project.conversation?.id ||
-                    project.conversation?._id ||
-                    project.conversationId
-                )}`
+            path: (
+                project?.conversation?.id ||
+                project?.conversation?._id ||
+                project?.conversationId
+            )
+                ? `/projects/${projectId}/chat`
                 : null
         }
     ];

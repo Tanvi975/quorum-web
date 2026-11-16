@@ -47,6 +47,7 @@ import MyGitHubPage from "./pages/github/MyGitHubPage";
 import GitHubPage from "./pages/github/GitHubPage";
 import ProjectsPage from "./pages/projects/ProjectsPage";
 import ProjectDetailsPage from "./pages/projects/ProjectDetailsPage";
+import ProjectChat from "./pages/projects/ProjectChat";
 import InviteAcceptPage from "./components/projects/InviteAcceptPage";
 import TaskBoard from "./components/projects/TaskBoard";
 import ResourceList from "./components/projects/ResourceList";
@@ -448,6 +449,14 @@ function App() {
   element={
     <ProtectedRoute>
       <ProjectDetailsPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/projects/:projectId/chat"
+  element={
+    <ProtectedRoute>
+      <ProjectChat />
     </ProtectedRoute>
   }
 />
