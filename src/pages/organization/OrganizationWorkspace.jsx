@@ -33,6 +33,7 @@ import OrganizationOverview from "./OrganizationOverview";
 import OrganizationWhiteboards from "../../components/OrganizationWhiteboards";
 import OrganizationDocuments from "../../components/documents/OrganizationDocuments";
 import OrganizationFeed from "../../components/organization-feed/OrganizationFeed";
+import OrganizationProjects from "./OrganizationProjects";
 const btn =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -145,6 +146,7 @@ function OrganizationWorkspace() {
     "About",
     "Whiteboards",
     "Documents",
+    "Projects",
 ];
 
 const [activeTab, setActiveTab] = useState(
@@ -1457,6 +1459,7 @@ async function editOrganization(event) {
     "Members",
     "Whiteboards",
     "Documents",
+    "Projects",
     "About",
 ].map((tab) => (
             <button
@@ -1676,6 +1679,9 @@ async function editOrganization(event) {
         )}
         {activeTab === "Documents" && (
     <OrganizationDocuments organizationId={organizationId} />
+)}
+{activeTab === "Projects" && (
+  <OrganizationProjects organizationId={organizationId} />
 )}
         {showScheduleModal && (
           <Modal

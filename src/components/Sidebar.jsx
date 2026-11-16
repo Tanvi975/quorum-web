@@ -1,3 +1,4 @@
+
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiHome,
@@ -8,9 +9,7 @@ import {
   FiCpu,
   FiGlobe,
   FiUser,
-  FiBriefcase,
 } from "react-icons/fi";
-import { SiGithub, SiJira } from "react-icons/si";
 
 const navigationItems = [
   { label: "Home", icon: FiHome, path: "/dashboard" },
@@ -18,7 +17,6 @@ const navigationItems = [
   { label: "Saved Items", icon: FiBookmark, path: "/saved-items" },
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
-  { label: "Projects", icon: FiBriefcase, path: "/projects" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
   { label: "Profile", icon: FiUser, path: "/profile" }
@@ -30,9 +28,9 @@ export default function Sidebar() {
 
   return (
     <aside
-  data-tour="sidebar-home"
-  className="hidden h-full w-[76px] shrink-0 overflow-y-auto border-r border-white/10 bg-[#062C5F]/95 md:block lg:w-[220px]"
->
+      data-tour="sidebar-home"
+      className="hidden h-full w-[76px] shrink-0 overflow-y-auto border-r border-white/10 bg-[#062C5F]/95 md:block lg:w-[220px]"
+    >
       <div className="px-3 pt-7 lg:px-5">
         <button
           type="button"
