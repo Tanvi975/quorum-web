@@ -407,7 +407,7 @@ const [statusError, setStatusError] = useState("");
 </header>
 
         <div className="flex min-h-0 min-w-0 flex-1">
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">
+        <main className="hide-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">
             <div className="mx-auto max-w-[1180px]">
             <section
   data-tour="welcome"

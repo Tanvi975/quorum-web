@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiPlus, FiX, FiCheckCircle, FiClock, FiAlertCircle, FiCalendar, FiUser, FiRefreshCw, FiClipboard, FiArrowRight, FiEdit2, FiSend } from "react-icons/fi";
+import { FiPlus, FiX, FiCheckCircle, FiClock, FiAlertCircle, FiCalendar, FiUser, FiRefreshCw, FiClipboard, FiArrowRight, FiEdit2, FiSend , FiArrowLeft} from "react-icons/fi";
 import { getProjectTasks, createProjectTask, updateProjectTask, updateProjectTaskStatus, getProjectById } from "../../services/projectService";
 import DeliverableModal from "./DeliverableModal";
 import DeliverableReview from "./DeliverableReview";
@@ -125,10 +125,44 @@ export default function TaskBoard({ projectId, isManager: managerProp = false, c
   return (
     <div className="min-h-full w-full min-w-0 overflow-x-hidden bg-gradient-to-br from-[#213F70] via-[#315A8A] to-[#496C98] px-4 py-6 text-white sm:px-6 lg:px-9 lg:py-8">
       <div className="mx-auto max-w-[1500px]">
-        <header className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div><p className="mb-2 text-sm text-blue-100/65">Project Workspace / Tasks</p><h1 className="text-3xl font-bold sm:text-4xl">Project Tasks</h1><p className="mt-2 text-sm text-blue-100/70">Assign work, submit deliverables and review progress.</p></div>
-          {manager && <button type="button" onClick={() => { setEditingTask(null); resetForm(); setError(""); setShowForm(v => !v); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0875F9] px-5 py-3 text-sm font-semibold hover:bg-[#2588FF]">{showForm ? <FiX /> : <FiPlus />}{showForm ? "Close" : "Create task"}</button>}
-        </header>
+      <header className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+  <div>
+    <button
+      type="button"
+      onClick={() => window.history.back()}
+      className="mb-4 inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white"
+    >
+      <FiArrowLeft />
+      Back
+    </button>
+
+    <p className="mb-2 text-sm text-blue-100/65">
+      Project Workspace / Tasks
+    </p>
+
+    <h1 className="text-3xl font-bold sm:text-4xl">Project Tasks</h1>
+
+    <p className="mt-2 text-sm text-blue-100/70">
+      Assign work, submit deliverables and review progress.
+    </p>
+  </div>
+
+  {manager && (
+    <button
+      type="button"
+      onClick={() => {
+        setEditingTask(null);
+        resetForm();
+        setError("");
+        setShowForm(v => !v);
+      }}
+      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0875F9] px-5 py-3 text-sm font-semibold hover:bg-[#2588FF]"
+    >
+      {showForm ? <FiX /> : <FiPlus />}
+      {showForm ? "Close" : "Create task"}
+    </button>
+  )}
+</header>
 
         {error && <div role="alert" className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm text-rose-100"><FiAlertCircle /><span className="min-w-0 flex-1">{error}</span><button type="button" onClick={() => loadTasks()} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Retry</button></div>}
 
@@ -151,7 +185,7 @@ export default function TaskBoard({ projectId, isManager: managerProp = false, c
         </div>
 
         {loading ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">{STATUSES.map(s => <div key={s} className="h-64 animate-pulse rounded-2xl bg-white/10" />)}</div> : (
-          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:thin]">
+         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide">
             {STATUSES.map(status => {
               const cfg = STATUS_CONFIG[status], Icon = cfg.icon;
               const columnTasks = tasks.filter(t => (t.status || "TODO") === status);
@@ -167,7 +201,7 @@ export default function TaskBoard({ projectId, isManager: managerProp = false, c
                       <div className="mt-4 space-y-2 border-t border-white/10 pt-3 text-xs text-blue-100/70"><div className="flex items-center gap-2"><FiUser /><span className="truncate">{task.assignee?.name || assignee.find(u => getId(u) === String(task.assigneeId))?.name || "Unassigned"}</span></div><div className="flex items-center gap-2"><FiCalendar /><span>{dateLabel(task.dueDate)}</span></div></div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         {manager && status !== "IN_REVIEW" && status !== "COMPLETED" && status !== "CANCELLED" && <button type="button" onClick={() => openEdit(task)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-white/15 px-2 py-2 text-xs hover:bg-white/10"><FiEdit2 />Edit</button>}
-                        {status === "TODO" && (manager || assigned) && <button type="button" onClick={() => changeStatus(task, "IN_PROGRESS")} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-500/20 px-2 py-2 text-xs font-semibold text-blue-100 hover:bg-blue-500/30">Start task <FiArrowRight /></button>}
+                        {status === "TODO" && !manager && assigned &&  <button type="button" onClick={() => changeStatus(task, "IN_PROGRESS")} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-500/20 px-2 py-2 text-xs font-semibold text-blue-100 hover:bg-blue-500/30">Start task <FiArrowRight /></button>}
                         {status === "IN_PROGRESS" && assigned && <button type="button" onClick={() => setSubmissionTask(task)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-500/20 px-2 py-2 text-xs font-semibold text-blue-100 hover:bg-blue-500/30"><FiSend />Submit work</button>}
                         {status === "IN_REVIEW" && manager && <button type="button" onClick={() => setReviewTask(task)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-amber-400/15 px-2 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-400/25">Review deliverable</button>}
                         {status === "IN_REVIEW" && assigned && <span className="w-full rounded-lg bg-amber-400/10 px-2 py-2 text-center text-xs text-amber-100">Awaiting manager approval</span>}
