@@ -8,6 +8,7 @@ import AuthButton from "../components/AuthButton";
 import illustration2 from "../assets/team-illustration-2.svg";
 import { registerUser } from "../services/authService";
 import { getApiErrorMessage } from "../services/api";
+
 function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,21 +25,26 @@ function Signup() {
   function validate() {
     const newErrors = {};
 
-    const nameRegex = /^[A-Za-z ]{2,20}$/;
+    const nameRegex = /^[A-Za-z ]{2,}$/;
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
     const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,30}$/;
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])\S{8,16}$/;
 
-    if (!fullName) {
+    if (!fullName.trim()) {
       newErrors.fullName = "Full name is required";
-    } else if (!nameRegex.test(fullName)) {
+    } else if (
+      !nameRegex.test(fullName.trim()) ||
+      fullName.trim().split(/\s+/).length > 150
+    ) {
       newErrors.fullName =
-        "Only letters and spaces allowed (2-20 characters)";
+        "Enter a valid name (maximum 150 words)";
     }
 
-    if (!email) {
+    if (!email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!emailRegex.test(email)) {
+    } else if (email.length > 150) {
+      newErrors.email = "Email cannot exceed 150 characters";
+    } else if (!emailRegex.test(email.trim())) {
       newErrors.email = "Enter a valid email";
     }
 
@@ -46,7 +52,7 @@ function Signup() {
       newErrors.password = "Password is required";
     } else if (!passwordRegex.test(password)) {
       newErrors.password =
-        "8-30 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character, no spaces";
+        "8-16 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character, no spaces";
     }
 
     if (!confirmPassword) {
@@ -136,7 +142,16 @@ function Signup() {
         <AuthInput
           label="Full Name"
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            const words = value.trimStart().split(/\s+/);
+
+            setFullName(
+              !value.trim() || words.length <= 150
+                ? value
+                : words.slice(0, 150).join(" ")
+            );
+          }}
           placeholder="Enter your name"
           error={errors.fullName}
         />
@@ -145,7 +160,7 @@ function Signup() {
           label="Email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value.slice(0, 150))}
           placeholder="Enter your email"
           error={errors.email}
         />
@@ -154,11 +169,11 @@ function Signup() {
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value.slice(0, 16))}
           placeholder="E2gv_86q@r"
           error={errors.password}
           checklist={[
-            { label: "8-30 characters", test: (v) => v.length >= 8 && v.length <= 30 },
+            { label: "8-16 characters", test: (v) => v.length >= 8 && v.length <= 16 },
             { label: "No spaces", test: (v) => v.length > 0 && !/\s/.test(v) },
             { label: "1 uppercase & 1 lowercase letter", test: (v) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
             { label: "1 number", test: (v) => /\d/.test(v) },
@@ -170,7 +185,7 @@ function Signup() {
           label="Confirm Password"
           type="password"
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => setConfirmPassword(e.target.value.slice(0, 16))}
           placeholder="Re-enter your password"
           error={errors.confirmPassword}
         />

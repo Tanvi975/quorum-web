@@ -60,6 +60,20 @@ const tabs = [
     { label: "About", icon: FiInfo },
     { label: "Join Requests", icon: FiUsers, adminOnly: true },
 ];
+
+const MAX_DESCRIPTION_WORDS = 200;
+
+const countWords = (text) =>
+    text.trim() ? text.trim().split(/\s+/).length : 0;
+
+const limitWords = (text) => {
+    const words = text.trim().split(/\s+/);
+
+    if (words.length <= MAX_DESCRIPTION_WORDS) return text;
+
+    return words.slice(0, MAX_DESCRIPTION_WORDS).join(" ");
+};
+
 function getPictureUrl(response) {
     const result = response?.data?.data ?? response?.data ?? response;
 
@@ -2013,22 +2027,7 @@ try {
                                             />
                                         </div>
 
-                                        <div>
-                                            <label className="mb-2 block text-sm font-semibold text-white/90">
-                                                Description
-                                            </label>
-                                            <textarea
-                                                value={communityDescription}
-                                                onChange={(event) =>
-                                                    setCommunityDescription(
-                                                        event.target.value
-                                                    )
-                                                }
-                                                maxLength={2000}
-                                                rows={4}
-                                                className={glassInput}
-                                            />
-                                        </div>
+                                        Description
 
                                         <div className="flex flex-wrap gap-2">
                                             <button

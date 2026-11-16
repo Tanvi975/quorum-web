@@ -56,6 +56,19 @@ const ROLE_LABELS = {
   MEMBER: "Member",
 };
 
+const MAX_DESCRIPTION_WORDS = 200;
+
+const countWords = (text) =>
+  text.trim() ? text.trim().split(/\s+/).length : 0;
+
+const limitWords = (text) => {
+  const words = text.trim().split(/\s+/);
+
+  if (words.length <= MAX_DESCRIPTION_WORDS) return text;
+
+  return words.slice(0, MAX_DESCRIPTION_WORDS).join(" ");
+};
+
 function roleLabel(value) {
   const key = String(value || "MEMBER").toUpperCase();
   return ROLE_LABELS[key] || key.replaceAll("_", " ");
@@ -1912,24 +1925,30 @@ async function editOrganization(event) {
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-[#B6C6D9]">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  maxLength={300}
-                  value={teamForm.description}
-                  onChange={(event) =>
-                    setTeamForm({
-                      ...teamForm,
-                      description: event.target.value,
-                    })
-                  }
-                  placeholder="What will this team work on?"
-                  className={`${input} resize-none`}
-                />
-              </div>
+             
+<div>
+  <label className="mb-2 block text-sm text-[#B6C6D9]">
+    Description
+  </label>
+
+  <textarea
+    rows={3}
+    value={orgForm.description}
+    onChange={(event) =>
+      setOrgForm({
+        ...orgForm,
+        description: limitWords(event.target.value),
+      })
+    }
+    className={`${input} resize-none`}
+    placeholder="Describe your organization..."
+  />
+
+  <p className="mt-1 text-right text-xs text-[#B6C6D9]">
+    {countWords(orgForm.description)}/{MAX_DESCRIPTION_WORDS} words
+  </p>
+</div>
+
 
               <div className="flex justify-end gap-3">
                 <button

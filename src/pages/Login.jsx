@@ -27,14 +27,18 @@ function Login() {
     const newErrors = {};
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
-    if (!email) {
+    if (!email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!emailRegex.test(email)) {
+    } else if (email.length > 150) {
+      newErrors.email = "Email cannot exceed 150 characters";
+    } else if (!emailRegex.test(email.trim())) {
       newErrors.email = "Enter a valid email";
     }
 
     if (!password) {
       newErrors.password = "Password is required";
+    } else if (password.length < 8 || password.length > 16) {
+      newErrors.password = "Password must be 8-16 characters";
     }
 
     setErrors(newErrors);
@@ -129,7 +133,7 @@ function Login() {
           type="email"
           value={email}
           onChange={(e) => {
-            setEmail(e.target.value);
+            setEmail(e.target.value.slice(0, 150));
             setLoading(false);
           }}
           placeholder="Enter your email"
@@ -141,7 +145,7 @@ function Login() {
           type="password"
           value={password}
           onChange={(e) => {
-            setPassword(e.target.value);
+            setPassword(e.target.value.slice(0, 16));
             setLoading(false);
           }}
           placeholder="Enter your password"
