@@ -1424,15 +1424,6 @@ async function editOrganization(event) {
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={openMeetingDialog}
-              className={`${secondary} shrink-0 whitespace-nowrap`}
-            >
-              <FaVideo className="shrink-0" />
-              <span>Join meeting</span>
-            </button>
-
             {menu("organization", [
               {
                 label: "Edit organization",
