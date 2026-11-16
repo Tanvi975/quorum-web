@@ -54,6 +54,7 @@ import DocumentsPage from "./components/documents/DocumentsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Recordings from "./pages/Recordings";
+import MeetingRecording from "./pages/MeetingRecording";
 import ProductTour from "./components/ProductTour";
 function MeetRedirect() {
   const { code } = useParams();
@@ -237,6 +238,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/meeting-recording"
+  element={
+    <ProtectedRoute>
+      <MeetingRecording />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/meetings/:code"
             element={

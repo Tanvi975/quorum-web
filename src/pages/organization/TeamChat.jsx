@@ -82,15 +82,18 @@ function MessageContent({ content }) {
       {parts.map((part, index) => {
         if (/^https?:\/\//i.test(part)) {
           return (
-            <a
-              key={index}
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="break-all text-sky-300 underline underline-offset-2 hover:text-sky-200"
-            >
-              Watch Recording
-            </a>
+            <button
+            key={index}
+            type="button"
+            onClick={() =>
+              navigate("/meeting-recording", {
+                state: { recordingUrl: part },
+              })
+            }
+            className="break-all text-sky-300 underline underline-offset-2 hover:text-sky-200"
+          >
+            Watch Recording
+          </button>
           );
         }
 

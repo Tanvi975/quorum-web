@@ -139,12 +139,11 @@ subscribeToRecordingStatus,
   const recordingAudioDestinationRef = useRef(null);
   const recordingOutputStreamRef = useRef(null);
   const recordingAudioSourcesRef = useRef(new Map());
-  
-  const recordingCanvasRef = useRef(null);
-  const recordingAnimationRef = useRef(null);
-  const recordingVideosRef = useRef(new Map());
+
+  const recordingDisplayStreamRef = useRef(null);
+  const stopCallRecordingRef = useRef(null);
   const recordingStreamsRef = useRef([]);
-  
+
   const recordingChunksRef = useRef([]);
   const recordingIdRef = useRef(null);
   const recordingStartedAtRef = useRef(null);
@@ -152,6 +151,9 @@ subscribeToRecordingStatus,
 
 const [isRecording, setIsRecording] = useState(false);
 const [isUploadingRecording, setIsUploadingRecording] = useState(false);
+const [isStartingRecording, setIsStartingRecording] = useState(false);
+const [showRecordingDialog, setShowRecordingDialog] = useState(false);
+const [recordingDialogError, setRecordingDialogError] = useState("");
 const [recordingMessage, setRecordingMessage] = useState("");
 recordingStreamsRef.current = [
   ...(localStream
@@ -374,109 +376,78 @@ function closePoll(pollId) {
         pollId,
     });
 }
-function drawRecordingFrame(ctx, canvas, videos) {
-  const width = canvas.width;
-  const height = canvas.height;
 
-  ctx.fillStyle = "#06182F";
-  ctx.fillRect(0, 0, width, height);
+async function cleanupRecordingResources() {
+  const displayTracks = recordingDisplayStreamRef.current?.getTracks() || [];
 
-  const activeVideos = Array.from(videos.values()).filter(
-    (item) =>
-      item.video.readyState >= 2 &&
-      item.video.videoWidth > 0 &&
-      item.video.videoHeight > 0
-  );
-
-  if (!activeVideos.length) {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "32px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Waiting for participants...", width / 2, height / 2);
-    return;
-  }
-
-  const columns = Math.ceil(Math.sqrt(activeVideos.length));
-  const rows = Math.ceil(activeVideos.length / columns);
-
-  const gap = 12;
-  const tileWidth = (width - gap * (columns + 1)) / columns;
-  const tileHeight = (height - gap * (rows + 1)) / rows;
-
-  activeVideos.forEach((item, index) => {
-    const col = index % columns;
-    const row = Math.floor(index / columns);
-
-    const x = gap + col * (tileWidth + gap);
-    const y = gap + row * (tileHeight + gap);
-
-    const video = item.video;
-
-    const videoRatio = video.videoWidth / video.videoHeight;
-    const tileRatio = tileWidth / tileHeight;
-
-    let sx = 0;
-    let sy = 0;
-    let sw = video.videoWidth;
-    let sh = video.videoHeight;
-
-    if (videoRatio > tileRatio) {
-      sw = video.videoHeight * tileRatio;
-      sx = (video.videoWidth - sw) / 2;
-    } else {
-      sh = video.videoWidth / tileRatio;
-      sy = (video.videoHeight - sh) / 2;
-    }
-
-    ctx.save();
-
-    ctx.beginPath();
-    ctx.roundRect(x, y, tileWidth, tileHeight, 16);
-    ctx.clip();
-
-    ctx.drawImage(
-      video,
-      sx,
-      sy,
-      sw,
-      sh,
-      x,
-      y,
-      tileWidth,
-      tileHeight
-    );
-
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(x, y + tileHeight - 42, tileWidth, 42);
-
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "20px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(item.label, x + 16, y + tileHeight - 15);
-
-    ctx.restore();
+  displayTracks.forEach((track) => {
+    track.onended = null;
+    track.stop();
   });
+
+  recordingDisplayStreamRef.current = null;
+
+  recordingOutputStreamRef.current?.getTracks().forEach((track) => {
+    track.stop();
+  });
+
+  recordingOutputStreamRef.current = null;
+
+  recordingAudioSourcesRef.current.forEach((source) => {
+    try {
+      source.disconnect();
+    } catch {}
+  });
+
+  recordingAudioSourcesRef.current.clear();
+
+  recordingAudioDestinationRef.current = null;
+
+  const audioContext = recordingAudioContextRef.current;
+  recordingAudioContextRef.current = null;
+
+  if (audioContext && audioContext.state !== "closed") {
+    try {
+      await audioContext.close();
+    } catch {}
+  }
 }
 
 async function buildRecordingStream() {
   if (
     !window.MediaRecorder ||
-    !HTMLCanvasElement.prototype.captureStream
+    !navigator.mediaDevices?.getDisplayMedia
   ) {
-    throw new Error("This browser does not support meeting recording.");
+    throw new Error(
+      "This browser does not support meeting recording. Please use the latest Chrome or Edge on a desktop."
+    );
   }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 1280;
-  canvas.height = 720;
-
-  recordingCanvasRef.current = canvas;
-
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) {
-    throw new Error("Could not initialize recording canvas.");
+  if (!window.isSecureContext) {
+    throw new Error("Recording requires a secure (HTTPS) connection.");
   }
+
+  const displayStream = await navigator.mediaDevices.getDisplayMedia({
+    video: { frameRate: { ideal: 20, max: 30 } },
+    audio: true,
+    preferCurrentTab: true,
+    selfBrowserSurface: "include",
+    systemAudio: "include",
+  });
+
+  recordingDisplayStreamRef.current = displayStream;
+
+  const displayVideoTrack = displayStream.getVideoTracks()[0];
+
+  if (!displayVideoTrack) {
+    throw new Error("No video was shared for recording.");
+  }
+
+  displayVideoTrack.onended = () => {
+    if (recordingOwnerRef.current && mediaRecorderRef.current) {
+      stopCallRecordingRef.current?.();
+    }
+  };
 
   const audioContext = new AudioContext();
   recordingAudioContextRef.current = audioContext;
@@ -484,81 +455,41 @@ async function buildRecordingStream() {
   const destination = audioContext.createMediaStreamDestination();
   recordingAudioDestinationRef.current = destination;
 
-  const videos = recordingVideosRef.current;
   const audioSources = recordingAudioSourcesRef.current;
 
-  function syncRecordingStreams() {
-    const currentStreams = recordingStreamsRef.current;
-    const activeIds = new Set(currentStreams.map(({ id }) => id));
+  function addAudioTrack(track) {
+    if (!track || track.readyState !== "live" || audioSources.has(track.id)) {
+      return;
+    }
 
-    // Remove participants who have left
-    videos.forEach(({ video }, id) => {
-      if (!activeIds.has(id)) {
-        video.pause();
-        video.srcObject = null;
-        videos.delete(id);
-      }
-    });
+    const source = audioContext.createMediaStreamSource(
+      new MediaStream([track])
+    );
 
-    currentStreams.forEach(({ id, stream, label }) => {
-      if (!stream) return;
+    source.connect(destination);
+    audioSources.set(track.id, source);
+  }
 
-      if (!videos.has(id)) {
-        const video = document.createElement("video");
-        video.autoplay = true;
-        video.playsInline = true;
-        video.muted = true;
-        video.srcObject = stream;
+  const displayAudioTracks = displayStream
+    .getAudioTracks()
+    .filter((track) => track.readyState === "live");
 
-        videos.set(id, { video, label });
-
-        video.play().catch((error) => {
-          console.warn("Recording video could not start:", error);
-        });
-      } else {
-        const item = videos.get(id);
-
-        if (item.video.srcObject !== stream) {
-          item.video.srcObject = stream;
-          item.video.play().catch(() => {});
-        }
-
-        item.label = label;
-      }
-
-      const audioTracks = stream
-        .getAudioTracks()
-        .filter((track) => track.readyState === "live");
-
-      audioTracks.forEach((track) => {
-        if (audioSources.has(track.id)) return;
-
-        const audioStream = new MediaStream([track]);
-        const source = audioContext.createMediaStreamSource(audioStream);
-
-        source.connect(destination);
-        audioSources.set(track.id, source);
+  if (displayAudioTracks.length > 0) {
+    displayAudioTracks.forEach(addAudioTrack);
+  } else {
+    recordingStreamsRef.current
+      .filter(({ id }) => id !== "local")
+      .forEach(({ stream }) => {
+        stream?.getAudioTracks().forEach(addAudioTrack);
       });
-    });
   }
 
-  function drawFrame() {
-    syncRecordingStreams();
-    drawRecordingFrame(ctx, canvas, videos);
-
-    recordingAnimationRef.current = requestAnimationFrame(drawFrame);
-  }
-
-  syncRecordingStreams();
+  localStream?.getAudioTracks().forEach(addAudioTrack);
 
   await audioContext.resume();
 
-  drawFrame();
-
-  const canvasStream = canvas.captureStream(20);
-
   const outputStream = new MediaStream([
-    ...canvasStream.getVideoTracks(),
+    displayVideoTrack,
     ...destination.stream.getAudioTracks(),
   ]);
 
@@ -568,12 +499,18 @@ async function buildRecordingStream() {
 }
 
 async function startCallRecording() {
+  setRecordingDialogError("");
+
   if (!isHost) {
-    setRecordingMessage("Only the meeting host can start a recording.");
+    const message = "Only the meeting host can start a recording.";
+    setRecordingMessage(message);
+    setRecordingDialogError(message);
     return;
   }
 
-  if (isRecording || mediaRecorderRef.current) return;
+  if (isRecording || mediaRecorderRef.current || isStartingRecording) return;
+
+  setIsStartingRecording(true);
 
   try {
     if (!window.MediaRecorder) {
@@ -588,12 +525,13 @@ async function startCallRecording() {
         ? "video/webm"
         : "";
 
-    const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
+    const recorderOptions = { videoBitsPerSecond: 2500000 };
 
-   
-    const extension = recorder.mimeType.includes("webm") ? "webm" : "mp4";
+    if (mimeType) {
+      recorderOptions.mimeType = mimeType;
+    }
+
+    const recorder = new MediaRecorder(stream, recorderOptions);
 
     const started = await emitMeetingEvent("meeting:start-recording");
 
@@ -624,54 +562,41 @@ async function startCallRecording() {
 
     setIsRecording(true);
     setRecordingMessage("Recording is live.");
+    setShowRecordingDialog(false);
   } catch (err) {
     console.error("Could not start recording:", err);
-  
-    setRecordingMessage(
-      err.message || "Could not start recording."
-    );
-  
+
+    let message = err?.message || "Could not start recording.";
+
+    if (err?.name === "NotAllowedError") {
+      message =
+        "Screen capture permission was denied or cancelled. Please click Start Recording again and choose this tab to share.";
+    } else if (err?.name === "NotSupportedError") {
+      message = "Screen capture is not supported on this device or browser.";
+    } else if (err?.name === "AbortError") {
+      message = "Screen capture could not be started. Please try again.";
+    }
+
+    setRecordingMessage(message);
+    setRecordingDialogError(message);
+
     recordingOwnerRef.current = false;
-  
-    if (mediaRecorderRef.current?.state !== "inactive") {
-      mediaRecorderRef.current?.stop();
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
     }
-  
+
     mediaRecorderRef.current = null;
-  
-    recordingOutputStreamRef.current?.getTracks().forEach((track) => {
-      track.stop();
-    });
-  
-    recordingOutputStreamRef.current = null;
-  
-    if (recordingAnimationRef.current) {
-      cancelAnimationFrame(recordingAnimationRef.current);
-      recordingAnimationRef.current = null;
-    }
-  
-    recordingVideosRef.current.forEach(({ video }) => {
-      video.pause();
-      video.srcObject = null;
-    });
-  
-    recordingVideosRef.current.clear();
-  
-    recordingAudioSourcesRef.current.forEach((source) => {
-      try {
-        source.disconnect();
-      } catch {}
-    });
-  
-    recordingAudioSourcesRef.current.clear();
-  
-    recordingCanvasRef.current = null;
-    recordingAudioDestinationRef.current = null;
-  
-    if (recordingAudioContextRef.current) {
-      await recordingAudioContextRef.current.close();
-      recordingAudioContextRef.current = null;
-    }
+    recordingChunksRef.current = [];
+    recordingIdRef.current = null;
+    recordingStartedAtRef.current = null;
+
+    await cleanupRecordingResources();
+  } finally {
+    setIsStartingRecording(false);
   }
 }
 
@@ -744,7 +669,7 @@ async function stopCallRecording() {
       method: "PUT",
       headers: {
         // Required by the current backend's presigned URL signature.
-        "Content-Type": "video/mp4",
+        "Content-Type": videoBlob.type || "video/webm",
       },
       body: videoBlob,
     });
@@ -776,47 +701,17 @@ async function stopCallRecording() {
     recordingIdRef.current = null;
     recordingStartedAtRef.current = null;
     recordingOwnerRef.current = false;
-  
+
     mediaRecorderRef.current = null;
-  
-    recordingOutputStreamRef.current?.getTracks().forEach((track) => {
-      track.stop();
-    });
-  
-    recordingOutputStreamRef.current = null;
-  
-    if (recordingAnimationRef.current) {
-      cancelAnimationFrame(recordingAnimationRef.current);
-      recordingAnimationRef.current = null;
-    }
-  
-    recordingVideosRef.current.forEach(({ video }) => {
-      video.pause();
-      video.srcObject = null;
-    });
-  
-    recordingVideosRef.current.clear();
-  
-    recordingAudioSourcesRef.current.forEach((source) => {
-      try {
-        source.disconnect();
-      } catch {}
-    });
-  
-    recordingAudioSourcesRef.current.clear();
-  
-    recordingCanvasRef.current = null;
-    recordingAudioDestinationRef.current = null;
-  
-    if (recordingAudioContextRef.current) {
-      await recordingAudioContextRef.current.close();
-      recordingAudioContextRef.current = null;
-    }
-  
+
+    await cleanupRecordingResources();
+
     setIsRecording(false);
     setIsUploadingRecording(false);
   }
 }
+
+stopCallRecordingRef.current = stopCallRecording;
 
 async function leaveCall() {
   if (recordingOwnerRef.current && mediaRecorderRef.current) {
@@ -1149,7 +1044,10 @@ async function confirmEndMeeting() {
   
     <button
       type="button"
-      onClick={isRecording ? stopCallRecording : startCallRecording}
+      onClick={() => {
+        setRecordingDialogError("");
+        setShowRecordingDialog(true);
+      }}
       disabled={isUploadingRecording}
       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
       title={
@@ -1323,6 +1221,99 @@ async function confirmEndMeeting() {
           <FiPhoneOff size={18} />
         </button>
       </footer>
+      {showRecordingDialog && (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+        <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Meeting recording"
+            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/15 bg-[#0B2344] p-5 text-white shadow-2xl"
+        >
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                    {isRecording ? "Recording in progress" : "Record this meeting?"}
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={() => setShowRecordingDialog(false)}
+                    className="rounded-lg px-3 py-1 text-white/70 hover:bg-white/10"
+                    aria-label="Close"
+                >
+                    ✕
+                </button>
+            </div>
+
+            {isRecording ? (
+                <div className="mb-5 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/80">
+                    <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+                        {recordingMessage || "Recording is live."}
+                    </span>
+                    <p className="mt-2 text-xs text-white/50">
+                        Stopping the recording will upload it and share it in the team chat.
+                    </p>
+                </div>
+            ) : (
+                <div className="mb-5 space-y-3 text-sm text-white/80">
+                    <p>
+                        The meeting will be recorded, including the visible participants,
+                        shared screens and meeting audio. All participants will see a
+                        recording indicator.
+                    </p>
+                    <p className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">
+                        Your browser will ask which screen to capture. Choose{" "}
+                        <span className="font-semibold text-white">This tab</span> and
+                        turn on{" "}
+                        <span className="font-semibold text-white">Share tab audio</span>{" "}
+                        so participants&apos; voices are recorded. Quorum cannot skip this
+                        browser prompt. Tab audio capture works best in Chrome and Edge on
+                        desktop.
+                    </p>
+                </div>
+            )}
+
+            {recordingDialogError && (
+                <p className="mb-4 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {recordingDialogError}
+                </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={() => setShowRecordingDialog(false)}
+                    className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
+                >
+                    {isRecording ? "Close" : "Cancel"}
+                </button>
+
+                {isRecording ? (
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            setShowRecordingDialog(false);
+                            await stopCallRecording();
+                        }}
+                        disabled={isUploadingRecording}
+                        className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-40"
+                    >
+                        Stop Recording
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={startCallRecording}
+                        disabled={isStartingRecording}
+                        className="rounded-lg bg-[#0066FF] px-4 py-2 text-sm font-medium hover:bg-[#0057DB] disabled:opacity-40"
+                    >
+                        {isStartingRecording ? "Starting..." : "Start Recording"}
+                    </button>
+                )}
+            </div>
+        </section>
+    </div>
+)}
       {showPolls && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
         <section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#0B2344] p-5 text-white shadow-2xl">
