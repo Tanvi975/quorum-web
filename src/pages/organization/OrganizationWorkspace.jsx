@@ -1125,9 +1125,22 @@ async function editOrganization(event) {
 
     return (
       <div
-        key={id}
-        className="flex min-w-0 flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-3 transition hover:border-[#8BB9E8]/45 hover:bg-[#315A83]/50 sm:flex-row sm:items-center sm:justify-between sm:px-4"
-      >
+  key={id}
+  role="button"
+  tabIndex={0}
+  aria-label={`Open ${team.name || "team"} workspace`}
+  onClick={() => setSelectedChatTeam(team)}
+  onKeyDown={(event) => {
+    if (
+      event.target === event.currentTarget &&
+      (event.key === "Enter" || event.key === " ")
+    ) {
+      event.preventDefault();
+      setSelectedChatTeam(team);
+    }
+  }}
+  className="flex min-w-0 cursor-pointer flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-3 transition hover:border-[#8BB9E8]/60 hover:bg-[#315A83]/50 focus:outline-none focus:ring-2 focus:ring-[#38BDF8] sm:flex-row sm:items-center sm:justify-between sm:px-4"
+>
         <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-[#C6EAFF]">
   {team.avatar ? (
@@ -1151,14 +1164,12 @@ async function editOrganization(event) {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedChatTeam(team)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-2 text-xs font-medium text-[#C6EAFF] transition hover:bg-[#38BDF8]/20 sm:text-sm"
-          >
-            Open Team Chat
-          </button>
+        <div
+  className="flex shrink-0 items-center gap-2"
+  onClick={(event) => event.stopPropagation()}
+  onKeyDown={(event) => event.stopPropagation()}
+>
+         
 
           {(role === "ORG_ADMIN" || role === "TEAM_HEAD") &&
   menu(`team-${id}`, [
@@ -1200,9 +1211,9 @@ async function editOrganization(event) {
 
     return (
       <div
-        key={id}
-        className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/10 bg-[#062C52]/40 px-3 py-3 transition hover:bg-[#062C52]/70 sm:flex-row sm:items-center sm:justify-between sm:px-4"
-      >
+      key={id}
+      className="flex min-w-0 flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+    >
         <div className="flex min-w-0 items-center gap-3">
           {avatar ? (
             <img
@@ -1225,7 +1236,11 @@ async function editOrganization(event) {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div
+  className="flex shrink-0 items-center gap-2"
+  onClick={(event) => event.stopPropagation()}
+  onKeyDown={(event) => event.stopPropagation()}
+>
           <span className="hidden rounded-lg border border-[#B6C6D9]/25 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-[#EDEFF7] sm:inline-flex">
             {roleLabel(currentMemberRole)}
           </span>
