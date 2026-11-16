@@ -31,7 +31,6 @@ import AddTeamMember from "./AddTeamMember";
 import TeamChat from "./TeamChat";
 import OrganizationOverview from "./OrganizationOverview";
 import OrganizationWhiteboards from "../../components/OrganizationWhiteboards";
-import OrgJiraSettings from "../../components/jira/OrgJiraSettings";
 import OrganizationDocuments from "../../components/documents/OrganizationDocuments";
 import OrganizationFeed from "../../components/organization-feed/OrganizationFeed";
 const btn =
@@ -146,7 +145,6 @@ function OrganizationWorkspace() {
     "About",
     "Whiteboards",
     "Documents",
-    "Jira",
 ];
 
 const [activeTab, setActiveTab] = useState(
@@ -1459,7 +1457,6 @@ async function editOrganization(event) {
     "Members",
     "Whiteboards",
     "Documents",
-    "Jira",
     "About",
 ].map((tab) => (
             <button
@@ -1680,14 +1677,6 @@ async function editOrganization(event) {
         {activeTab === "Documents" && (
     <OrganizationDocuments organizationId={organizationId} />
 )}
-        {activeTab === "Jira" && (
-          <div className="w-full min-w-0">
-            <OrgJiraSettings
-              orgId={organizationId}
-              isOrgAdmin={role === "ORG_ADMIN" || isOrganizationOwner}
-            />
-          </div>
-        )}
         {showScheduleModal && (
           <Modal
             title="Schedule a meeting"
