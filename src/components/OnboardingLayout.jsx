@@ -7,7 +7,9 @@ function OnboardingLayout({
 }) {
   return (
     <div
-      className="relative isolate min-h-screen w-full min-w-0 overflow-x-hidden"
+    className={`relative isolate w-full min-w-0 overflow-x-hidden ${
+      fullWidth ? "h-dvh overflow-hidden" : "min-h-screen"
+    }`}
       style={{
         backgroundColor: "#062C5F",
         backgroundImage: `
@@ -24,14 +26,18 @@ function OnboardingLayout({
       }}
     >
       <div
-        className={`relative z-10 flex min-h-screen w-full min-w-0 ${
+      className={`relative z-10 flex w-full min-w-0 ${
+        fullWidth ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
+      } ${
           fullWidth
             ? "items-stretch justify-start p-0"
             : "items-start justify-center px-3 py-5 sm:px-5 sm:py-8 lg:px-8"
         }`}
       >
         <div
-          className={`w-full min-w-0 ${
+         className={`w-full min-w-0 ${
+          fullWidth ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden" : ""
+        } ${
             fullWidth
               ? "max-w-none flex-1 rounded-none p-0"
               : `rounded-2xl p-4 sm:p-6 md:px-8 md:py-7 ${
