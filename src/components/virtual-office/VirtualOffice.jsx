@@ -1,163 +1,387 @@
-
-import { useMemo } from "react";
-import {
-  FaBuilding,
-  FaCoffee,
-  FaDesktop,
-  FaShieldAlt,
-  FaVideo,
-  FaSyncAlt,
-  FaSpinner,
-  FaMapMarkerAlt,
-} from "react-icons/fa";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import useVirtualOffice from "../../hooks/useVirtualOffice";
+import { useAuth } from "../../context/AuthContext";
 
-const statusStyles = {
-  AVAILABLE: "bg-emerald-400",
-  BUSY: "bg-red-400",
-  AWAY: "bg-amber-400",
-  BE_RIGHT_BACK: "bg-amber-400",
-  DO_NOT_DISTURB: "bg-red-400",
-  EMPTY: "bg-slate-500",
+const GRID = 10;
+const WALL_UNITS = 1.5;
+const DESK_HEIGHT = 0.28;
+
+const WAR_RECT    = { l: 0.3, t: 0.3, r: 4.7, b: 4.7 };
+const COFFEE_RECT = { l: 5.3, t: 0.3, r: 9.7, b: 4.7 };
+const FOCUS_RECT  = { l: 0.3, t: 5.3, r: 4.7, b: 9.7 };
+const OPEN_RECT   = { l: 5.3, t: 5.3, r: 9.7, b: 9.7 };
+
+const WAR_SLOTS = [
+  [1.0, 2.4], [2.0, 1.2], [3.4, 1.2], [4.1, 2.4],
+  [3.5, 3.7], [2.2, 3.8], [1.0, 3.5],
+];
+const COFFEE_SLOTS = [
+  [6.3, 1.7], [8.5, 1.7], [6.3, 3.5],
+  [8.5, 3.6], [7.5, 4.2], [7.5, 1.1],
+];
+const POD_CENTERS = [
+  [1.5, 6.6], [3.5, 6.6], [1.5, 8.6], [3.5, 8.6],
+];
+
+const C = {
+  floorA: "#414E75",
+  floorB: "#2C3659",
+  slabL:  "#1B2440",
+  slabR:  "#111729",
+  gridLine: "rgba(255,255,255,0.078)",
+  floorEdge: "rgba(255,255,255,0.2)",
+  wallA:  "rgba(35,44,77,0.5)",
+  wallB:  "rgba(107,127,181,0.302)",
+  wallEdge: "rgba(255,255,255,0.4)",
+  window: "rgba(96,165,250,0.2)",
+  warPadDefault: "rgba(79,123,217,0.251)",
+  warPadLive:    "rgba(34,197,94,0.251)",
+  coffeePad: "rgba(251,191,36,0.22)",
+  focusPad:  "rgba(139,92,246,0.22)",
+  openPad:   "rgba(20,184,166,0.196)",
+  ellipseShadow: "rgba(255,255,255,0.122)",
+  minePadStroke: "rgba(167,139,250,0.9)",
+  deskRug: "rgba(167,139,250,0.333)",
+  chair:   "#334155",
+  deskTop: "#C8B08A",
+  monitor: "#0F172A",
+  tableRoom: "#9DB0D6",
+  partition: "rgba(255,255,255,0.18)",
+  partitionB: "rgba(255,255,255,0.078)",
+  shelf:   "#B08968",
+  coffeeMachine: "#1F2937",
+  coffeeTable:   "#E8CFA6",
+  couchBase: "#C2704B",
+  couchBack: "#A85A3A",
+  plantPot:  "#8A6A45",
+  plantLeafA: "#1F9D68",
+  plantLeafB: "#34D399",
+  podActive: "#8B5CF6",
+  podIdle:   "#3B4268",
+  podWallA:  "rgba(139,92,246,0.333)",
+  podWallB:  "rgba(196,181,253,0.133)",
+  podSeat:   "#6B7280",
+  presenceAvailable: "#22C55E",
+  presenceBusy:  "#EF4444",
+  presenceAway:  "#FBBF24",
+  presenceOff:   "#9EA3AE",
+  tileBorder:    "rgba(255,255,255,0.133)",
+  live: "#22C55E",
 };
 
-const statusLabels = {
-  AVAILABLE: "Available",
-  BUSY: "Busy",
-  AWAY: "Away",
-  BE_RIGHT_BACK: "On break",
-  DO_NOT_DISTURB: "Do not disturb",
-  EMPTY: "Empty",
-};
+function presenceColor(p) {
+  switch ((p || "").toUpperCase()) {
+    case "AVAILABLE": return C.presenceAvailable;
+    case "BUSY":
+    case "DO_NOT_DISTURB": return C.presenceBusy;
+    case "AWAY":
+    case "BE_RIGHT_BACK": return C.presenceAway;
+    case "OFFLINE": return C.presenceOff;
+    default: return C.presenceAvailable;
+  }
+}
 
-const isDeskFree = (desk) =>
-  desk.status === "EMPTY" || !desk.occupiedByUserId;
+function presenceLabel(p) {
+  switch ((p || "").toUpperCase()) {
+    case "AVAILABLE": return "Available";
+    case "BUSY": return "Busy";
+    case "AWAY": return "Away";
+    case "BE_RIGHT_BACK": return "Be right back";
+    case "DO_NOT_DISTURB": return "Do not disturb";
+    case "OFFLINE": return "Offline";
+    default: return "Active";
+  }
+}
 
-function getInitials(name) {
+function initials(name) {
   return String(name || "M")
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((part) => part[0])
+    .map((p) => p[0] || "")
     .join("")
     .toUpperCase();
 }
 
-function MemberAvatar({ name, avatarUrl, status }) {
-  return (
-    <div className="relative h-9 w-9 shrink-0">
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={name || "Team member"}
-          className="h-9 w-9 rounded-full border border-white/20 object-cover"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-      ) : (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-white">
-          {getInitials(name)}
-        </div>
-      )}
-
-      <span
-        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#213F70] ${
-          statusStyles[status] || "bg-slate-400"
-        }`}
-      />
-    </div>
-  );
+function shade(hex, f) {
+  const h = hex.replace("#", "");
+  const r = Math.round(parseInt(h.slice(0, 2), 16) * f);
+  const g = Math.round(parseInt(h.slice(2, 4), 16) * f);
+  const b = Math.round(parseInt(h.slice(4, 6), 16) * f);
+  return `rgb(${r},${g},${b})`;
 }
 
-function ZoneMember({ member }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
-      <MemberAvatar
-        name={member.name}
-        avatarUrl={member.avatarUrl}
-        status={member.presenceStatus}
-      />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">
-          {member.name || "Team member"}
-        </p>
-
-        <p className="text-xs text-sky-100/65">
-          {statusLabels[member.presenceStatus] || "Active"}
-        </p>
-      </div>
-    </div>
-  );
+function computeDeskRects(n) {
+  const cols = 4;
+  const rows = Math.max(Math.ceil(n / cols), 1);
+  const x0 = 5.4, x1 = 9.7, y0 = 5.7, y1 = 9.7;
+  const cw = (x1 - x0) / cols;
+  const rh = (y1 - y0) / rows;
+  const rects = [];
+  for (let i = 0; i < n; i++) {
+    rects.push({
+      left: x0 + (i % cols) * cw + cw * 0.1,
+      top:  y0 + Math.floor(i / cols) * rh + rh * 0.1,
+      width:  cw * 0.8,
+      height: rh * 0.5,
+    });
+  }
+  return rects;
 }
 
-function ZoneCard({
-  title,
-  description,
-  icon: Icon,
-  members,
-  actionLabel,
-  onAction,
-  disabled,
-  accent,
-}) {
-  return (
-    <section className="min-w-0 rounded-2xl border border-white/15 bg-white/[0.07] p-4 shadow-lg shadow-[#102842]/10 backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accent}`}
-          >
-            <Icon className="text-lg" />
-          </div>
-
-          <div className="min-w-0">
-            <h3 className="font-semibold text-white">{title}</h3>
-            <p className="mt-0.5 text-xs text-sky-100/60">
-              {description}
-            </p>
-          </div>
-        </div>
-
-        <span className="shrink-0 rounded-full border border-white/10 bg-black/10 px-2 py-1 text-xs text-sky-100/80">
-          {members.length}
-        </span>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {members.length > 0 ? (
-          members.map((member) => (
-            <ZoneMember key={member.userId} member={member} />
-          ))
-        ) : (
-          <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-center text-xs text-sky-100/55">
-            Nobody is here right now.
-          </p>
-        )}
-      </div>
-
-      {actionLabel && (
-        <button
-          type="button"
-          onClick={onAction}
-          disabled={disabled}
-          className="mt-4 w-full rounded-xl border border-sky-300/25 bg-[#1B4B7A]/70 px-3 py-2.5 text-sm font-semibold text-sky-50 transition hover:bg-[#245D91] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {actionLabel}
-        </button>
-      )}
-    </section>
-  );
+function makeIso(ox, oy, tw, th, unit) {
+  return {
+    ox, oy, tw, th, unit,
+    p(x, y, z = 0) {
+      return [ox + (x - y) * tw / 2, oy + (x + y) * th / 2 - z * unit];
+    },
+  };
 }
 
-export default function VirtualOffice({
-  teamId,
-  teamName,
-  socket,
-  connected,
-  enabled,
-}) {
+function paintFloor(ctx, iso, state) {
+  const { myZone, warLive, deskRects, deskColors, mineDesk, focusCount, pulse } = state;
+
+  const fillPath = (pts, color) => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  const strokePath = (pts, color, w = 1) => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.lineWidth = w;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  };
+
+  const T = 0.5;
+  fillPath([iso.p(0, GRID), iso.p(GRID, GRID), iso.p(GRID, GRID, -T), iso.p(0, GRID, -T)], C.slabL);
+  fillPath([iso.p(GRID, 0), iso.p(GRID, GRID), iso.p(GRID, GRID, -T), iso.p(GRID, 0, -T)], C.slabR);
+
+  const corners = [iso.p(0, 0), iso.p(GRID, 0), iso.p(GRID, GRID), iso.p(0, GRID)];
+  let minY = Infinity, maxY = -Infinity;
+  corners.forEach(([, y]) => { if (y < minY) minY = y; if (y > maxY) maxY = y; });
+  const grad = ctx.createLinearGradient(0, minY, 0, maxY);
+  grad.addColorStop(0, C.floorA);
+  grad.addColorStop(1, C.floorB);
+  fillPath(corners, grad);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = C.gridLine;
+  for (let i = 1; i < GRID; i++) {
+    const a1 = iso.p(i, 0), a2 = iso.p(i, GRID);
+    ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.stroke();
+    const b1 = iso.p(0, i), b2 = iso.p(GRID, i);
+    ctx.beginPath(); ctx.moveTo(b1[0], b1[1]); ctx.lineTo(b2[0], b2[1]); ctx.stroke();
+  }
+  strokePath(corners, C.floorEdge, 1.4);
+
+  const pad = (r, color, mine, live) => {
+    const pts = [iso.p(r.l, r.t), iso.p(r.r, r.t), iso.p(r.r, r.b), iso.p(r.l, r.b)];
+    fillPath(pts, color);
+    if (live) {
+      ctx.save();
+      ctx.shadowColor = `rgba(34,197,94,${0.35 + 0.55 * pulse})`;
+      ctx.shadowBlur = 6;
+      strokePath(pts, `rgba(34,197,94,${0.35 + 0.55 * pulse})`, 2.2);
+      ctx.restore();
+    } else if (mine) {
+      strokePath(pts, C.minePadStroke, 2);
+    } else {
+      strokePath(pts, C.tileBorder, 1);
+    }
+  };
+  pad(WAR_RECT,    warLive ? C.warPadLive : C.warPadDefault, myZone === "WAR_ROOM", warLive);
+  pad(COFFEE_RECT, C.coffeePad, myZone === "COFFEE_LOUNGE", false);
+  pad(FOCUS_RECT,  C.focusPad,  myZone === "FOCUS_POD", false);
+  pad(OPEN_RECT,   C.openPad,   myZone === "OPEN_WORKSPACE", false);
+
+  fillEllipse(ctx, iso, 7.5, 2.5, 1.35, 0.01, C.ellipseShadow);
+
+  wall(ctx, iso, 0, GRID, 0, 0, WALL_UNITS, C.wallA, C.wallB, true);
+  wall(ctx, iso, 0, 0,    GRID, 0, WALL_UNITS, C.wallA, C.wallB, true);
+  windows(ctx, iso, true);
+  windows(ctx, iso, false);
+
+  const items = [];
+
+  items.push([0.5, () => {
+    box(ctx, iso, 1.4, 0.05, 2.0, 0.08, 0.7, C.monitor, 0.55);
+    fillPath(
+      [iso.p(1.5, 0.13, 0.62), iso.p(3.3, 0.13, 0.62), iso.p(3.3, 0.13, 1.18), iso.p(1.5, 0.13, 1.18)],
+      warLive ? `rgba(34,197,94,${0.35 + 0.3 * pulse})` : "rgba(96,165,250,0.333)"
+    );
+  }]);
+  items.push([4.8, () => box(ctx, iso, 1.4, 1.8, 2.0, 1.2, 0.35, C.tableRoom)]);
+  items.push([7.35, () => wall(ctx, iso, 5.0, 0.0, 5.0, 4.7, 0.55, C.partition, C.partitionB, false)]);
+  items.push([7.35, () => wall(ctx, iso, 0.0, 5.0, 4.7, 5.0, 0.55, C.partition, C.partitionB, false)]);
+  items.push([6.9, () => {
+    box(ctx, iso, 5.5, 0.35, 1.6, 0.6, 0.55, C.shelf);
+    box(ctx, iso, 5.8, 0.45, 0.35, 0.35, 0.35, C.coffeeMachine, 0.55);
+  }]);
+  items.push([10.0, () => cyl(ctx, iso, 7.5, 2.5, 0.55, 0.4, C.coffeeTable)]);
+  items.push([11.0, () => {
+    box(ctx, iso, 9.1, 1.2, 0.55, 2.6, 0.35, C.couchBase);
+    box(ctx, iso, 9.45, 1.2, 0.2, 2.6, 0.75, C.couchBack);
+  }]);
+  items.push([9.0,  () => plant(ctx, iso, 5.6, 4.3)]);
+  items.push([9.4,  () => plant(ctx, iso, 4.3, 4.3)]);
+  items.push([19.0, () => plant(ctx, iso, 9.4, 9.4)]);
+  for (let i = 0; i < POD_CENTERS.length; i++) {
+    const [cx, cy] = POD_CENTERS[i];
+    items.push([cx + cy, () => drawPod(ctx, iso, cx, cy, i < focusCount)]);
+  }
+  for (let i = 0; i < deskRects.length; i++) {
+    const r = deskRects[i];
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    items.push([cx + cy, () => drawDesk(ctx, iso, r, deskColors[i], i === mineDesk)]);
+  }
+
+  items.sort((a, b) => a[0] - b[0]);
+  items.forEach(([, fn]) => fn());
+}
+
+function wall(ctx, iso, x1, y1, x2, y2, h, a, b, edge) {
+  const pts = [iso.p(x1, y1), iso.p(x2, y2), iso.p(x2, y2, h), iso.p(x1, y1, h)];
+  let minY = Infinity, maxY = -Infinity;
+  pts.forEach(([, y]) => { if (y < minY) minY = y; if (y > maxY) maxY = y; });
+  const g = ctx.createLinearGradient(0, minY, 0, maxY);
+  g.addColorStop(0, b);
+  g.addColorStop(1, a);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = g;
+  ctx.fill();
+  if (edge) {
+    const p1 = iso.p(x1, y1, h), p2 = iso.p(x2, y2, h);
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]);
+    ctx.strokeStyle = C.wallEdge;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+}
+
+function windows(ctx, iso, alongX) {
+  for (let k = 0; k < 4; k++) {
+    const s = 0.9 + k * 2.4;
+    const e = s + 1.4;
+    const pts = alongX
+      ? [iso.p(s, 0, 0.8), iso.p(e, 0, 0.8), iso.p(e, 0, 1.35), iso.p(s, 0, 1.35)]
+      : [iso.p(0, s, 0.8), iso.p(0, e, 0.8), iso.p(0, e, 1.35), iso.p(0, s, 1.35)];
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = C.window;
+    ctx.fill();
+  }
+}
+
+function box(ctx, iso, x, y, w, d, h, topColor, z0 = 0) {
+  const z1 = z0 + h;
+  const fill = (pts, color) => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  fill([iso.p(x, y + d, z0), iso.p(x + w, y + d, z0), iso.p(x + w, y + d, z1), iso.p(x, y + d, z1)], shade(topColor, 0.72));
+  fill([iso.p(x + w, y, z0), iso.p(x + w, y + d, z0), iso.p(x + w, y + d, z1), iso.p(x + w, y, z1)], shade(topColor, 0.52));
+  fill([iso.p(x, y, z1), iso.p(x + w, y, z1), iso.p(x + w, y + d, z1), iso.p(x, y + d, z1)], topColor);
+}
+
+function ringPath(ctx, iso, cx, cy, r, z) {
+  const path = new Path2D();
+  for (let i = 0; i <= 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    const [px, py] = iso.p(cx + r * Math.cos(a), cy + r * Math.sin(a), z);
+    if (i === 0) path.moveTo(px, py);
+    else path.lineTo(px, py);
+  }
+  path.closePath();
+  return path;
+}
+
+function cyl(ctx, iso, cx, cy, r, h, topColor, z0 = 0) {
+  const side = shade(topColor, 0.6);
+  for (let i = 0; i <= 6; i++) {
+    const p = ringPath(ctx, iso, cx, cy, r, z0 + h * i / 6);
+    ctx.fillStyle = side;
+    ctx.fill(p);
+  }
+  const top = ringPath(ctx, iso, cx, cy, r, z0 + h);
+  ctx.fillStyle = topColor;
+  ctx.fill(top);
+}
+
+function fillEllipse(ctx, iso, cx, cy, r, z, color) {
+  const p = ringPath(ctx, iso, cx, cy, r, z);
+  ctx.fillStyle = color;
+  ctx.fill(p);
+}
+
+function plant(ctx, iso, x, y) {
+  cyl(ctx, iso, x, y, 0.22, 0.3, C.plantPot);
+  const [tx, ty] = iso.p(x, y, 0.78);
+  ctx.beginPath();
+  ctx.arc(tx, ty, iso.tw * 0.2, 0, Math.PI * 2);
+  ctx.fillStyle = C.plantLeafA; ctx.fill();
+  ctx.beginPath();
+  ctx.arc(tx - iso.tw * 0.07, ty - iso.tw * 0.07, iso.tw * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = C.plantLeafB; ctx.fill();
+}
+
+function drawPod(ctx, iso, cx, cy, active) {
+  box(ctx, iso, cx - 0.75, cy - 0.75, 1.5, 1.5, 0.06, active ? C.podActive : C.podIdle);
+  wall(ctx, iso, cx - 0.75, cy + 0.75, cx - 0.75, cy - 0.75, 1.0, C.podWallA, C.podWallB, false);
+  wall(ctx, iso, cx - 0.75, cy - 0.75, cx + 0.75, cy - 0.75, 1.0, C.podWallA, C.podWallB, false);
+  box(ctx, iso, cx - 0.5, cy - 0.6, 1.0, 0.35, 0.34, C.podSeat, 0.06);
+}
+
+function drawDesk(ctx, iso, r, color, mine) {
+  if (mine) {
+    fillEllipse(ctx, iso, r.left + r.width / 2, r.top + r.height / 2 + 0.2, 0.95, 0.02, C.deskRug);
+  }
+  box(ctx, iso, r.left + r.width * 0.3, r.top + r.height + 0.05, r.width * 0.4, 0.32, 0.3, C.chair);
+  box(ctx, iso, r.left, r.top, r.width, r.height, DESK_HEIGHT, C.deskTop);
+  const my = r.top + r.height * 0.2;
+  box(ctx, iso, r.left + r.width * 0.25, my, r.width * 0.5, 0.07, 0.4, C.monitor, DESK_HEIGHT);
+  const pts = [
+    iso.p(r.left + r.width * 0.28, my + 0.07, DESK_HEIGHT + 0.05),
+    iso.p(r.left + r.width * 0.72, my + 0.07, DESK_HEIGHT + 0.05),
+    iso.p(r.left + r.width * 0.72, my + 0.07, DESK_HEIGHT + 0.36),
+    iso.p(r.left + r.width * 0.28, my + 0.07, DESK_HEIGHT + 0.36),
+  ];
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  if (color) {
+    const h = color.replace("#", "");
+    const rr = parseInt(h.slice(0, 2), 16);
+    const gg = parseInt(h.slice(2, 4), 16);
+    const bb = parseInt(h.slice(4, 6), 16);
+    ctx.fillStyle = `rgba(${rr},${gg},${bb},0.85)`;
+  } else {
+    ctx.fillStyle = "#1E293B";
+  }
+  ctx.fill();
+}
+
+export default function VirtualOffice({ teamId, teamName, socket, connected, enabled }) {
+  const { user } = useAuth();
+  const currentUserId = user?.id || user?.userId || user?._id || null;
+
   const {
     floorState,
     loading,
@@ -168,311 +392,604 @@ export default function VirtualOffice({
     refreshFloor,
     claimDesk,
     changeZone,
-  } = useVirtualOffice({
-    teamId,
-    socket,
-    connected,
-    enabled,
-  });
+    knockOnDesk,
+  } = useVirtualOffice({ teamId, socket, connected, enabled });
 
-  const members = useMemo(
-    () => Object.values(floorState?.members || {}),
-    [floorState?.members]
-  );
-
-  const zoneMembers = useMemo(
-    () => ({
-      WAR_ROOM: members.filter(
-        (member) => member.zoneId === "WAR_ROOM"
-      ),
-      COFFEE_LOUNGE: members.filter(
-        (member) => member.zoneId === "COFFEE_LOUNGE"
-      ),
-      FOCUS_POD: members.filter(
-        (member) => member.zoneId === "FOCUS_POD"
-      ),
-    }),
-    [members]
-  );
-
+  const members = floorState?.members || {};
+  const membersList = useMemo(() => Object.values(members), [members]);
   const desks = floorState?.desks || [];
   const counts = floorState?.counts || {};
+  const activeMeetingCode = floorState?.activeMeetingCode;
+  const warLive = Boolean(activeMeetingCode);
+
+  const selfMember = membersList.find((m) => m.userId === currentUserId);
+  const myZone = selfMember?.zoneId || null;
+
+  const inZone = (z) => membersList.filter((m) => m.zoneId === z);
+  const warM = inZone("WAR_ROOM");
+  const coffeeM = inZone("COFFEE_LOUNGE");
+  const focusM = inZone("FOCUS_POD");
+  const openM = inZone("OPEN_WORKSPACE");
+
+  const deskRects = useMemo(() => computeDeskRects(desks.length), [desks.length]);
+
+  const sortedDesks = useMemo(
+    () => [...desks].sort((a, b) => (a.deskNumber ?? 0) - (b.deskNumber ?? 0)),
+    [desks]
+  );
+  const deskColors = sortedDesks.map((d) => {
+    const m = d.occupiedByUserId ? members[d.occupiedByUserId] : null;
+    return m ? presenceColor(m.presenceStatus) : null;
+  });
+  const mineDesk = sortedDesks.findIndex((d) => d.occupiedByUserId === currentUserId);
+
+  const wrapRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [size, setSize] = useState({ w: 800, h: 520, tw: 0, th: 0, unit: 0, top: 0 });
+
+  useLayoutEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.max(320, entry.contentRect.width);
+      const h = Math.max(360, entry.contentRect.height);
+      const tw = w / (GRID + 0.4);
+      const th = tw * 0.56;
+      const unit = th * 1.7;
+      const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
+      const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
+      setSize({ w, h, tw, th, unit, top });
+    });
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const pulseRef = useRef(0);
+  useEffect(() => {
+    let raf;
+    const tick = (t) => {
+      pulseRef.current = (Math.sin(t / 900) + 1) / 2;
+      draw();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [size, warLive, myZone, mineDesk, sortedDesks.length, focusM.length]);
+
+  function draw() {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    if (w < 50 || h < 50) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== Math.round(w * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const tw = w / (GRID + 0.4);
+    const th = tw * 0.56;
+    const unit = th * 1.7;
+    const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
+    const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
+    const iso = makeIso(w / 2, top, tw, th, unit);
+
+    paintFloor(ctx, iso, {
+      myZone,
+      warLive,
+      deskRects,
+      deskColors,
+      mineDesk,
+      focusCount: focusM.length,
+      pulse: pulseRef.current,
+    });
+  }
+
+  const iso = useMemo(() => {
+    const w = size.w || 800;
+    const h = size.h || 520;
+    const tw = w / (GRID + 0.4);
+    const th = tw * 0.56;
+    const unit = th * 1.7;
+    const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
+    const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
+    return makeIso(w / 2, top, tw, th, unit);
+  }, [size]);
+
+  const avatarSize = Math.max(20, Math.min(30, size.tw * 0.68));
+
+  const avatars = [];
+  const placed = new Set();
+
+  function placeInSlots(list, slots, z) {
+    for (let i = 0; i < list.length && i < slots.length; i++) {
+      const m = list[i];
+      const [px, py] = iso.p(slots[i][0], slots[i][1], z);
+      avatars.push({
+        userId: m.userId,
+        left: px - avatarSize / 2,
+        top:  py - avatarSize - 6,
+        member: m,
+        label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
+      });
+      placed.add(m.userId);
+    }
+  }
+  placeInSlots(warM,    WAR_SLOTS,    0);
+  placeInSlots(coffeeM, COFFEE_SLOTS, 0);
+  placeInSlots(focusM,  POD_CENTERS.map(([x, y]) => [x, y + 0.2]), 0.06);
+
+  const seated = new Set();
+  sortedDesks.forEach((d, i) => {
+    const m = d.occupiedByUserId ? members[d.occupiedByUserId] : null;
+    if (m && m.zoneId === "OPEN_WORKSPACE") {
+      const r = deskRects[i];
+      const [px, py] = iso.p(r.left + r.width / 2, r.top + r.height + 0.2, 0.15);
+      avatars.push({
+        userId: m.userId,
+        left: px - avatarSize / 2,
+        top:  py - avatarSize - 6,
+        member: m,
+        label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
+      });
+      seated.add(m.userId);
+      placed.add(m.userId);
+    }
+  });
+  openM.filter((m) => !seated.has(m.userId)).slice(0, 5).forEach((m, i) => {
+    const [px, py] = iso.p(5.8 + i * 0.9, 5.1);
+    avatars.push({
+      userId: m.userId,
+      left: px - avatarSize / 2,
+      top:  py - avatarSize - 6,
+      member: m,
+      label: m.userId === currentUserId ? "You" : (m.name || "").split(" ")[0],
+    });
+    placed.add(m.userId);
+  });
+
+  avatars.sort((a, b) => a.top - b.top);
+
+  const labels = [
+    { text: warLive ? "Meeting Room · LIVE" : (warM.length ? `Meeting Room · ${warM.length}` : "Meeting Room"), pos: iso.p(2.5, 0, 0.3) },
+    { text: coffeeM.length ? `Coffee Lounge · ${coffeeM.length}` : "Coffee Lounge", pos: iso.p(7.5, 0, 0.3) },
+    { text: focusM.length  ? `Focus Pod · ${focusM.length}`     : "Focus Pod",     pos: iso.p(0, 7.5, 0.3) },
+    { text: "Open Workspace", pos: iso.p(7.5, 5.1) },
+  ];
+
   const isLoading = loading || joining;
 
   if (isLoading && !floorState) {
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/5 text-sky-100">
-        <FaSpinner className="animate-spin text-2xl text-sky-300" />
-        <p className="text-sm">
-          Connecting to your virtual office...
-        </p>
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-sky-300 border-t-transparent" />
+        <p className="text-sm">Connecting to your virtual office...</p>
       </div>
     );
   }
-
   if (!floorState && error) {
     return (
       <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 rounded-2xl border border-red-300/20 bg-red-400/5 p-6 text-center">
-        <FaBuilding className="text-3xl text-red-200" />
-
-        <h3 className="font-semibold text-white">
-          Unable to load Virtual Office
-        </h3>
-
-        <p className="max-w-md text-sm text-sky-100/70">
-          {error}
-        </p>
-
-        <button
-          type="button"
-          onClick={refreshFloor}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#0148B3] px-4 py-2.5 text-sm font-semibold text-white"
-        >
-          <FaSyncAlt />
-          Try again
-        </button>
+        <h3 className="font-semibold text-white">Unable to load Virtual Office</h3>
+        <p className="max-w-md text-sm text-sky-100/70">{error}</p>
+        <button onClick={refreshFloor} className="rounded-xl bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white">Try again</button>
       </div>
     );
   }
+
+  const openDesks = desks.filter((d) => d.status === "EMPTY" || !d.occupiedByUserId);
+  const occupiedDesks = desks.filter((d) => d.status !== "EMPTY" && d.occupiedByUserId);
+  const padLeft = Math.max(10, 10);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 text-white sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <FaBuilding className="text-sky-300" />
-
-            <h2 className="truncate text-lg font-bold sm:text-xl">
-              Virtual Office
-            </h2>
-          </div>
-
+          <h2 className="truncate text-lg font-bold sm:text-xl">Virtual Office</h2>
           <p className="mt-1 text-xs text-sky-100/65 sm:text-sm">
             {teamName} · Your team's shared workspace
           </p>
         </div>
-
         <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${
-              connected
-                ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-200"
-                : "border-red-300/25 bg-red-400/10 text-red-200"
-            }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                connected ? "bg-emerald-400" : "bg-red-400"
-              }`}
-            />
-
-            {connected ? "Live" : "Reconnecting"}
+          <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${
+            connected
+              ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-200"
+              : "border-red-300/25 bg-red-400/10 text-red-200"
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-red-400"}`} />
+            {connected ? `Connected · ${membersList.length} Online` : "Reconnecting"}
           </span>
-
           <button
-            type="button"
             onClick={refreshFloor}
             disabled={loading}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-sky-100 hover:bg-white/10 disabled:opacity-50"
             aria-label="Refresh office"
-            title="Refresh office"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-sky-100 transition hover:bg-white/10 disabled:opacity-50"
           >
-            <FaSyncAlt className={loading ? "animate-spin" : ""} />
+            ↻
           </button>
         </div>
       </div>
 
       {(error || socketError) && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"
-        >
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
           <span>{error || socketError}</span>
-
-          <button
-            type="button"
-            onClick={refreshFloor}
-            className="font-semibold underline underline-offset-2"
-          >
-            Refresh
-          </button>
+          <button onClick={refreshFloor} className="font-semibold underline">Refresh</button>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          {
-            label: "Active members",
-            value: counts.totalActive ?? members.length,
-          },
-          {
-            label: "Occupied desks",
-            value: desks.filter((desk) => !isDeskFree(desk)).length,
-          },
-          {
-            label: "In War Room",
-            value: counts.warRoom ?? zoneMembers.WAR_ROOM.length,
-          },
-          {
-            label: "Focus Pods",
-            value: counts.focusPods ?? zoneMembers.FOCUS_POD.length,
-          },
-        ].map((item) => (
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <section className="min-w-0">
           <div
-            key={item.label}
-            className="rounded-xl border border-white/15 bg-white/[0.07] p-3"
+            className="rounded-3xl border border-white/10 p-3 shadow-2xl"
+            style={{
+              background: "linear-gradient(180deg,#222E50 0%,#151C33 100%)",
+            }}
           >
-            <p className="text-xs text-sky-100/60">
-              {item.label}
-            </p>
-
-            <p className="mt-1 text-xl font-bold text-white">
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <section className="min-w-0 rounded-2xl border border-white/15 bg-white/[0.07] p-4 backdrop-blur-sm sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="flex items-center gap-2 font-bold text-white">
-                <FaDesktop className="text-sky-300" />
-                Open Workspace
-              </h3>
-
-              <p className="mt-1 text-xs text-sky-100/60">
-                Choose an available desk to join your team.
-              </p>
+            <div className="mb-2 flex items-center justify-between px-2">
+              <div>
+                <h3 className="text-base font-bold text-white sm:text-lg">
+                  Virtual Office Floor
+                  <span className="ml-2 rounded-full bg-sky-500/20 px-2 py-0.5 text-[11px] font-semibold text-sky-200">
+                    {desks.length} Desks
+                  </span>
+                </h3>
+                <p className="mt-0.5 text-[11px] text-sky-100/60 sm:text-xs">
+                  Interactive 3D spatial floor · Click any room or desk to navigate
+                </p>
+              </div>
+              <div className="hidden gap-2 sm:flex">
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center">
+                  <div className="text-base font-bold text-white">{openDesks.length}</div>
+                  <div className="text-[10px] text-sky-100/60">Desks Free</div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center">
+                  <div className="text-base font-bold text-white">{warM.length}</div>
+                  <div className="text-[10px] text-sky-100/60">In Huddle</div>
+                </div>
+              </div>
             </div>
 
-            <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1.5 text-xs text-sky-100">
-              {desks.filter(isDeskFree).length} desks free
-            </span>
-          </div>
+            <div
+              ref={wrapRef}
+              className="relative w-full overflow-hidden rounded-2xl"
+              style={{ aspectRatio: "1.45 / 1", minHeight: 420, maxHeight: 640 }}
+            >
+              <canvas
+                ref={canvasRef}
+                className="pointer-events-none absolute inset-0"
+                style={{ width: "100%", height: "100%" }}
+              />
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {desks.map((desk) => {
-              const occupied = !isDeskFree(desk);
+              {sortedDesks.map((desk, i) => {
+                const r = deskRects[i];
+                if (!r) return null;
+                const [cx, cy] = iso.p(r.left + r.width / 2, r.top + r.height / 2, 0.3);
+                const w = size.tw * 1.2;
+                const h = size.tw * 0.9;
+                const occupied = desk.status !== "EMPTY" && desk.occupiedByUserId;
+                return (
+                  <button
+                    key={desk.deskId}
+                    type="button"
+                    onClick={() =>
+                      occupied
+                        ? desk.occupiedByUserId !== currentUserId &&
+                          knockOnDesk(desk.occupiedByUserId, "")
+                        : claimDesk(desk.deskId)
+                    }
+                    disabled={actionLoading || !connected}
+                    title={
+                      occupied
+                        ? `Desk ${desk.deskNumber} · ${members[desk.occupiedByUserId]?.name || "Teammate"}`
+                        : `Desk ${desk.deskNumber} · Free`
+                    }
+                    className="absolute cursor-pointer border-0 bg-transparent p-0"
+                    style={{
+                      left: cx - w / 2,
+                      top:  cy - h * 0.65,
+                      width: w,
+                      height: h,
+                    }}
+                  />
+                );
+              })}
 
-              const member = members.find(
-                (item) => item.userId === desk.occupiedByUserId
-              );
+              {[
+                { zone: "WAR_ROOM",      rect: WAR_RECT },
+                { zone: "COFFEE_LOUNGE", rect: COFFEE_RECT },
+                { zone: "FOCUS_POD",     rect: FOCUS_RECT },
+              ].map(({ zone, rect }) => {
+                const corners = [
+                  iso.p(rect.l, rect.t),
+                  iso.p(rect.r, rect.t),
+                  iso.p(rect.r, rect.b),
+                  iso.p(rect.l, rect.b),
+                ];
+                const xs = corners.map((p) => p[0]);
+                const ys = corners.map((p) => p[1]);
+                const x1 = Math.min(...xs), x2 = Math.max(...xs);
+                const y1 = Math.min(...ys), y2 = Math.max(...ys);
+                return (
+                  <button
+                    key={zone}
+                    type="button"
+                    onClick={() => changeZone(zone)}
+                    disabled={actionLoading || !connected}
+                    title={zone.replace("_", " ")}
+                    className="absolute cursor-pointer border-0 bg-transparent p-0"
+                    style={{
+                      left: x1,
+                      top: y1,
+                      width: x2 - x1,
+                      height: y2 - y1,
+                      zIndex: 1,
+                    }}
+                  />
+                );
+              })}
 
-              const memberName =
-                desk.occupiedByUserName || member?.name || "Occupied";
-
-              const memberAvatar =
-                desk.occupiedByUserAvatar || member?.avatarUrl;
-
-              return (
-                <button
-                  key={desk.deskId}
-                  type="button"
-                  onClick={() =>
-                    !occupied && claimDesk(desk.deskId)
-                  }
-                  disabled={occupied || actionLoading || !connected}
-                  className={`flex min-h-[132px] min-w-0 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition ${
-                    occupied
-                      ? "cursor-default border-white/10 bg-[#102842]/45"
-                      : "border-sky-300/25 bg-[#1B4B7A]/35 hover:border-sky-300/70 hover:bg-[#1B4B7A]/70"
-                  }`}
-                  aria-label={
-                    occupied
-                      ? `Desk ${desk.deskNumber}, occupied by ${memberName}`
-                      : `Claim desk ${desk.deskNumber}`
-                  }
+              {labels.map((l, i) => (
+                <div
+                  key={i}
+                  className="pointer-events-none absolute text-center font-bold text-white"
+                  style={{
+                    left: l.pos[0] - 70,
+                    top:  l.pos[1] - 7,
+                    width: 140,
+                    fontSize: 10,
+                    letterSpacing: 0.3,
+                    textShadow: "0 0 4px rgba(0,0,0,0.6)",
+                  }}
                 >
-                  {occupied && member ? (
-                    <MemberAvatar
-                      name={memberName}
-                      avatarUrl={memberAvatar}
-                      status={member.presenceStatus || desk.status}
-                    />
-                  ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sky-100">
-                      <FaDesktop />
-                    </div>
-                  )}
+                  {l.text}
+                </div>
+              ))}
 
-                  <span className="text-xs font-semibold text-white">
-                    Desk {desk.deskNumber}
-                  </span>
-
-                  <span className="max-w-full truncate text-[11px] text-sky-100/65">
-                    {occupied
-                      ? memberName
-                      : "Available · Claim desk"}
-                  </span>
-
-                  <span className="flex items-center gap-1.5 text-[10px] text-sky-100/65">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        occupied
-                          ? statusStyles[desk.status] || "bg-red-400"
-                          : "bg-emerald-400"
+              {avatars.map((a) => {
+                const isSelf = a.userId === currentUserId;
+                const ring = presenceColor(a.member.presenceStatus);
+                return (
+                  <div
+                    key={a.userId}
+                    className="absolute"
+                    style={{
+                      left: a.left,
+                      top:  a.top,
+                      width: avatarSize,
+                      zIndex: Math.round(a.top + 500),
+                    }}
+                  >
+                    <div
+                      onClick={() =>
+                        !isSelf && knockOnDesk(a.userId, "")
+                      }
+                      className={`relative mx-auto flex items-center justify-center rounded-full ${
+                        !isSelf ? "cursor-pointer" : ""
                       }`}
-                    />
+                      style={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        background: "#0F172A",
+                        border: `1.6px solid ${ring}`,
+                        boxShadow: `0 0 8px ${ring}88`,
+                      }}
+                    >
+                      {a.member.avatarUrl ? (
+                        <img
+                          src={a.member.avatarUrl}
+                          alt=""
+                          className="h-full w-full rounded-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      ) : (
+                        <span
+                          className="font-bold text-white"
+                          style={{ fontSize: avatarSize * 0.38 }}
+                        >
+                          {initials(a.member.name)}
+                        </span>
+                      )}
+                      {a.member.isInMeeting && (
+                        <span
+                          className="absolute -right-1 -top-1 rounded-md bg-emerald-500 px-1 text-[9px] font-bold text-white"
+                        >
+                          📹
+                        </span>
+                      )}
+                    </div>
+                    {a.label && (
+                      <div
+                        className="mx-auto mt-1 truncate rounded-md border px-1.5 py-0.5 text-center text-[9px] font-bold text-white"
+                        style={{
+                          background: "rgba(15,23,42,0.7)",
+                          borderColor: `${ring}cc`,
+                          maxWidth: 70,
+                        }}
+                      >
+                        {a.label}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-                    {occupied
-                      ? statusLabels[desk.status] || "Occupied"
-                      : "Free"}
-                  </span>
-                </button>
-              );
-            })}
+            <div className="mt-3 grid grid-cols-3 gap-2 px-2">
+              <button
+                onClick={() => changeZone("OPEN_WORKSPACE")}
+                disabled={actionLoading || !connected || openDesks.length === 0}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition disabled:opacity-50 ${
+                  myZone === "OPEN_WORKSPACE"
+                    ? "border-emerald-300/60 bg-emerald-400/20 text-emerald-100"
+                    : "border-white/10 bg-white/5 text-sky-100 hover:bg-white/10"
+                }`}
+              >
+                🪑 Sit at Desk
+              </button>
+              <button
+                onClick={() => changeZone("COFFEE_LOUNGE")}
+                disabled={actionLoading || !connected}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition disabled:opacity-50 ${
+                  myZone === "COFFEE_LOUNGE"
+                    ? "border-amber-300/60 bg-amber-400/20 text-amber-100"
+                    : "border-white/10 bg-white/5 text-sky-100 hover:bg-white/10"
+                }`}
+              >
+                ☕ Coffee Lounge
+              </button>
+              <button
+                onClick={() => changeZone("FOCUS_POD")}
+                disabled={actionLoading || !connected}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition disabled:opacity-50 ${
+                  myZone === "FOCUS_POD"
+                    ? "border-violet-300/60 bg-violet-400/20 text-violet-100"
+                    : "border-white/10 bg-white/5 text-sky-100 hover:bg-white/10"
+                }`}
+              >
+                🛡️ Focus Pod
+              </button>
+            </div>
           </div>
-
-          {desks.length === 0 && (
-            <p className="mt-5 rounded-xl border border-dashed border-white/20 p-6 text-center text-sm text-sky-100/60">
-              No desk information is available yet.
-            </p>
-          )}
         </section>
 
         <div className="grid min-w-0 content-start gap-4">
-          <ZoneCard
-            title="The War Room"
-            description="Team meetings and huddles"
-            icon={FaVideo}
-            members={zoneMembers.WAR_ROOM}
-            accent="bg-violet-400/15 text-violet-200"
-            actionLabel={
-                floorState?.activeMeetingCode
-                ? "Meeting in progress"
-                : "War Room available"
-            }
-            disabled
-          />
+          <section className="rounded-2xl border border-white/15 bg-white/[0.07] p-4 backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-400/15 text-xl">📹</div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-white">The War Room</h3>
+                  <p className="text-xs text-sky-100/60">
+                    {warLive ? "Meeting in progress" : "War Room available"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => changeZone("WAR_ROOM")}
+                disabled={actionLoading || !connected}
+                className="shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg disabled:opacity-50"
+              >
+                🚀 Start Huddle
+              </button>
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-xl bg-black/20 px-3 py-2 text-xs">
+              <span className="text-sky-100/60">Room Status:</span>
+              <span className="font-semibold text-sky-100">
+                {warM.length > 0 ? `${warM.length} in call` : "Nobody is in the call yet"}
+              </span>
+            </div>
+          </section>
 
-          <ZoneCard
-            title="Coffee Lounge"
-            description="Take a break and recharge"
-            icon={FaCoffee}
-            members={zoneMembers.COFFEE_LOUNGE}
-            accent="bg-amber-400/15 text-amber-200"
-            actionLabel="Take a break"
-            onAction={() => changeZone("COFFEE_LOUNGE")}
-            disabled={actionLoading || !connected}
-          />
+          <section className="rounded-2xl border border-white/15 bg-white/[0.07] p-4 backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-xl">🪑</div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-white">Open Desks</h3>
+                  <p className="text-xs text-sky-100/60">{openDesks.length} Desks Available</p>
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full border border-white/10 bg-black/10 px-2 py-1 text-xs text-sky-100/80">
+                {occupiedDesks.length}/{desks.length} Occupied
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {occupiedDesks.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-center text-xs text-sky-100/55">
+                  Nobody sitting yet.
+                </p>
+              ) : (
+                occupiedDesks.map((desk) => {
+                  const m = members[desk.occupiedByUserId];
+                  const isSelf = desk.occupiedByUserId === currentUserId;
+                  const name = m?.name || desk.occupiedByUserName || "Teammate";
+                  const status = m?.presenceStatus || desk.status;
+                  const ring = presenceColor(status);
+                  return (
+                    <div
+                      key={desk.deskId}
+                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+                    >
+                      <div className="relative h-9 w-9 shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4770] text-xs font-semibold text-white">
+                          {initials(name)}
+                        </div>
+                        <span
+                          className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#213F70]"
+                          style={{ background: ring }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {name}
+                          {isSelf && (
+                            <span className="ml-2 rounded bg-amber-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              YOU
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-sky-100/65">
+                          Desk #{String(desk.deskNumber).padStart(2, "0")} · {presenceLabel(status)}
+                        </p>
+                      </div>
+                      {!isSelf && (
+                        <button
+                          onClick={() => knockOnDesk(desk.occupiedByUserId, "")}
+                          disabled={actionLoading || !connected}
+                          className="shrink-0 rounded-lg bg-amber-500/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                        >
+                          Knock 👋
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
 
-          <ZoneCard
-            title="Focus Pods"
-            description="Quiet space for deep work"
-            icon={FaShieldAlt}
-            members={zoneMembers.FOCUS_POD}
-            accent="bg-sky-400/15 text-sky-200"
-            actionLabel="Enter Focus Pod"
-            onAction={() => changeZone("FOCUS_POD")}
-            disabled={actionLoading || !connected}
-          />
-
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs leading-5 text-sky-100/60">
-            <FaMapMarkerAlt className="mr-2 inline text-sky-300" />
-            Your location and availability update automatically when teammates
-            move between office zones.
+          <div className="grid grid-cols-2 gap-3">
+            <section className="rounded-2xl border border-white/15 bg-white/[0.07] p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400/15 text-lg">☕</div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-white">Coffee Lounge</h3>
+                  <p className="truncate text-[10px] text-sky-100/60">
+                    {coffeeM.length ? `${coffeeM.length} on break` : "The lounge is quiet"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => changeZone("COFFEE_LOUNGE")}
+                disabled={actionLoading || !connected}
+                className="mt-3 w-full rounded-lg bg-amber-500/70 px-2 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                Take Break ☕
+              </button>
+            </section>
+            <section className="rounded-2xl border border-white/15 bg-white/[0.07] p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-400/15 text-lg">🛡️</div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-white">Focus Pods</h3>
+                  <p className="truncate text-[10px] text-sky-100/60">
+                    {focusM.length ? `${focusM.length} focusing` : "All pods are free"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => changeZone("FOCUS_POD")}
+                disabled={actionLoading || !connected}
+                className="mt-3 w-full rounded-lg bg-violet-500/70 px-2 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                Enter Pod 🛡️
+              </button>
+            </section>
           </div>
         </div>
       </div>
