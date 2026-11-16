@@ -5,6 +5,7 @@ import { useQuorumMeeting } from "../hooks/useQuorumMeeting";
 import ConfirmDialog from "../components/ConfirmDialog";
 import ParticipantPanel from "../components/ParticipantPanel";
 import WhiteboardWorkspace from "../components/WhiteboardWorkspace";
+import { sendTeamMessage } from "../services/chatService";
 import {
   getRecordingUploadUrl,
   completeRecording,
@@ -79,6 +80,7 @@ function VideoCall() {
   ).toString();
   const isHostFromUrl = searchParams.get("host") === "1";
   const organizationId = searchParams.get("organizationId");
+  const teamId = searchParams.get("teamId");
   const whiteboardEnabled = searchParams.get("whiteboard") === "1";
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
@@ -132,14 +134,42 @@ subscribeToRecordingStatus,
   const chatEndRef = useRef(null);
   const previousMessageCount = useRef(messages.length);
   const mediaRecorderRef = useRef(null);
-const recordingChunksRef = useRef([]);
-const recordingIdRef = useRef(null);
-const recordingStartedAtRef = useRef(null);
-const recordingOwnerRef = useRef(false);
+
+  const recordingAudioContextRef = useRef(null);
+  const recordingAudioDestinationRef = useRef(null);
+  const recordingOutputStreamRef = useRef(null);
+  const recordingAudioSourcesRef = useRef(new Map());
+  
+  const recordingCanvasRef = useRef(null);
+  const recordingAnimationRef = useRef(null);
+  const recordingVideosRef = useRef(new Map());
+  const recordingStreamsRef = useRef([]);
+  
+  const recordingChunksRef = useRef([]);
+  const recordingIdRef = useRef(null);
+  const recordingStartedAtRef = useRef(null);
+  const recordingOwnerRef = useRef(false);
 
 const [isRecording, setIsRecording] = useState(false);
 const [isUploadingRecording, setIsUploadingRecording] = useState(false);
 const [recordingMessage, setRecordingMessage] = useState("");
+recordingStreamsRef.current = [
+  ...(localStream
+    ? [{ id: "local", stream: localStream, label: "You" }]
+    : []),
+
+  ...Object.entries(remoteStreams || {}).map(([peerId, stream]) => ({
+    id: String(peerId),
+    stream,
+    label:
+      participants.find(
+        (person) =>
+          String(person.userId) === String(peerId) ||
+          String(person.peerId) === String(peerId)
+      )?.name || "Participant",
+  })),
+];
+
 useEffect(() => {
   const unsubscribe = subscribeToRecordingStatus((data) => {
     if (!data || data.meetingCode !== meetingCode) return;
@@ -344,34 +374,197 @@ function closePoll(pollId) {
         pollId,
     });
 }
+function drawRecordingFrame(ctx, canvas, videos) {
+  const width = canvas.width;
+  const height = canvas.height;
 
-function buildRecordingStream() {
-  const tracks = [];
-  const seenTrackIds = new Set();
+  ctx.fillStyle = "#06182F";
+  ctx.fillRect(0, 0, width, height);
 
-  const addStream = (stream) => {
-    if (!stream) return;
+  const activeVideos = Array.from(videos.values()).filter(
+    (item) =>
+      item.video.readyState >= 2 &&
+      item.video.videoWidth > 0 &&
+      item.video.videoHeight > 0
+  );
 
-    stream.getTracks().forEach((track) => {
-      if (track.readyState === "live" && !seenTrackIds.has(track.id)) {
-        seenTrackIds.add(track.id);
-        tracks.push(track);
-      }
-    });
-  };
-
-  addStream(localStream);
-
-  Object.values(remoteStreams || {}).forEach(addStream);
-
-  // Include the local screen share as well.
-  addStream(screenStreamRef.current);
-
-  if (!tracks.length) {
-    throw new Error("No live audio/video tracks are available to record.");
+  if (!activeVideos.length) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Waiting for participants...", width / 2, height / 2);
+    return;
   }
 
-  return new MediaStream(tracks);
+  const columns = Math.ceil(Math.sqrt(activeVideos.length));
+  const rows = Math.ceil(activeVideos.length / columns);
+
+  const gap = 12;
+  const tileWidth = (width - gap * (columns + 1)) / columns;
+  const tileHeight = (height - gap * (rows + 1)) / rows;
+
+  activeVideos.forEach((item, index) => {
+    const col = index % columns;
+    const row = Math.floor(index / columns);
+
+    const x = gap + col * (tileWidth + gap);
+    const y = gap + row * (tileHeight + gap);
+
+    const video = item.video;
+
+    const videoRatio = video.videoWidth / video.videoHeight;
+    const tileRatio = tileWidth / tileHeight;
+
+    let sx = 0;
+    let sy = 0;
+    let sw = video.videoWidth;
+    let sh = video.videoHeight;
+
+    if (videoRatio > tileRatio) {
+      sw = video.videoHeight * tileRatio;
+      sx = (video.videoWidth - sw) / 2;
+    } else {
+      sh = video.videoWidth / tileRatio;
+      sy = (video.videoHeight - sh) / 2;
+    }
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.roundRect(x, y, tileWidth, tileHeight, 16);
+    ctx.clip();
+
+    ctx.drawImage(
+      video,
+      sx,
+      sy,
+      sw,
+      sh,
+      x,
+      y,
+      tileWidth,
+      tileHeight
+    );
+
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(x, y + tileHeight - 42, tileWidth, 42);
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "20px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(item.label, x + 16, y + tileHeight - 15);
+
+    ctx.restore();
+  });
+}
+
+async function buildRecordingStream() {
+  if (
+    !window.MediaRecorder ||
+    !HTMLCanvasElement.prototype.captureStream
+  ) {
+    throw new Error("This browser does not support meeting recording.");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+
+  recordingCanvasRef.current = canvas;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Could not initialize recording canvas.");
+  }
+
+  const audioContext = new AudioContext();
+  recordingAudioContextRef.current = audioContext;
+
+  const destination = audioContext.createMediaStreamDestination();
+  recordingAudioDestinationRef.current = destination;
+
+  const videos = recordingVideosRef.current;
+  const audioSources = recordingAudioSourcesRef.current;
+
+  function syncRecordingStreams() {
+    const currentStreams = recordingStreamsRef.current;
+    const activeIds = new Set(currentStreams.map(({ id }) => id));
+
+    // Remove participants who have left
+    videos.forEach(({ video }, id) => {
+      if (!activeIds.has(id)) {
+        video.pause();
+        video.srcObject = null;
+        videos.delete(id);
+      }
+    });
+
+    currentStreams.forEach(({ id, stream, label }) => {
+      if (!stream) return;
+
+      if (!videos.has(id)) {
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.playsInline = true;
+        video.muted = true;
+        video.srcObject = stream;
+
+        videos.set(id, { video, label });
+
+        video.play().catch((error) => {
+          console.warn("Recording video could not start:", error);
+        });
+      } else {
+        const item = videos.get(id);
+
+        if (item.video.srcObject !== stream) {
+          item.video.srcObject = stream;
+          item.video.play().catch(() => {});
+        }
+
+        item.label = label;
+      }
+
+      const audioTracks = stream
+        .getAudioTracks()
+        .filter((track) => track.readyState === "live");
+
+      audioTracks.forEach((track) => {
+        if (audioSources.has(track.id)) return;
+
+        const audioStream = new MediaStream([track]);
+        const source = audioContext.createMediaStreamSource(audioStream);
+
+        source.connect(destination);
+        audioSources.set(track.id, source);
+      });
+    });
+  }
+
+  function drawFrame() {
+    syncRecordingStreams();
+    drawRecordingFrame(ctx, canvas, videos);
+
+    recordingAnimationRef.current = requestAnimationFrame(drawFrame);
+  }
+
+  syncRecordingStreams();
+
+  await audioContext.resume();
+
+  drawFrame();
+
+  const canvasStream = canvas.captureStream(20);
+
+  const outputStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...destination.stream.getAudioTracks(),
+  ]);
+
+  recordingOutputStreamRef.current = outputStream;
+
+  return outputStream;
 }
 
 async function startCallRecording() {
@@ -387,7 +580,7 @@ async function startCallRecording() {
       throw new Error("Recording is not supported in this browser.");
     }
 
-    const stream = buildRecordingStream();
+    const stream = await buildRecordingStream();
 
     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
       ? "video/webm;codecs=vp8,opus"
@@ -399,8 +592,7 @@ async function startCallRecording() {
       ? new MediaRecorder(stream, { mimeType })
       : new MediaRecorder(stream);
 
-    // Backend currently presigns the upload for Content-Type video/mp4.
-    // Keep the filename extension aligned with the actual WebM container.
+   
     const extension = recorder.mimeType.includes("webm") ? "webm" : "mp4";
 
     const started = await emitMeetingEvent("meeting:start-recording");
@@ -434,8 +626,52 @@ async function startCallRecording() {
     setRecordingMessage("Recording is live.");
   } catch (err) {
     console.error("Could not start recording:", err);
-    setRecordingMessage(err.message || "Could not start recording.");
+  
+    setRecordingMessage(
+      err.message || "Could not start recording."
+    );
+  
     recordingOwnerRef.current = false;
+  
+    if (mediaRecorderRef.current?.state !== "inactive") {
+      mediaRecorderRef.current?.stop();
+    }
+  
+    mediaRecorderRef.current = null;
+  
+    recordingOutputStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
+  
+    recordingOutputStreamRef.current = null;
+  
+    if (recordingAnimationRef.current) {
+      cancelAnimationFrame(recordingAnimationRef.current);
+      recordingAnimationRef.current = null;
+    }
+  
+    recordingVideosRef.current.forEach(({ video }) => {
+      video.pause();
+      video.srcObject = null;
+    });
+  
+    recordingVideosRef.current.clear();
+  
+    recordingAudioSourcesRef.current.forEach((source) => {
+      try {
+        source.disconnect();
+      } catch {}
+    });
+  
+    recordingAudioSourcesRef.current.clear();
+  
+    recordingCanvasRef.current = null;
+    recordingAudioDestinationRef.current = null;
+  
+    if (recordingAudioContextRef.current) {
+      await recordingAudioContextRef.current.close();
+      recordingAudioContextRef.current = null;
+    }
   }
 }
 
@@ -490,7 +726,6 @@ async function stopCallRecording() {
       throw new Error("Recording ID is missing.");
     }
 
-    // Tell the backend that the recording has stopped.
     await emitMeetingEvent("meeting:stop-recording");
 
     setIsRecording(false);
@@ -528,6 +763,7 @@ async function stopCallRecording() {
       durationSeconds,
       fileSizeBytes: videoBlob.size,
     });
+    
 
     setRecordingMessage("Recording uploaded successfully.");
   } catch (err) {
@@ -540,7 +776,43 @@ async function stopCallRecording() {
     recordingIdRef.current = null;
     recordingStartedAtRef.current = null;
     recordingOwnerRef.current = false;
+  
     mediaRecorderRef.current = null;
+  
+    recordingOutputStreamRef.current?.getTracks().forEach((track) => {
+      track.stop();
+    });
+  
+    recordingOutputStreamRef.current = null;
+  
+    if (recordingAnimationRef.current) {
+      cancelAnimationFrame(recordingAnimationRef.current);
+      recordingAnimationRef.current = null;
+    }
+  
+    recordingVideosRef.current.forEach(({ video }) => {
+      video.pause();
+      video.srcObject = null;
+    });
+  
+    recordingVideosRef.current.clear();
+  
+    recordingAudioSourcesRef.current.forEach((source) => {
+      try {
+        source.disconnect();
+      } catch {}
+    });
+  
+    recordingAudioSourcesRef.current.clear();
+  
+    recordingCanvasRef.current = null;
+    recordingAudioDestinationRef.current = null;
+  
+    if (recordingAudioContextRef.current) {
+      await recordingAudioContextRef.current.close();
+      recordingAudioContextRef.current = null;
+    }
+  
     setIsRecording(false);
     setIsUploadingRecording(false);
   }
@@ -610,6 +882,13 @@ async function confirmEndMeeting() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[#06182F] text-white">
+
+    {isRecording && (
+      <div className="flex shrink-0 items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white">
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white" />
+        This meeting is being recorded
+      </div>
+    )}
       <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#071D38] px-3 sm:px-6">
         <div className="min-w-0">
           <h1 className="text-base font-semibold">Quorum Meeting</h1>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
   FaPaperPlane,
@@ -71,7 +72,33 @@ function getMessageId(message) {
 function getMessageText(message) {
   return message?.content ?? message?.message ?? "";
 }
+function MessageContent({ content }) {
+  const parts = String(content || "").split(
+    /(https?:\/\/[^\s]+)/g
+  );
 
+  return (
+    <p className="whitespace-pre-wrap break-words text-sm leading-6">
+      {parts.map((part, index) => {
+        if (/^https?:\/\//i.test(part)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="break-all text-sky-300 underline underline-offset-2 hover:text-sky-200"
+            >
+              Watch Recording
+            </a>
+          );
+        }
+
+        return <span key={index}>{part}</span>;
+      })}
+    </p>
+  );
+}
 function getTeamHeadId(team) {
   return getId(
     team?.teamHead ??
@@ -107,13 +134,6 @@ function getMemberRole(member) {
   );
 }
 
-function getLocalDateTimeMin() {
-  const date = new Date(Date.now() + 60000);
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60000)
-    .toISOString()
-    .slice(0, 16);
-}
 
 function getMessageTime(message) {
   if (!message?.createdAt) return "";
@@ -172,7 +192,7 @@ const iconButton =
     connected,
     connectionError,
   } = useChatSocket();
-
+  const navigate = useNavigate();
   const [currentUser] = useState(
     () => currentUserProp ?? getStoredUser()
   );
@@ -189,11 +209,7 @@ const iconButton =
   const [openMemberMenu, setOpenMemberMenu] = useState("");
   const [memberToRemove, setMemberToRemove] = useState(null);
 const [removingMemberId, setRemovingMemberId] = useState("");
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleTitle, setScheduleTitle] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("");
-  const [scheduling, setScheduling] = useState(false);
-  const [scheduleNotice, setScheduleNotice] = useState("");
+const [creatingMeeting, setCreatingMeeting] = useState(false);
   const [teamViewMode, setTeamViewMode] = useState("chat");
 
   const messagesEndRef = useRef(null);
@@ -527,52 +543,36 @@ useEffect(() => {
       );
     }
   }
-
-  async function handleScheduleMeeting(event) {
-    event.preventDefault();
-
-    if (!organizationId || !teamId || !scheduleTime || scheduling) return;
-
-    const scheduledStartTime = new Date(scheduleTime);
-
-    if (
-      Number.isNaN(scheduledStartTime.getTime()) ||
-      scheduledStartTime <= new Date()
-    ) {
-      setError("Please select a future date and time.");
-      return;
-    }
-
-    setScheduling(true);
-    setError("");
-    setScheduleNotice("");
+  async function handleNewTeamMeeting() {
+    if (!organizationId || !teamId || creatingMeeting) return;
 
     try {
+      setCreatingMeeting(true);
+      setError("");
+
       const meeting = await createScopedMeeting({
-        title: scheduleTitle.trim() || `${teamName} Meeting`,
+        title: `${teamName} Meeting`,
         scopeType: "TEAM",
         organizationId,
         teamId,
-        scheduledStartTime: scheduledStartTime.toISOString(),
       });
 
-      setShowScheduleModal(false);
-      setScheduleTitle("");
-      setScheduleTime("");
+      if (!meeting?.code) {
+        throw new Error("Meeting code was not returned.");
+      }
 
-      setScheduleNotice(
-        meeting?.code
-          ? `Meeting scheduled successfully. Meeting code: ${meeting.code}`
-          : "Meeting scheduled successfully. Team members will be notified."
+      navigate(
+        `/video-call?code=${encodeURIComponent(meeting.code)}&host=1&organizationId=${encodeURIComponent(organizationId)}&teamId=${encodeURIComponent(teamId)}`
       );
     } catch (err) {
       setError(
         err?.response?.data?.message ||
           err?.response?.data?.error ||
-          "Unable to schedule the team meeting."
+          err?.message ||
+          "Unable to start the team meeting."
       );
     } finally {
-      setScheduling(false);
+      setCreatingMeeting(false);
     }
   }
 
@@ -674,16 +674,21 @@ useEffect(() => {
 
       <button
         type="button"
-        onClick={() => {
-          setError("");
-          setScheduleNotice("");
-          setShowScheduleModal(true);
-        }}
-        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-sky-300/30 bg-[#1B4B7A] px-2.5 py-2 text-xs font-semibold text-sky-50 transition hover:bg-[#245D91] sm:px-3 sm:text-sm"
+        onClick={handleNewTeamMeeting}
+        disabled={creatingMeeting}
+        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-sky-300/30 bg-[#1B4B7A] px-2.5 py-2 text-xs font-semibold text-sky-50 transition hover:bg-[#245D91] disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-sm"
       >
-        <FaVideo />
-        <span className="hidden sm:inline">Schedule meeting</span>
-        <span className="sm:hidden">Schedule</span>
+        {creatingMeeting ? (
+          <>
+            <FaSpinner className="animate-spin" />
+            <span>Starting...</span>
+          </>
+        ) : (
+          <>
+            <FaVideo />
+            <span>New Meet</span>
+          </>
+        )}
       </button>
 
       <button
@@ -729,108 +734,6 @@ useEffect(() => {
       </span>
     </header>
 
-    {scheduleNotice && (
-      <div className="mx-3 mt-3 flex items-start justify-between gap-3 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2.5 text-sm text-emerald-100 sm:mx-5">
-        <p className="min-w-0 break-words">{scheduleNotice}</p>
-        <button
-          type="button"
-          onClick={() => setScheduleNotice("")}
-          className="shrink-0 rounded px-1 text-lg leading-none hover:bg-white/10"
-          aria-label="Dismiss message"
-        >
-          ×
-        </button>
-      </div>
-    )}
-
-    {showScheduleModal && (
-      <div
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget && !scheduling) {
-            setShowScheduleModal(false);
-          }
-        }}
-      >
-        <section className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#426B96] bg-[#153656] p-4 text-slate-100 shadow-2xl shadow-black/40 sm:p-5">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-white">
-                Schedule team meeting
-              </h3>
-              <p className="mt-1 text-sm text-sky-100/70">
-                All members of {teamName} will be invited automatically.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowScheduleModal(false)}
-              disabled={scheduling}
-              className={iconButton}
-              aria-label="Close schedule meeting"
-            >
-              <FaTimes />
-            </button>
-          </div>
-
-          <form onSubmit={handleScheduleMeeting} className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-sky-100">
-                Meeting title
-              </label>
-              <input
-                type="text"
-                value={scheduleTitle}
-                onChange={(event) => setScheduleTitle(event.target.value)}
-                maxLength={120}
-                placeholder={`${teamName} Meeting`}
-                className="w-full rounded-xl border border-[#52789F] bg-[#0D2743] px-3.5 py-3 text-sm text-white outline-none placeholder:text-sky-100/45 focus:border-sky-300"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-sky-100">
-                Date and time
-              </label>
-              <input
-                type="datetime-local"
-                required
-                min={getLocalDateTimeMin()}
-                value={scheduleTime}
-                onChange={(event) => setScheduleTime(event.target.value)}
-                className="w-full rounded-xl border border-[#52789F] bg-[#0D2743] px-3.5 py-3 text-sm text-white outline-none focus:border-sky-300 [color-scheme:dark]"
-              />
-            </div>
-
-            <div className="rounded-xl border border-sky-300/20 bg-[#1B426A] px-3 py-2.5 text-xs leading-5 text-sky-100">
-              Meeting scope: <strong>{teamName}</strong>. Other teams and organization members will not be invited.
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowScheduleModal(false)}
-                disabled={scheduling}
-                className="rounded-xl border border-[#52789F] px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-white/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={scheduling || !scheduleTime}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#0878F9] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {scheduling && <FaSpinner className="animate-spin" />}
-                {scheduling ? "Scheduling..." : "Schedule meeting"}
-              </button>
-            </div>
-          </form>
-        </section>
-      </div>
-    )}
-
 {teamViewMode === "virtual-office" ? (
   <VirtualOffice
     teamId={teamId}
@@ -856,7 +759,7 @@ useEffect(() => {
   </div>
 ) : (
       <div className="relative flex min-h-0 flex-1 items-stretch overflow-hidden">
-      <section className="flex min-w-0 flex-1 flex-col">
+     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {connectionError && (
           <p className="shrink-0 px-4 pt-2 text-xs text-amber-200">
             Real-time updates are unavailable. Please check your connection.
@@ -968,11 +871,9 @@ useEffect(() => {
                           </div>
                         )}
 
-                        {getMessageText(message) && (
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                            {getMessageText(message)}
-                          </p>
-                        )}
+{getMessageText(message) && (
+  <MessageContent content={getMessageText(message)} />
+)}
 
                         {fileUrl && (
                           <a
