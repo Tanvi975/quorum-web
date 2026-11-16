@@ -16,7 +16,7 @@ function AddTeamMember({
   const [error, setError] = useState("");
 
   const getUserId = (member) =>
-    member.userId || member.user?.id || member.user?._id;
+    member.userId || member.user?.id || member.user?._id || member.id || member._id;
 
   const getUserName = (member) =>
     member.user?.name ||
@@ -24,6 +24,32 @@ function AddTeamMember({
     member.user?.email ||
     member.email ||
     getUserId(member);
+
+  // Find selected team
+  const selectedTeam = teams.find(
+    (team) => String(team._id || team.id) === String(teamId)
+  );
+
+  // Get members already added to selected team
+  const existingMembers =
+    selectedTeam?.members ||
+    selectedTeam?.teamMembers ||
+    [];
+
+  const isAlreadyJoined = (memberId) => {
+    return existingMembers.some((item) => {
+      const existingId =
+        typeof item === "string"
+          ? item
+          : item.userId ||
+            item.user?.id ||
+            item.user?._id ||
+            item.id ||
+            item._id;
+
+      return String(existingId) === String(memberId);
+    });
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -34,10 +60,20 @@ function AddTeamMember({
       return;
     }
 
+    if (isAlreadyJoined(userId)) {
+      setError("This member is already part of the selected team.");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      await addTeamMember(organizationId, teamId, userId, selectedRole);
+      await addTeamMember(
+        organizationId,
+        teamId,
+        userId,
+        selectedRole
+      );
 
       await onSuccess?.();
     } catch (err) {
@@ -80,6 +116,8 @@ function AddTeamMember({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
+
+          {/* Select Team */}
           <div>
             <label
               htmlFor="team"
@@ -91,7 +129,11 @@ function AddTeamMember({
             <select
               id="team"
               value={teamId}
-              onChange={(event) => setTeamId(event.target.value)}
+              onChange={(event) => {
+                setTeamId(event.target.value);
+                setUserId("");
+                setError("");
+              }}
               className={selectStyle}
               required
             >
@@ -115,43 +157,71 @@ function AddTeamMember({
             </select>
           </div>
 
+          {/* Select Organization Member */}
           <div>
-            <label
-              htmlFor="member"
-              className="mb-2 block text-sm font-medium text-[#D4E3F2]"
-            >
+            <label className="mb-2 block text-sm font-medium text-[#D4E3F2]">
               Select Organization Member
             </label>
 
-            <select
-              id="member"
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              className={selectStyle}
-              required
-            >
-              <option value="" className="bg-[#102B4B] text-[#A9C3DD]">
-                Choose a member
-              </option>
+            {!teamId ? (
+              <p className="rounded-lg border border-white/10 bg-[#173B60] p-4 text-center text-sm text-[#A9C3DD]">
+                Please select a team first.
+              </p>
+            ) : (
+              <div className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-[#426486] bg-[#173B60] p-2">
 
-              {members.map((member) => {
-                const id = getUserId(member);
+                {members.map((member) => {
+                  const id = getUserId(member);
 
-                if (!id) return null;
+                  if (!id) return null;
 
-                return (
-                  <option
-                    key={id}
-                    value={id}
-                    className="bg-[#102B4B] text-white"
-                  >
-                    {getUserName(member)}
-                  </option>
-                );
-              })}
-            </select>
+                  const joined = isAlreadyJoined(id);
+                  const selected = String(userId) === String(id);
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={joined || loading}
+                      onClick={() => {
+                        setUserId(id);
+                        setError("");
+                      }}
+                      className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
+                        joined
+                          ? "cursor-not-allowed border-green-500/20 bg-green-500/10"
+                          : selected
+                          ? "border-blue-400 bg-blue-500/20"
+                          : "border-white/10 bg-white/5 hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="min-w-0 truncate text-sm text-white">
+                        {getUserName(member)}
+                      </span>
+
+                      {joined ? (
+                        <span className="shrink-0 rounded-full bg-green-500/15 px-3 py-1 text-xs font-semibold text-green-400">
+                          ✓ Joined
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-xs font-medium text-blue-300">
+                          {selected ? "Selected ✓" : "Select"}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {!members.length && (
+                  <p className="py-4 text-center text-sm text-[#A9C3DD]">
+                    No organization members found.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Select Role */}
           <div>
             <label
               htmlFor="teamRole"
@@ -175,6 +245,7 @@ function AddTeamMember({
             </select>
           </div>
 
+          {/* Error */}
           {error && (
             <p
               className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
@@ -197,7 +268,7 @@ function AddTeamMember({
 
             <button
               type="submit"
-              disabled={loading || !teamId || !userId}
+              disabled={loading || !teamId || !userId || isAlreadyJoined(userId)}
               className="rounded-lg bg-[#087BFF] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0069DF] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Adding..." : "Add Member"}
