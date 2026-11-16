@@ -19,7 +19,12 @@ import {
 } from "react-icons/fa";
 
 import api from "../../services/api";
-import { deleteTeam } from "../../services/teamService";
+import {
+  deleteTeam,
+  updateTeam as updateTeamApi,
+  uploadTeamProfilePicture,
+  deleteTeamProfilePicture,
+} from "../../services/teamService";
 import { createMeeting, createScopedMeeting } from "../../services/meetingService";
 import OnboardingLayout from "../../components/OnboardingLayout";
 import AddTeamMember from "./AddTeamMember";
@@ -68,6 +73,7 @@ function errorMessage(error) {
   return (
     error?.response?.data?.message ||
     error?.response?.data?.error ||
+    error?.message ||
     "Something went wrong. Please try again."
   );
 }
@@ -255,7 +261,74 @@ const [activeTab, setActiveTab] = useState(
         ? items(teamResult.value.data, "teams")
         : [];
     
-    setTeams(freshTeams);
+        const teamsWithProfiles = await Promise.all(
+          freshTeams.map(async (team) => {
+            const teamId = team._id || team.id;
+        
+            if (!teamId) return team;
+        
+            try {
+              const response = await api.get(
+                `/api/organizations/${organizationId}/teams/${teamId}/profile-picture`
+              );
+        
+              const result =
+                response?.data?.data?.team ||
+                response?.data?.data ||
+                response?.data?.team ||
+                response?.data ||
+                {};
+        
+              const avatar =
+                typeof result === "string"
+                  ? result
+                  : result.avatar ||
+                    result.profilePicture ||
+                    result.avatarUrl ||
+                    result.logo ||
+                    result.url ||
+                    null;
+        
+              return {
+                ...team,
+                avatar:
+                  avatar ||
+                  team.avatar ||
+                  team.profilePicture ||
+                  team.logo ||
+                  null,
+              };
+            } catch (error) {
+              console.error(
+                `Failed to load profile picture for team ${teamId}:`,
+                error
+              );
+        
+              return {
+                ...team,
+                avatar:
+                  team.avatar ||
+                  team.profilePicture ||
+                  team.logo ||
+                  null,
+              };
+            }
+          })
+        );
+    
+    setTeams(teamsWithProfiles);
+    
+    setSelectedTeam((currentTeam) => {
+      if (!currentTeam) return currentTeam;
+    
+      const currentId = String(currentTeam._id || currentTeam.id);
+    
+      return (
+        teamsWithProfiles.find(
+          (team) => String(team._id || team.id) === currentId
+        ) || currentTeam
+      );
+    });
     
     setSelectedChatTeam((currentTeam) => {
       if (!currentTeam) return currentTeam;
@@ -503,7 +576,19 @@ const [activeTab, setActiveTab] = useState(
     }
   }
   function openEditTeam(team) {
-    setSelectedTeam(team);
+    const teamAvatar =
+      team.avatar ||
+      team.profilePicture ||
+      team.logo ||
+      team.avatarUrl ||
+      null;
+  
+    setSelectedTeam({
+      ...team,
+      avatar: teamAvatar,
+      profilePicture: teamAvatar,
+      logo: teamAvatar,
+    });
   
     setTeamForm({
       name: team.name || "",
@@ -513,7 +598,7 @@ const [activeTab, setActiveTab] = useState(
     setOpenMenu("");
     setModal("edit-team");
   }
-  
+
   async function updateTeam(event) {
     event.preventDefault();
   
@@ -526,17 +611,25 @@ const [activeTab, setActiveTab] = useState(
       return;
     }
   
+    if (!teamForm.name.trim()) {
+      setNotice("Team name is required.");
+      return;
+    }
+  
     setSaving(true);
     setNotice("");
   
     try {
-      await deleteTeam(organizationId, teamId);
+      await updateTeamApi(organizationId, teamId, {
+        name: teamForm.name.trim(),
+        description: teamForm.description.trim(),
+      });
+  
       closeModal();
       setSelectedTeam(null);
       setTeamForm({ name: "", description: "" });
   
       setNotice("Team updated successfully.");
-  
       await loadWorkspace(false);
     } catch (err) {
       setNotice(errorMessage(err));
@@ -544,6 +637,104 @@ const [activeTab, setActiveTab] = useState(
       setSaving(false);
     }
   }
+  
+  async function handleTeamPictureUpload(event) {
+    const file = event.target.files?.[0];
+  
+    if (!file || !selectedTeam) return;
+  
+    const teamId = selectedTeam._id || selectedTeam.id;
+  
+    if (!teamId) {
+      setNotice("Team ID is missing.");
+      return;
+    }
+  
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+      "image/heic",
+      "image/avif",
+    ];
+  
+    if (!allowedTypes.includes(file.type)) {
+      setNotice("Please select a supported image file.");
+      return;
+    }
+  
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice("Image size must not exceed 5 MB.");
+      return;
+    }
+  
+    setSaving(true);
+    setNotice("");
+  
+    try {
+      const uploadResult = await uploadTeamProfilePicture(
+        organizationId,
+        teamId,
+        file
+      );
+      
+      const avatar =
+        uploadResult?.avatar ||
+        uploadResult?.profilePicture ||
+        uploadResult?.logo ||
+        uploadResult?.data?.avatar ||
+        uploadResult?.data?.profilePicture ||
+        uploadResult?.data?.logo;
+      
+      if (!avatar) {
+        throw new Error("Image URL not found in upload response.");
+      }
+      
+      const updatedTeam = {
+        ...selectedTeam,
+        avatar,
+        profilePicture: avatar,
+        logo: avatar,
+      };
+      
+      setSelectedTeam(updatedTeam);
+      
+      setTeams((current) =>
+        current.map((team) =>
+          String(team._id || team.id) === String(teamId)
+            ? { ...team, ...updatedTeam }
+            : team
+        )
+      );
+      
+      setNotice("Team picture updated successfully.");
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+async function handleTeamPictureDelete() {
+  if (!selectedTeam) return;
+
+  const teamId = selectedTeam._id || selectedTeam.id;
+
+  setSaving(true);
+  setNotice("");
+
+  try {
+    await deleteTeamProfilePicture(organizationId, teamId);
+    setNotice("Team picture removed successfully.");
+    await loadWorkspace(false);
+  } catch (err) {
+    setNotice(errorMessage(err));
+  } finally {
+    setSaving(false);
+  }
+}
+
   async function inviteMember(event) {
     event.preventDefault();
 
@@ -901,9 +1092,17 @@ const [activeTab, setActiveTab] = useState(
         className="flex min-w-0 flex-col gap-3 rounded-xl border border-[#8BB9E8]/25 bg-[#315A83]/35 px-3 py-3 transition hover:border-[#8BB9E8]/45 hover:bg-[#315A83]/50 sm:flex-row sm:items-center sm:justify-between sm:px-4"
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-[#C6EAFF]">
-            <FaLayerGroup />
-          </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#38BDF8]/25 bg-[#38BDF8]/10 text-[#C6EAFF]">
+  {team.avatar ? (
+    <img
+      src={team.avatar}
+      alt={`${team.name || "Team"} profile`}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <FaLayerGroup />
+  )}
+</div>
 
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white">
@@ -1757,7 +1956,55 @@ const [activeTab, setActiveTab] = useState(
           className={`${input} resize-none`}
         />
       </div>
+      <div>
+  <label className="mb-2 block text-sm text-[#B6C6D9]">
+    Team profile picture
+  </label>
 
+  {(
+    selectedTeam?.avatar ||
+    selectedTeam?.profilePicture ||
+    selectedTeam?.logo ||
+    selectedTeam?.avatarUrl
+  ) ? (
+    <img
+      src={
+        selectedTeam.avatar ||
+        selectedTeam.profilePicture ||
+        selectedTeam.logo ||
+        selectedTeam.avatarUrl
+      }
+      alt="Team profile"
+      className="mb-3 h-16 w-16 rounded-full border border-white/20 object-cover"
+    />
+  ) : (
+    <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200">
+      <FaLayerGroup className="text-gray-500" />
+    </div>
+  )}
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleTeamPictureUpload}
+    disabled={saving}
+    className="w-full text-sm text-[#B6C6D9]"
+  />
+
+  {(selectedTeam?.avatar ||
+    selectedTeam?.profilePicture ||
+    selectedTeam?.logo ||
+    selectedTeam?.avatarUrl) && (
+    <button
+      type="button"
+      onClick={handleTeamPictureDelete}
+      disabled={saving}
+      className="mt-2 text-sm text-red-400 hover:text-red-300"
+    >
+      Remove team picture
+    </button>
+  )}
+</div>
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
