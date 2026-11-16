@@ -33,8 +33,6 @@ function MobileBottomNav() {
     { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
     { label: "Organizations", icon: FiUsers, path: "/organization" },
     { label: "Projects", icon: FiBriefcase, path: "/projects" },
-    { label: "My Jira", icon: SiJira, path: "/jira/my-tickets" },
-    { label: "My GitHub", icon: SiGithub, path: "/github" },
     { label: "Chat", icon: FiMessageCircle, path: "/chat" },
     { label: "Communities", icon: FiGlobe, path: "/communities" },
     { label: "Profile", icon: FiUser, path: "/profile" },

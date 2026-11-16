@@ -19,8 +19,6 @@ const navigationItems = [
   { label: "AI Assistant", icon: FiCpu, path: "/ai-assistant" },
   { label: "Organizations", icon: FiUsers, path: "/organization" },
   { label: "Projects", icon: FiBriefcase, path: "/projects" },
-  { label: "My Jira", icon: SiJira, path: "/jira/my-tickets" },
-  { label: "My GitHub", icon: SiGithub, path: "/github" },
   { label: "Community", icon: FiGlobe, path: "/communities" },
   { label: "Chat", icon: FiMessageCircle, path: "/chat" },
   { label: "Profile", icon: FiUser, path: "/profile" }
