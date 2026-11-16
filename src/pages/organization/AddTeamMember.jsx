@@ -50,29 +50,40 @@ function AddTeamMember({
     }
   };
 
+  const selectStyle =
+    "w-full rounded-lg border border-[#426486] bg-[#173B60] p-3 text-sm text-white outline-none transition focus:border-[#168BFF] focus:ring-2 focus:ring-[#168BFF]/20";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Add Team Member
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020817]/75 p-4 backdrop-blur-[2px]">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-[#355D83] bg-[#102B4B] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-semibold text-white">
+              Add Team Member
+            </h2>
+            <p className="mt-1 text-xs text-[#A9C3DD]">
+              Add an organization member to your team.
+            </p>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-2xl text-gray-500 hover:text-gray-800"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-2xl text-[#A9C3DD] transition hover:bg-white/10 hover:text-white"
             aria-label="Close"
           >
             &times;
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5 p-6">
           <div>
             <label
               htmlFor="team"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-2 block text-sm font-medium text-[#D4E3F2]"
             >
               Select Team
             </label>
@@ -81,16 +92,22 @@ function AddTeamMember({
               id="team"
               value={teamId}
               onChange={(event) => setTeamId(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-3"
+              className={selectStyle}
               required
             >
-              <option value="">Choose a team</option>
+              <option value="" className="bg-[#102B4B] text-[#A9C3DD]">
+                Choose a team
+              </option>
 
               {teams.map((team) => {
                 const id = team._id || team.id;
 
                 return (
-                  <option key={id} value={id}>
+                  <option
+                    key={id}
+                    value={id}
+                    className="bg-[#102B4B] text-white"
+                  >
                     {team.name || team.teamName || "Unnamed team"}
                   </option>
                 );
@@ -101,7 +118,7 @@ function AddTeamMember({
           <div>
             <label
               htmlFor="member"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-2 block text-sm font-medium text-[#D4E3F2]"
             >
               Select Organization Member
             </label>
@@ -110,10 +127,12 @@ function AddTeamMember({
               id="member"
               value={userId}
               onChange={(event) => setUserId(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-3"
+              className={selectStyle}
               required
             >
-              <option value="">Choose a member</option>
+              <option value="" className="bg-[#102B4B] text-[#A9C3DD]">
+                Choose a member
+              </option>
 
               {members.map((member) => {
                 const id = getUserId(member);
@@ -121,7 +140,11 @@ function AddTeamMember({
                 if (!id) return null;
 
                 return (
-                  <option key={id} value={id}>
+                  <option
+                    key={id}
+                    value={id}
+                    className="bg-[#102B4B] text-white"
+                  >
                     {getUserName(member)}
                   </option>
                 );
@@ -132,7 +155,7 @@ function AddTeamMember({
           <div>
             <label
               htmlFor="teamRole"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-2 block text-sm font-medium text-[#D4E3F2]"
             >
               Select Team Role
             </label>
@@ -141,25 +164,33 @@ function AddTeamMember({
               id="teamRole"
               value={selectedRole}
               onChange={(event) => setSelectedRole(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 p-3"
+              className={selectStyle}
             >
-              <option value="MEMBER">Team Member</option>
-              <option value="TEAM_HEAD">Team Head</option>
+              <option value="MEMBER" className="bg-[#102B4B] text-white">
+                Team Member
+              </option>
+              <option value="TEAM_HEAD" className="bg-[#102B4B] text-white">
+                Team Head
+              </option>
             </select>
           </div>
 
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p
+              className="rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              role="alert"
+            >
               {error}
             </p>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Footer */}
+          <div className="flex justify-end gap-3 border-t border-white/10 pt-5">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700"
+              className="rounded-lg border border-[#426486] px-4 py-2.5 text-sm font-semibold text-[#D4E3F2] transition hover:bg-white/10 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -167,7 +198,7 @@ function AddTeamMember({
             <button
               type="submit"
               disabled={loading || !teamId || !userId}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg bg-[#087BFF] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0069DF] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Adding..." : "Add Member"}
             </button>
