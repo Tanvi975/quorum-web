@@ -236,7 +236,12 @@ const [removingMemberId, setRemovingMemberId] = useState("");
 
     const teamName =
     team?.name ?? team?.teamName ?? "Team Chat";
-  
+    const teamAvatar =
+    team?.avatar ||
+    team?.profilePicture ||
+    team?.logo ||
+    team?.avatarUrl ||
+    null;
   const teamMembers = Array.isArray(team?.members)
     ? team.members
     : Array.isArray(team?.users)
@@ -586,9 +591,19 @@ useEffect(() => {
       >
         <FaArrowLeft />
       </button>
-
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white">
-  <FaUsers />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10 text-white">
+  {teamAvatar ? (
+    <img
+      src={teamAvatar}
+      alt={`${teamName} profile`}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : (
+    <FaUsers />
+  )}
 </div>
 
       <div className="min-w-0 flex-1">
@@ -1085,9 +1100,20 @@ useEffect(() => {
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1D4770] text-sky-100">
-                  <FaUsers />
-                </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1D4770] text-sky-100">
+  {teamAvatar ? (
+    <img
+      src={teamAvatar}
+      alt={`${teamName} profile`}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  ) : (
+    <FaUsers />
+  )}
+</div>
 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">
