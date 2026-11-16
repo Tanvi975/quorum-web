@@ -69,12 +69,7 @@ function Login() {
       );
 
       login(res.data.user);
-
-      if (res.data.user.isOnboarded) {
-        navigate("/dashboard");
-      } else {
-        navigate("/onboarding/step-1");
-      }
+      navigate("/dashboard");
     } catch (err) {
       resetCaptcha();
 

@@ -104,7 +104,7 @@ function VerifyCode() {
         }
     
         login(verifiedUser);
-        navigate("/dashboard", { replace: true });
+        navigate("/onboarding/step-1", { replace: true });
       } else {
         const res = await verifyPasswordResetOTP(email, otp);
       
