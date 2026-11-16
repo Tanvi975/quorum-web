@@ -116,6 +116,7 @@ const [pollOptions, setPollOptions] = useState(["", ""]);
     toggleMic,
     toggleCamera,
     replaceVideoTrack,
+    restoreCameraAfterScreenShare,
     sendMessage,
     admitGuest,
     rejectGuest,
@@ -281,30 +282,37 @@ useEffect(() => {
 
   async function stopScreenShare() {
     const screenTrack = screenTrackRef.current;
-    const cameraTrack = localStream?.getVideoTracks()[0];
 
     if (!screenTrack && !screenSharing) return;
 
     screenTrackRef.current = null;
     screenStreamRef.current = null;
-    setScreenSharing(false);
 
     if (screenTrack) {
-      screenTrack.onended = null;
+        screenTrack.onended = null;
     }
 
     try {
-      if (cameraTrack) {
-        await replaceVideoTrack(cameraTrack);
-      }
-    } catch (error) {
-      console.error("Could not restore camera track:", error);
-    }
+        // Restart camera and restore video
+        await restoreCameraAfterScreenShare();
 
-    if (screenTrack && screenTrack.readyState !== "ended") {
-      screenTrack.stop();
+        setScreenSharing(false);
+
+    } catch (error) {
+        console.error("Could not restart camera:", error);
+
+        window.alert(
+            "Camera could not restart. Please enable camera permission."
+        );
+
+        setScreenSharing(false);
+
+    } finally {
+        if (screenTrack && screenTrack.readyState !== "ended") {
+            screenTrack.stop();
+        }
     }
-  }
+}
 
   async function toggleScreenShare() {
     if (screenSharing) {

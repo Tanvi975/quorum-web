@@ -267,7 +267,52 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
 
         await sender.replaceTrack(newTrack);
     }, []);
+    const restoreCameraAfterScreenShare = useCallback(async() => {
+        const currentStream = localStreamRef.current;
 
+        // Start camera again
+        const cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+        });
+
+        const newCameraTrack = cameraStream.getVideoTracks()[0];
+
+        if (!newCameraTrack) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            throw new Error("Camera could not be restarted.");
+        }
+
+        try {
+            // Replace screen-sharing track with new camera track
+            await replaceVideoTrack(newCameraTrack);
+
+            // Preserve existing microphone tracks
+            const audioTracks = currentStream ?.getAudioTracks() || [];
+
+            const updatedStream = new MediaStream([
+                ...audioTracks,
+                newCameraTrack,
+            ]);
+
+            // Update local stream
+            localStreamRef.current = updatedStream;
+
+            if (mountedRef.current) {
+                setLocalStream(updatedStream);
+                setIsVideoOff(false);
+            }
+
+            // Stop old camera tracks
+            currentStream ?.getVideoTracks().forEach(track => {
+                track.stop();
+            });
+
+        } catch (error) {
+            newCameraTrack.stop();
+            throw error;
+        }
+    }, [replaceVideoTrack]);
     const subscribeToTrack = useCallback(
         async(trackId, kind, peerId) => {
             const socket = socketRef.current;
@@ -1075,6 +1120,7 @@ export function useQuorumMeeting({ meetingCode, user, isHost }) {
         toggleMic,
         toggleCamera,
         replaceVideoTrack,
+        restoreCameraAfterScreenShare,
         sendMessage,
         admitGuest,
         rejectGuest,
