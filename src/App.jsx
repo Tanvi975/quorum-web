@@ -55,7 +55,9 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Recordings from "./pages/Recordings";
 import MeetingRecording from "./pages/MeetingRecording";
+import MeetingHistory from "./pages/MeetingHistory";
 import ProductTour from "./components/ProductTour";
+
 function MeetRedirect() {
   const { code } = useParams();
 
@@ -202,6 +204,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/meeting-history"
+  element={
+    <ProtectedRoute>
+      <MeetingHistory />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/recordings"
             element={<Navigate to="/calendar" replace />}

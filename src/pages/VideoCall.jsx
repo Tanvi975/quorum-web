@@ -7,6 +7,10 @@ import ParticipantPanel from "../components/ParticipantPanel";
 import WhiteboardWorkspace from "../components/WhiteboardWorkspace";
 import { sendTeamMessage } from "../services/chatService";
 import {
+  saveMeetingStart,
+  saveMeetingEnd,
+} from "../services/meetingHistoryService";
+import {
   getRecordingUploadUrl,
   completeRecording,
 } from "../services/recordingService";
@@ -148,6 +152,7 @@ subscribeToRecordingStatus,
   const recordingIdRef = useRef(null);
   const recordingStartedAtRef = useRef(null);
   const recordingOwnerRef = useRef(false);
+  const historyStartedRef = useRef(false);
 
 const [isRecording, setIsRecording] = useState(false);
 const [isUploadingRecording, setIsUploadingRecording] = useState(false);
@@ -171,7 +176,37 @@ recordingStreamsRef.current = [
       )?.name || "Participant",
   })),
 ];
+const historyUserId =
+  user?.id || user?.userId || user?.sub || user?._id;
 
+useEffect(() => {
+  console.log("HISTORY DEBUG:", {
+    status,
+    historyUserId,
+    meetingCode,
+    alreadySaved: historyStartedRef.current,
+  });
+
+  if (
+    !historyStartedRef.current &&
+    historyUserId &&
+    meetingCode
+  ) {
+    saveMeetingStart(historyUserId, {
+      code: meetingCode,
+      title: "Quorum Meeting",
+    });
+
+    historyStartedRef.current = true;
+
+    console.log(
+      "SAVED HISTORY:",
+      localStorage.getItem(
+        `quorum_meeting_history_${historyUserId}`
+      )
+    );
+  }
+}, [status, historyUserId, meetingCode]);
 useEffect(() => {
   const unsubscribe = subscribeToRecordingStatus((data) => {
     if (!data || data.meetingCode !== meetingCode) return;
@@ -730,7 +765,10 @@ async function leaveCall() {
   screenTrackRef.current = null;
   screenStreamRef.current = null;
   setScreenSharing(false);
-
+  if (historyStartedRef.current) {
+    saveMeetingEnd(user?.id, meetingCode);
+    historyStartedRef.current = false;
+  }
   leaveMeeting();
 }
 
@@ -757,7 +795,10 @@ async function confirmEndMeeting() {
   screenTrackRef.current = null;
   screenStreamRef.current = null;
   setScreenSharing(false);
-
+  if (historyStartedRef.current) {
+    saveMeetingEnd(user?.id, meetingCode);
+    historyStartedRef.current = false;
+  }
   endMeeting();
 }
   const remoteEntries = Object.entries(remoteStreams || {});

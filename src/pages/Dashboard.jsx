@@ -422,35 +422,46 @@ const [statusError, setStatusError] = useState("");
                     Here's what's happening with your workspace today.
                   </p>
 
-                  <div className="mt-5 flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                    <input
-                      type="text"
-                      value={meetingCode}
-                      onChange={(e) => setMeetingCode(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleJoinMeeting();
-                      }}
-                      placeholder="Enter meeting code"
-                      className="w-full min-w-0 flex-1 rounded-lg border border-[#52789E] bg-[#102D4B] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[#9EB5CF] focus:border-[#55A0FF] focus:ring-2 focus:ring-[#3988F5]/25 sm:w-auto"
-                    />
+                  <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
 
-                    <button
-                      type="button"
-                      onClick={handleJoinMeeting}
-                      className="rounded-lg border border-[#6484A5] bg-[#E5EEF9] px-5 py-3 text-sm font-semibold text-[#173B60] transition hover:bg-white"
-                    >
-                      Join Meeting
-                    </button>
+<input
+  type="text"
+  value={meetingCode}
+  onChange={(e) => setMeetingCode(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") handleJoinMeeting();
+  }}
+  placeholder="Enter meeting code"
+  className="w-full min-w-0 rounded-lg border border-[#52789E] bg-[#102D4B] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[#9EB5CF] focus:border-[#55A0FF] focus:ring-2 focus:ring-[#3988F5]/25 sm:w-auto sm:flex-1"
+/>
 
-                    <button
-                      type="button"
-                      onClick={handleNewMeeting}
-                      disabled={creatingMeeting}
-                      className="rounded-lg bg-[#2878E8] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-blue-950/30 transition hover:bg-[#3D8BFA] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {creatingMeeting ? "Creating..." : "+ New Meeting"}
-                    </button>
-                  </div>
+<button
+  type="button"
+  onClick={handleJoinMeeting}
+  className="w-full rounded-lg border border-[#6484A5] bg-[#E5EEF9] px-5 py-3 text-sm font-semibold text-[#173B60] transition hover:bg-white sm:w-auto"
+>
+  Join Meeting
+</button>
+
+<div className="grid grid-cols-2 gap-2 sm:contents">
+  <button
+    type="button"
+    onClick={handleNewMeeting}
+    disabled={creatingMeeting}
+    className="w-full rounded-lg bg-[#2878E8] px-3 py-3 text-sm font-semibold text-white shadow-md shadow-blue-950/30 transition hover:bg-[#3D8BFA] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-5"
+  >
+    {creatingMeeting ? "Creating..." : "+ New Meeting"}
+  </button>
+
+  <button
+    type="button"
+    onClick={() => navigate("/meeting-history")}
+    className="inline-flex w-full items-center justify-center rounded-lg border border-[#6484A5] bg-[#173B60] px-3 py-3 text-sm font-semibold text-white transition hover:bg-[#244F78] sm:w-auto sm:px-5"
+  >
+    Meeting History
+  </button>
+</div>
+</div>
 
                   {meetingError && (
                     <p className="mt-3 text-sm text-red-300">
