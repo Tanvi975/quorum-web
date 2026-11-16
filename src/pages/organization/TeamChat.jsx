@@ -881,7 +881,7 @@ useEffect(() => {
                         {fileUrl && (
                           <a
                             href={fileUrl}
-                            target="_blank"
+                            
                             rel="noreferrer"
                             className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-[#52789F] bg-[#0D2B49] p-2.5 text-sm text-sky-100 transition hover:bg-[#173D62] hover:text-white"
                           >
