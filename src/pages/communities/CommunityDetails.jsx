@@ -49,6 +49,7 @@ import {
     FiBookmark,
     FiCheck,
     FiX,
+    FiCamera,
 } from "react-icons/fi";
 import { saveItem } from "../../services/savedItemsService";
 
