@@ -116,7 +116,10 @@ function DashboardOverview({
       
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.55fr_1fr]">
         
-        <div className={`${cardStyle} min-w-0 p-5 sm:p-6`}>
+      <div
+  data-tour="upcoming-meetings"
+  className={`${cardStyle} min-w-0 p-5 sm:p-6`}
+>
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -269,7 +272,10 @@ function DashboardOverview({
           )}
         </div>
 
-        <div className={`${cardStyle} min-w-0 p-5 sm:p-6`}>
+        <div
+  data-tour="my-calendar"
+  className={`${cardStyle} min-w-0 p-5 sm:p-6`}
+>
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A5A83] text-[#8CC4FF]">
@@ -392,6 +398,7 @@ function DashboardOverview({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           
           <button
+          data-tour="organizations"
             type="button"
             onClick={() => navigate("/organization")}
             className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#75A8D8] hover:bg-[#2A5A83]`}
@@ -419,6 +426,7 @@ function DashboardOverview({
           </button>
 
           <button
+          data-tour="communities"
             type="button"
             onClick={() => navigate("/communities")}
             className={`${cardStyle} group p-5 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#75A8D8] hover:bg-[#2A5A83]`}
@@ -445,7 +453,10 @@ function DashboardOverview({
             </span>
           </button>
 
-          <div className={`${cardStyle} p-5`}>
+          <div
+  data-tour="quick-actions"
+  className={`${cardStyle} p-5`}
+>
             <div className="flex items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2A5A83] text-white">
                 <FiPlus size={23} />

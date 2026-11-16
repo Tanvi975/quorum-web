@@ -31,7 +31,10 @@ export default function Sidebar() {
   const location = useLocation();
 
   return (
-    <aside className="hidden h-full w-[76px] shrink-0 overflow-y-auto border-r border-white/10 bg-[#062C5F]/95 md:block lg:w-[220px]">
+    <aside
+  data-tour="sidebar-home"
+  className="hidden h-full w-[76px] shrink-0 overflow-y-auto border-r border-white/10 bg-[#062C5F]/95 md:block lg:w-[220px]"
+>
       <div className="px-3 pt-7 lg:px-5">
         <button
           type="button"

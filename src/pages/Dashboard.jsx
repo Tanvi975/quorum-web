@@ -409,8 +409,10 @@ const [statusError, setStatusError] = useState("");
         <div className="flex min-h-0 min-w-0 flex-1">
           <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-6 lg:px-8 lg:pt-8">
             <div className="mx-auto max-w-[1180px]">
-              {/* Welcome panel */}
-              <section className="flex min-h-[105px] flex-col items-stretch justify-between gap-4 rounded-xl border border-[#355D83] bg-[#173B60]/95 px-4 py-5 shadow-[0_10px_35px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:px-6 lg:px-7">
+            <section
+  data-tour="welcome"
+  className="flex min-h-[105px] flex-col items-stretch justify-between gap-4 rounded-xl border border-[#355D83] bg-[#173B60]/95 px-4 py-5 shadow-[0_10px_35px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:px-6 lg:px-7"
+>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-[18px] font-semibold text-white sm:text-[20px]">
                     Welcome back, {userName}

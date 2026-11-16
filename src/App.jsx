@@ -54,6 +54,7 @@ import DocumentsPage from "./components/documents/DocumentsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Recordings from "./pages/Recordings";
+import ProductTour from "./components/ProductTour";
 function MeetRedirect() {
   const { code } = useParams();
 
@@ -458,8 +459,11 @@ function App() {
   }
 />
 <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+</Routes>
+
+<ProductTour />
+
+</BrowserRouter>
     </AuthProvider>
     </ErrorBoundary>
   );
