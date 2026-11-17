@@ -115,7 +115,7 @@ export default function ProjectDetailsPage() {
                         </button>
 
                         <button
-                            onClick={() => navigate("/projects")}
+                           onClick={() => navigate(-1)}
                             className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"
                         >
                             Back to Projects
@@ -195,7 +195,7 @@ export default function ProjectDetailsPage() {
             <div className="mx-auto max-w-[1450px]">
 
                 <button
-                    onClick={() => navigate("/projects")}
+                    onClick={() => navigate(-1)}
                     className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-blue-100/75 transition hover:text-white"
                 >
                     <FiArrowLeft />
