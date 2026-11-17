@@ -396,7 +396,12 @@ const normalizedList = list.map((item) => ({
   ...item,
   id: item.id || item._id || item.conversationId
 }));
-
+const normalChatConversations = normalizedList.filter(
+  (conversation) =>
+      conversation.type === "direct" ||
+      conversation.type === "group"
+);
+console.log("ALL CONVERSATIONS:", normalizedList);
 const requestedConversation = requestedConversationId
   ? normalizedList.find(
       (item) =>
@@ -404,12 +409,12 @@ const requestedConversation = requestedConversationId
     )
   : null;
 
-setConversations(
-  normalizedList.map((item) =>
-      String(item.id) === String(activeConversationRef.current?.id)
-          ? { ...item, unreadCount: 0 }
-          : item
-  )
+  setConversations(
+    normalChatConversations.map((item) =>
+        String(item.id) === String(activeConversationRef.current?.id)
+            ? { ...item, unreadCount: 0 }
+            : item
+    )
 );
 
 if (requestedConversationId && !requestedConversation) {
