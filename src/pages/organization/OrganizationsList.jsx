@@ -489,9 +489,6 @@ const uploadTargetRef = useRef(null);
       <option value="my" className="bg-[#315A8A] text-white">
         My Organizations
       </option>
-      <option value="all" className="bg-[#315A8A] text-white">
-        Explore All Organizations
-      </option>
     </select>
 
     <label className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-[#B6C6D9]/40 bg-[#315A8A]/75 px-4 shadow-sm transition focus-within:border-[#C6EAFF] focus-within:ring-2 focus-within:ring-[#38BDF8]/20">

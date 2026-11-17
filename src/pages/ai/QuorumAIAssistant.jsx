@@ -1298,7 +1298,7 @@ className="relative isolate flex min-h-[calc(100dvh-64px)] w-full min-w-0 flex-c
   >
     {isListening ? <FiMicOff size={17} /> : <FiMic size={17} />}
 
-    {isListening ? "Stop Listening" : "Speak to Ultron"}
+    {isListening ? "Stop Listening" : "Speak to Quorum Bot"}
   </button>
 
   <span className="text-xs text-white/65" role="status">

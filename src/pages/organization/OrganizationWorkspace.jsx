@@ -1353,7 +1353,7 @@ async function editOrganization(event) {
 
   return (
     <OnboardingLayout fullWidth>
-      <main className="organization-workspace relative min-h-full w-full min-w-0 max-w-none flex-1 self-stretch bg-[linear-gradient(135deg,#253F5B_0%,#305485_48%,#506D91_100%)] p-3 text-[#EDEFF7] sm:p-4 lg:p-5">
+    <main className="organization-workspace relative h-full min-h-0 w-full min-w-0 max-w-none flex-1 self-stretch overflow-y-auto bg-[linear-gradient(135deg,#253F5B_0%,#305485_48%,#506D91_100%)] p-3 text-[#EDEFF7] sm:p-4 lg:p-5">
 
         <div className="mb-3 flex items-center">
           <button
