@@ -9,7 +9,6 @@ import {
     FiMessageCircle,
     FiUsers,
     FiFileText,
-    FiDollarSign,
     FiAlertCircle,
     FiRefreshCw,
     FiArrowUpRight
@@ -73,13 +72,6 @@ export default function ProjectDetailsPage() {
         });
     };
 
-    const formatBudget = (budget) => {
-        if (budget == null) return "Not specified";
-
-        return new Intl.NumberFormat("en-IN", {
-            maximumFractionDigits: 0
-        }).format(budget);
-    };
 
     if (loading) {
         return (
@@ -263,65 +255,58 @@ export default function ProjectDetailsPage() {
                     </div>
                 </section>
 
-                <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {[
-                        {
-                            label: "Project Budget",
-                            value: formatBudget(project.budget),
-                            icon: FiDollarSign,
-                            note: "Allocated budget",
-                            iconStyle: "bg-emerald-300/15 text-emerald-200"
-                        },
-                        {
-                            label: "Total Tasks",
-                            value: taskCount,
-                            icon: FiCheckCircle,
-                            note: "Project work items",
-                            iconStyle: "bg-blue-300/15 text-blue-100"
-                        },
-                        {
-                            label: "Team Members",
-                            value: memberCount,
-                            icon: FiUsers,
-                            note: "Project collaborators",
-                            iconStyle: "bg-purple-300/15 text-purple-200"
-                        },
-                        {
-                            label: "Due Date",
-                            value: formatDate(project.dueDate),
-                            icon: FiCalendar,
-                            note: "Project deadline",
-                            iconStyle: "bg-amber-300/15 text-amber-200"
-                        }
-                    ].map((item) => {
-                        const Icon = item.icon;
+                <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {[
+        {
+            label: "Total Tasks",
+            value: taskCount,
+            icon: FiCheckCircle,
+            note: "Project work items",
+            iconStyle: "bg-blue-300/15 text-blue-100"
+        },
+        {
+            label: "Team Members",
+            value: memberCount,
+            icon: FiUsers,
+            note: "Project collaborators",
+            iconStyle: "bg-purple-300/15 text-purple-200"
+        },
+        {
+            label: "Due Date",
+            value: formatDate(project.dueDate),
+            icon: FiCalendar,
+            note: "Project deadline",
+            iconStyle: "bg-amber-300/15 text-amber-200"
+        }
+    ].map((item) => {
+        const Icon = item.icon;
 
-                        return (
-                            <div
-                                key={item.label}
-                                className="rounded-2xl border border-white/15 bg-white/[0.09] p-5 shadow-lg shadow-[#102C50]/10 backdrop-blur-sm transition hover:bg-white/[0.12]"
-                            >
-                                <div className="flex items-center justify-between gap-3">
-                                    <span className="text-sm text-blue-100/70">
-                                        {item.label}
-                                    </span>
+        return (
+            <div
+                key={item.label}
+                className="rounded-2xl border border-white/15 bg-white/[0.09] p-5 shadow-lg shadow-[#102C50]/10 backdrop-blur-sm transition hover:bg-white/[0.12]"
+            >
+                <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-blue-100/70">
+                        {item.label}
+                    </span>
 
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.iconStyle}`}>
-                                        <Icon className="text-lg" />
-                                    </div>
-                                </div>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.iconStyle}`}>
+                        <Icon className="text-lg" />
+                    </div>
+                </div>
 
-                                <p className="mt-4 break-words text-2xl font-bold">
-                                    {item.value}
-                                </p>
+                <p className="mt-4 break-words text-2xl font-bold">
+                    {item.value}
+                </p>
 
-                                <p className="mt-1 text-xs text-blue-100/55">
-                                    {item.note}
-                                </p>
-                            </div>
-                        );
-                    })}
-                </section>
+                <p className="mt-1 text-xs text-blue-100/55">
+                    {item.note}
+                </p>
+            </div>
+        );
+    })}
+</section>
 
                 <section className="mt-8">
                     <div className="mb-5">

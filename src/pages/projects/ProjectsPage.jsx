@@ -33,7 +33,6 @@ export default function ProjectsPage() {
         organizationId: "",
         name: "",
         description: "",
-        budget: "",
         dueDate: ""
     });
 
@@ -104,9 +103,6 @@ export default function ProjectsPage() {
             const payload = {
                 name: form.name.trim(),
                 description: form.description.trim(),
-                budget: form.budget
-                    ? Number(form.budget)
-                    : undefined,
                 dueDate: form.dueDate
                     ? new Date(form.dueDate).toISOString()
                     : undefined
@@ -118,7 +114,7 @@ export default function ProjectsPage() {
                 organizationId: "",
                 name: "",
                 description: "",
-                budget: "",
+           
                 dueDate: ""
             });
 
@@ -344,20 +340,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-blue-50">
-                                    Budget
-                                </label>
-                                <input
-                                    type="number"
-                                    name="budget"
-                                    value={form.budget}
-                                    onChange={handleChange}
-                                    min="0"
-                                    placeholder="Enter budget"
-                                    className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-blue-100/45 focus:border-blue-300"
-                                />
-                            </div>
+                
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-blue-50">
