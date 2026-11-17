@@ -360,15 +360,17 @@ function drawDesk(ctx, iso, r, color, mine) {
 }
 
 function KnockToast({ data, onDismiss }) {
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
   useEffect(() => {
     try {
       const a = new Audio("/sounds/desk-knock.mp3");
       a.volume = 0.5;
       a.play().catch(() => {});
     } catch {}
-    const t = setTimeout(onDismiss, 12000);
+    const t = setTimeout(() => dismissRef.current && dismissRef.current(), 12000);
     return () => clearTimeout(t);
-  }, [data, onDismiss]);
+  }, [data]);
   return (
     <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900 p-4 text-white shadow-2xl" style={{ maxWidth: 340 }}>
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold">
@@ -384,6 +386,15 @@ function KnockToast({ data, onDismiss }) {
       </div>
     </div>
   );
+}
+
+function buildSize(w, h) {
+  const tw = w / (GRID + 0.4);
+  const th = tw * 0.56;
+  const unit = th * 1.7;
+  const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
+  const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
+  return { w, h, tw, th, unit, top };
 }
 
 export default function VirtualOffice({ teamId, teamName, socket, connected, enabled }) {
@@ -442,29 +453,19 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
 
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
-  const [size, setSize] = useState(() => {
-    const w = 800, h = 520;
-    const tw = w / (GRID + 0.4);
-    const th = tw * 0.56;
-    const unit = th * 1.7;
-    const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
-    const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
-    return { w, h, tw, th, unit, top };
-  });
+  const [size, setSize] = useState(() => buildSize(800, 520));
 
   useLayoutEffect(() => {
-    if (!wrapRef.current) return;
+    const el = wrapRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width >= 50 && r.height >= 50) setSize(buildSize(r.width, r.height));
     const ro = new ResizeObserver(([entry]) => {
-      const w = Math.max(320, entry.contentRect.width);
-      const h = Math.max(360, entry.contentRect.height);
-      const tw = w / (GRID + 0.4);
-      const th = tw * 0.56;
-      const unit = th * 1.7;
-      const drawH = WALL_UNITS * unit + GRID * th + 0.5 * unit + 34;
-      const top = Math.max(WALL_UNITS * unit + 18, (h - drawH) / 2 + WALL_UNITS * unit + 18);
-      setSize({ w, h, tw, th, unit, top });
+      const { width, height } = entry.contentRect;
+      if (width < 50 || height < 50) return;
+      setSize(buildSize(width, height));
     });
-    ro.observe(wrapRef.current);
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
@@ -478,7 +479,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [size, warLive, myZone, mineDesk, sortedDesks.length, focusM.length]);
+  }, [size, warLive, myZone, mineDesk, sortedDesks.length, focusM.length, deskColors.join(",")]);
 
   function draw() {
     const canvas = canvasRef.current;
@@ -487,6 +488,7 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     const rect = wrap.getBoundingClientRect();
     const w = rect.width, h = rect.height;
     if (w < 50 || h < 50) return;
+    if (Math.abs(w - size.w) > 0.5 || Math.abs(h - size.h) > 0.5) setSize(buildSize(w, h));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     if (canvas.width !== Math.round(w * dpr)) {
       canvas.width = Math.round(w * dpr);
@@ -543,11 +545,14 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     membersList.forEach((m) => {
       const presence = (m.presenceStatus || "OFFLINE").toUpperCase();
       if (presence === "OFFLINE") return;
+      const zoneKnown = ["WAR_ROOM", "COFFEE_LOUNGE", "FOCUS_POD", "OPEN_WORKSPACE"].includes(m.zoneId);
       let effZone = m.zoneId;
-      if (presence === "DO_NOT_DISTURB") effZone = "FOCUS_POD";
-      else if (presence === "BE_RIGHT_BACK") effZone = "COFFEE_LOUNGE";
-      else if (presence === "BUSY" && m.isInMeeting) effZone = "WAR_ROOM";
-      else if (presence === "BUSY" || presence === "AVAILABLE" || presence === "AWAY") effZone = "OPEN_WORKSPACE";
+      if (!zoneKnown) {
+        if (presence === "DO_NOT_DISTURB") effZone = "FOCUS_POD";
+        else if (presence === "BE_RIGHT_BACK") effZone = "COFFEE_LOUNGE";
+        else if (presence === "BUSY" && m.isInMeeting) effZone = "WAR_ROOM";
+        else effZone = "OPEN_WORKSPACE";
+      }
 
       if (effZone === "OPEN_WORKSPACE") {
         const dk = deskByUser[m.userId];
@@ -613,10 +618,14 @@ export default function VirtualOffice({ teamId, teamName, socket, connected, ena
     changeZone("WAR_ROOM");
   }, [changeZone]);
 
-  const handleSitAtDesk = useCallback(() => {
+  const handleSitAtDesk = useCallback(async () => {
     if (myZone === "OPEN_WORKSPACE" && mineDesk >= 0) return;
-    if (firstFreeDesk) claimDesk(firstFreeDesk.deskId);
-    else changeZone("OPEN_WORKSPACE");
+    if (mineDesk >= 0 || !firstFreeDesk) {
+      changeZone("OPEN_WORKSPACE");
+      return;
+    }
+    await claimDesk(firstFreeDesk.deskId);
+    if (myZone !== "OPEN_WORKSPACE") changeZone("OPEN_WORKSPACE");
   }, [myZone, mineDesk, firstFreeDesk, claimDesk, changeZone]);
 
   const isLoading = loading || joining;
